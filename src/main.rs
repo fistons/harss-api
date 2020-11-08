@@ -1,65 +1,59 @@
-/// Source of articles, over da web
-struct Flux {
-    url: String,
-    title: String,
+#![feature(proc_macro_hygiene, decl_macro)]
+
+#[macro_use]
+extern crate rocket;
+
+use std::collections::HashMap;
+
+use rocket::State;
+use rocket_contrib::json::Json;
+use rustbreak::deser::Yaml;
+use rustbreak::FileDatabase;
+
+use crate::domain::Flux;
+use std::fs::File;
+use std::ops::Add;
+
+mod domain;
+
+type Loic = FileDatabase::<HashMap<u32, Flux>, Yaml>;
+
+#[get("/")]
+fn index(db: State<Loic>) -> Json<Vec<Flux>> {
+    let mut output = Vec::<&Flux>::new();
+    db.read(|db| {
+       for (key, flux) in db.iter() {
+           // output.push(flux.)
+       }
+    });
+    // output
+    Json(vec![])
 }
 
-/// # Basic **article** 
-struct Article {
-    url: String,
-    title: String,
-    content: String,
+#[post("/add", data = "<flux>")]
+fn new(flux: Json<Flux>, db: State<Loic>) {
+    db.write(|db| {
+        let flux = flux.0;
+        db.insert(flux.id, flux);
+    });
+    db.save();
 }
 
-/// # Abstraction over a collection of Flux, because, one day, we will store them somewhere
-struct FluxStorage<'a> {
-    flux: &'a mut Vec<Flux>
+
+fn main() {
+
+    let db : Loic = FileDatabase::load_from_path_or("/home/eric/pouet.yaml", HashMap::<u32, Flux>::new()).unwrap();
+    let _ = db.load();
+
+    rocket::ignite()
+        .manage(db)
+        .mount("/", routes![index, new])
+        .launch();
 }
-
-impl<'a> FluxStorage<'a> {
-    fn add_flux(&mut self, new_flux: Flux) {
-        self.flux.push(new_flux) // 🖕
-    }
-
-    fn get(&self, index: usize) -> Option<&Flux> {
-        self.flux.get(index)
-    }
-
-    fn get_urls(&self) -> Vec<&String> {
-        self.flux.iter().map(|f| &f.url).collect()
-    }
-}
-
-fn main() {}
 
 
 #[cfg(test)]
 mod test {
-    use crate::{Flux, FluxStorage};
-
     #[test]
-    fn test() {
-        let mut collection = Vec::<Flux>::new();
-        let mut store = FluxStorage { flux: &mut collection };
-
-        let flux_1 = Flux {
-            title: String::from("CanardPc"),
-            url: String::from("https://canardpc.com/rss.xml"),
-        };
-
-        let flux_2 = Flux {
-            title: String::from("El mundo en français"),
-            url: String::from("https://www.lemonde.fr/rss/une.xml"),
-        };
-
-
-        store.add_flux(flux_1);
-        store.add_flux(flux_2);
-
-        assert_eq!(store.get(0).unwrap().title, String::from("CanardPc"));
-        assert_eq!(store.get(1).unwrap().title, String::from("El mundo en français"));
-
-        assert_eq!(*store.get_urls().get(0).unwrap(), &String::from("https://canardpc.com/rss.xml"))
-        //🖕
-    }
+    fn test() {}
 }
