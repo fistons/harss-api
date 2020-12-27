@@ -2,51 +2,39 @@
 
 #[macro_use]
 extern crate rocket;
+#[macro_use]
+extern crate rocket_contrib;
 
 use std::collections::HashMap;
 
 use rocket::State;
+use rocket_contrib::databases::diesel;
 use rocket_contrib::json::Json;
-use rustbreak::deser::Yaml;
-use rustbreak::FileDatabase;
 
 use crate::domain::Flux;
-use std::fs::File;
-use std::ops::Add;
 
 mod domain;
 
-type Loic = FileDatabase::<HashMap<u32, Flux>, Yaml>;
+
+#[database("mydb")]
+struct MyDB(diesel::SqliteConnection);
+
 
 #[get("/")]
-fn index(db: State<Loic>) -> Json<Vec<Flux>> {
-    let mut output = Vec::<&Flux>::new();
-    db.read(|db| {
-       for (key, flux) in db.iter() {
-           // output.push(flux.)
-       }
-    });
+fn index(sql: MyDB) -> Json<Vec<Flux>> {
+    let mut output = Vec::<Flux>::new();
     // output
-    Json(vec![])
+    Json(output)
 }
 
 #[post("/add", data = "<flux>")]
-fn new(flux: Json<Flux>, db: State<Loic>) {
-    db.write(|db| {
-        let flux = flux.0;
-        db.insert(flux.id, flux);
-    });
-    db.save();
+fn new(flux: Json<Flux>, sql: MyDB) {
 }
 
 
 fn main() {
-
-    let db : Loic = FileDatabase::load_from_path_or("/home/eric/pouet.yaml", HashMap::<u32, Flux>::new()).unwrap();
-    let _ = db.load();
-
     rocket::ignite()
-        .manage(db)
+        .attach(MyDB::fairing())
         .mount("/", routes![index, new])
         .launch();
 }

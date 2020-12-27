@@ -4,21 +4,12 @@ version = "0.1.0"
 authors = ["Eric <Fistons> <eric@pedr0.net>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 reqwest = { version = "0.10", features = ["blocking", "json"] } # Request stuff over the web
-rocket = "0.4.5" # Serve stuff over the web
+rocket = "0.4.6" # Serve stuff over the web
 serde = { version = "1.0", features = ["derive"] }
 
-
 [dependencies.rocket_contrib]
-version = "0.4.5"
+version = "0.4.6"
 default-features = false
-features = ["json"]
-
-
-[dependencies.rustbreak]
-version = "2.0.0"
-features = ["yaml_enc"] # You can also use "yaml_enc" or "bin_enc"
-# Check the documentation to add your own!
+features = ["json", "diesel_sqlite_pool"]
