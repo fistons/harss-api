@@ -1,6 +1,8 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use]
+extern crate diesel;
+#[macro_use]
 extern crate rocket;
 #[macro_use]
 extern crate rocket_contrib;
@@ -8,40 +10,30 @@ extern crate rocket_contrib;
 use std::collections::HashMap;
 
 use rocket::State;
-use rocket_contrib::databases::diesel;
 use rocket_contrib::json::Json;
 
-use crate::domain::Flux;
+use crate::domain::*;
 
-mod domain;
+use self::diesel::prelude::*;
+use self::schema::flux::dsl::*;
 
+pub mod schema;
+pub mod domain;
 
 #[database("mydb")]
 struct MyDB(diesel::SqliteConnection);
 
 
+
 #[get("/")]
-fn index(sql: MyDB) -> Json<Vec<Flux>> {
-    let mut output = Vec::<Flux>::new();
-    // output
-    Json(output)
+fn index(sql: MyDB) -> &'static str {
+    diesel::select(flux).get_result(&sql);
+    "coucou"
 }
-
-#[post("/add", data = "<flux>")]
-fn new(flux: Json<Flux>, sql: MyDB) {
-}
-
 
 fn main() {
     rocket::ignite()
         .attach(MyDB::fairing())
-        .mount("/", routes![index, new])
+        .mount("/", routes![index])
         .launch();
-}
-
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn test() {}
 }

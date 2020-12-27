@@ -1308,6 +1308,7 @@ dependencies = [
 name = "rss-aggregator"
 version = "0.1.0"
 dependencies = [
+ "diesel",
  "reqwest",
  "rocket",
  "rocket_contrib",
