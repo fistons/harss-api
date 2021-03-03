@@ -1,1 +1,1 @@
-drop table flux;
+drop table channels;

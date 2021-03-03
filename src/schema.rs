@@ -1,5 +1,5 @@
 table! {
-    flux (id) {
+    channels (id) {
         id -> Integer,
         name -> Text,
         url -> Text,
