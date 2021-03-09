@@ -1,12 +1,13 @@
 #[macro_use]
 extern crate diesel;
 
-use actix_web::{App, get, HttpResponse, HttpServer, post, Responder, web};
+use actix_web::{App, get, HttpResponse, HttpServer, post, web};
 use actix_web::http::StatusCode;
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
+use rss::Channel as RssChannel;
 
-use crate::model::Channel;
+use crate::model::channel::{Channel, NewChannel};
 
 mod schema;
 mod model;
@@ -16,25 +17,47 @@ type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 #[get("/channel/{id}")]
 async fn get_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> web::Json<Channel> {
     let connection = db.get().unwrap();
-    web::Json(web::block(move || model::db::select_by_id(id.into_inner(), &connection)).await.unwrap())
+    web::Json(web::block(move || model::channel::db::select_by_id(id.into_inner(), &connection)).await.unwrap())
 }
 
 #[get("/channels")]
 async fn get_channels(db: web::Data<DbPool>) -> web::Json<Vec<Channel>> {
     let connection = db.get().unwrap();
-    web::Json(web::block(move || model::db::select_all(&connection)).await.unwrap())
+    web::Json(web::block(move || model::channel::db::select_all(&connection)).await.unwrap())
 }
 
 
 #[post("/channels")]
-async fn new_channel(new_channel: web::Json<model::NewChannel>, db: web::Data<DbPool>) -> HttpResponse {
+async fn new_channel(new_channel: web::Json<NewChannel>, db: web::Data<DbPool>) -> HttpResponse {
     println!("Recording new channel {:?}", new_channel);
 
     let connection = db.get().unwrap();
     let data = new_channel.into_inner();
 
-    web::block(move || model::db::insert(data, &connection)).await.unwrap();
+    web::block(move || model::channel::db::insert(data, &connection)).await.unwrap();
 
+    HttpResponse::new(StatusCode::ACCEPTED)
+}
+
+#[post("/refresh")]
+async fn refresh(db: web::Data<DbPool>) -> HttpResponse {
+    println!("Refreshing");
+    
+    let channels = web::block(move || model::channel::db::select_all(& db.get().unwrap())).await.unwrap();
+    
+    for channel in channels {
+        println!("Fetching {}", &channel.name);
+
+        let content = reqwest::get(&channel.url)
+            .await.unwrap()
+            .bytes()
+            .await.unwrap();
+        let channel = RssChannel::read_from(&content[..]).unwrap();
+        println!("Items: {}", channel.items.into_iter().map(|i| i.title.unwrap()).collect::<String>())
+        
+    }
+    
+    
     HttpResponse::new(StatusCode::ACCEPTED)
 }
 
@@ -56,6 +79,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_channels)
             .service(get_channel)
             .service(new_channel)
+            .service(refresh)
     })
         .bind("127.0.0.1:8080")?
         .run()
