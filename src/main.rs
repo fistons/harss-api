@@ -42,8 +42,10 @@ async fn new_channel(new_channel: web::Json<NewChannel>, db: web::Data<DbPool>) 
 #[post("/refresh")]
 async fn refresh(db: web::Data<DbPool>) -> HttpResponse {
     println!("Refreshing");
-    
-    let channels = web::block(move || model::channel::db::select_all(& db.get().unwrap())).await.unwrap();
+    let connection = db.get().unwrap();
+
+    let channels = web::block(move || model::channel::db::select_all(&db.get().unwrap())).await.unwrap();
+
     
     for channel in channels {
         println!("Fetching {}", &channel.name);
@@ -52,12 +54,16 @@ async fn refresh(db: web::Data<DbPool>) -> HttpResponse {
             .await.unwrap()
             .bytes()
             .await.unwrap();
-        let channel = RssChannel::read_from(&content[..]).unwrap();
-        println!("Items: {}", channel.items.into_iter().map(|i| i.title.unwrap()).collect::<String>())
-        
+        let rss_channel = RssChannel::read_from(&content[..]).unwrap();
+        for item in rss_channel.items.into_iter() {
+            println!("{:?}", item);
+            let i = model::items::NewItem { url: item.link.unwrap(), title: item.title.unwrap(), content: item.content.unwrap_or(String::new()), channel_id: channel.id };
+            
+            model::items::db::insert(i, &connection).unwrap();
+        }
     }
-    
-    
+
+
     HttpResponse::new(StatusCode::ACCEPTED)
 }
 

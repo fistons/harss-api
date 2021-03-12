@@ -66,5 +66,21 @@ pub mod items {
         pub content: String,
         pub channel_id: i32,
     }
+
+    pub mod db {
+        use diesel::prelude::*;
+        use diesel::SqliteConnection;
+
+        use crate::schema::items::dsl::*;
+
+        use super::Item;
+        use super::NewItem;
+
+        pub fn insert(new_item: NewItem, db: &SqliteConnection) -> Result<(), diesel::result::Error> {
+            diesel::insert_into(items).values(&new_item).execute(db)?;
+            Ok(())
+        }
+
+    }
 }
 
