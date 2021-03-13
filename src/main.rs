@@ -8,6 +8,7 @@ use diesel::SqliteConnection;
 use rss::Channel as RssChannel;
 
 use crate::model::channel::{Channel, NewChannel};
+use crate::model::items::Item;
 
 mod schema;
 mod model;
@@ -24,6 +25,12 @@ async fn get_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> web::Json<Cha
 async fn get_channels(db: web::Data<DbPool>) -> web::Json<Vec<Channel>> {
     let connection = db.get().unwrap();
     web::Json(web::block(move || model::channel::db::select_all(&connection)).await.unwrap())
+}
+
+#[get("/items/{chan_id}")]
+async fn get_items(chan_id: web::Path<i32>, db: web::Data<DbPool>) -> web::Json<Vec<Item>> {
+    let connection = db.get().unwrap();
+    web::Json(web::block(move || model::items::db::get_items_of_channel(chan_id.into_inner(), &connection)).await.unwrap())
 }
 
 
@@ -45,7 +52,6 @@ async fn refresh(db: web::Data<DbPool>) -> HttpResponse {
     let connection = db.get().unwrap();
 
     let channels = web::block(move || model::channel::db::select_all(&db.get().unwrap())).await.unwrap();
-
     
     for channel in channels {
         println!("Fetching {}", &channel.name);
@@ -62,7 +68,6 @@ async fn refresh(db: web::Data<DbPool>) -> HttpResponse {
             model::items::db::insert(i, &connection).unwrap();
         }
     }
-
 
     HttpResponse::new(StatusCode::ACCEPTED)
 }

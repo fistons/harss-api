@@ -52,31 +52,35 @@ pub mod items {
     #[derive(Debug, Serialize, Deserialize, Clone, Insertable)]
     #[table_name = "items"]
     pub struct NewItem {
-        pub title: String,
-        pub url: String,
-        pub content: String,
+        pub guid: Option<String>,
+        pub title: Option<String>,
+        pub url: Option<String>,
+        pub content: Option<String>,
+        pub read: bool,
         pub channel_id: i32,
-        pub read: bool
     }
 
     #[derive(Debug, Serialize, Deserialize, Clone, Queryable)]
     pub struct Item {
         pub id: i32,
-        pub title: String,
-        pub url: String,
-        pub content: String,
+        pub guid: Option<String>,
+        pub title: Option<String>,
+        pub url: Option<String>,
+        pub content: Option<String>,
+        pub read: bool,
         pub channel_id: i32,
     }
     
     impl NewItem {
         /// Create an item to be inserted in the database, from a rss item.
         pub fn from_rss_item(item: rss::Item, channel_id: i32) -> NewItem {
-            let title = item.title.unwrap_or_default();
-            let url = item.link.unwrap_or_default();
-            let content = item.content.unwrap_or_default();
+            let title = item.title;
+            let guid= item.guid.map(|x| x.value);
+            let url = item.link;
+            let content = item.content;
             let read = false;
             
-            NewItem{title, url, content, channel_id, read}
+            NewItem{title, guid, url, content, channel_id, read}
         }
     }
 
