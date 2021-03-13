@@ -46,13 +46,37 @@ async fn new_channel(new_channel: web::Json<NewChannel>, db: web::Data<DbPool>) 
     HttpResponse::new(StatusCode::ACCEPTED)
 }
 
+#[post("/refresh/{channel_id}")]
+async fn refresh_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> HttpResponse {
+    let id = id.into_inner();
+    let connection = db.get().unwrap();
+    println!("Refreshing channel {}", id);
+
+    let channel = web::block(move || model::channel::db::select_by_id(id, &db.get().unwrap()))
+        .await.unwrap();
+
+    println!("Fetching {}", &channel.name);
+
+    let content = reqwest::get(&channel.url)
+        .await.unwrap()
+        .bytes()
+        .await.unwrap();
+    let rss_channel = RssChannel::read_from(&content[..]).unwrap();
+    for item in rss_channel.items.into_iter() {
+        let i = model::items::NewItem::from_rss_item(item, channel.id);
+        model::items::db::insert(i, &connection).unwrap();
+    }
+
+    HttpResponse::new(StatusCode::ACCEPTED)
+}
+
 #[post("/refresh")]
 async fn refresh(db: web::Data<DbPool>) -> HttpResponse {
     println!("Refreshing");
     let connection = db.get().unwrap();
 
     let channels = web::block(move || model::channel::db::select_all(&db.get().unwrap())).await.unwrap();
-    
+
     for channel in channels {
         println!("Fetching {}", &channel.name);
 
@@ -62,9 +86,7 @@ async fn refresh(db: web::Data<DbPool>) -> HttpResponse {
             .await.unwrap();
         let rss_channel = RssChannel::read_from(&content[..]).unwrap();
         for item in rss_channel.items.into_iter() {
-            println!("{:?}", item);
             let i = model::items::NewItem::from_rss_item(item, channel.id);
-            
             model::items::db::insert(i, &connection).unwrap();
         }
     }
@@ -91,6 +113,8 @@ async fn main() -> std::io::Result<()> {
             .service(get_channel)
             .service(new_channel)
             .service(refresh)
+            .service(refresh_channel)
+            .service(get_items)
     })
         .bind("127.0.0.1:8080")?
         .run()

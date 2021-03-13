@@ -77,7 +77,7 @@ pub mod items {
             let title = item.title;
             let guid= item.guid.map(|x| x.value);
             let url = item.link;
-            let content = item.content;
+            let content = item.description;
             let read = false;
             
             NewItem{title, guid, url, content, channel_id, read}
