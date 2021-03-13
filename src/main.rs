@@ -57,7 +57,7 @@ async fn refresh(db: web::Data<DbPool>) -> HttpResponse {
         let rss_channel = RssChannel::read_from(&content[..]).unwrap();
         for item in rss_channel.items.into_iter() {
             println!("{:?}", item);
-            let i = model::items::NewItem { url: item.link.unwrap(), title: item.title.unwrap(), content: item.content.unwrap_or(String::new()), channel_id: channel.id };
+            let i = model::items::NewItem::from_rss_item(item, channel.id);
             
             model::items::db::insert(i, &connection).unwrap();
         }

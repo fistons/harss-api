@@ -56,6 +56,7 @@ pub mod items {
         pub url: String,
         pub content: String,
         pub channel_id: i32,
+        pub read: bool
     }
 
     #[derive(Debug, Serialize, Deserialize, Clone, Queryable)]
@@ -65,6 +66,18 @@ pub mod items {
         pub url: String,
         pub content: String,
         pub channel_id: i32,
+    }
+    
+    impl NewItem {
+        /// Create an item to be inserted in the database, from a rss item.
+        pub fn from_rss_item(item: rss::Item, channel_id: i32) -> NewItem {
+            let title = item.title.unwrap_or_default();
+            let url = item.link.unwrap_or_default();
+            let content = item.content.unwrap_or_default();
+            let read = false;
+            
+            NewItem{title, url, content, channel_id, read}
+        }
     }
 
     pub mod db {
@@ -80,7 +93,13 @@ pub mod items {
             diesel::insert_into(items).values(&new_item).execute(db)?;
             Ok(())
         }
-
+        
+        pub fn get_items_of_channel(chan_id: i32,  db: &SqliteConnection) ->  Result<Vec<Item>, diesel::result::Error> {
+            let res = items.filter(channel_id.eq(chan_id))
+                .load::<Item>(db)?;
+            
+            Ok(res)
+        }
     }
 }
 

@@ -9,9 +9,11 @@ table! {
 table! {
     items (id) {
         id -> Integer,
-        title -> Text,
-        url -> Text,
-        content -> Text,
+        guid -> Nullable<Text>,
+        title -> Nullable<Text>,
+        url -> Nullable<Text>,
+        content -> Nullable<Text>,
+        read -> Bool,
         channel_id -> Integer,
     }
 }
