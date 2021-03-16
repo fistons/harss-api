@@ -27,8 +27,13 @@ pub mod channel {
         use super::Channel;
         use super::NewChannel;
 
-        pub fn insert(new_channel: NewChannel, db: &SqliteConnection) -> Result<(), diesel::result::Error> {
-            diesel::insert_into(channels).values(&new_channel).execute(db)?;
+        pub fn insert(
+            new_channel: NewChannel,
+            db: &SqliteConnection,
+        ) -> Result<(), diesel::result::Error> {
+            diesel::insert_into(channels)
+                .values(&new_channel)
+                .execute(db)?;
             Ok(())
         }
 
@@ -37,9 +42,11 @@ pub mod channel {
             Ok(r)
         }
 
-        pub fn select_by_id(predicate: i32, db: &SqliteConnection) -> Result<Channel, diesel::result::Error> {
-            Ok(channels.filter(id.eq(predicate))
-                .first::<Channel>(db)?)
+        pub fn select_by_id(
+            predicate: i32,
+            db: &SqliteConnection,
+        ) -> Result<Channel, diesel::result::Error> {
+            Ok(channels.filter(id.eq(predicate)).first::<Channel>(db)?)
         }
     }
 }
@@ -70,17 +77,24 @@ pub mod items {
         pub read: bool,
         pub channel_id: i32,
     }
-    
+
     impl NewItem {
         /// Create an item to be inserted in the database, from a rss item.
         pub fn from_rss_item(item: rss::Item, channel_id: i32) -> NewItem {
             let title = item.title;
-            let guid= item.guid.map(|x| x.value);
+            let guid = item.guid.map(|x| x.value);
             let url = item.link;
             let content = item.description;
             let read = false;
-            
-            NewItem{title, guid, url, content, channel_id, read}
+
+            NewItem {
+                title,
+                guid,
+                url,
+                content,
+                channel_id,
+                read,
+            }
         }
     }
 
@@ -93,17 +107,21 @@ pub mod items {
         use super::Item;
         use super::NewItem;
 
-        pub fn insert(new_item: NewItem, db: &SqliteConnection) -> Result<(), diesel::result::Error> {
+        pub fn insert(
+            new_item: NewItem,
+            db: &SqliteConnection,
+        ) -> Result<(), diesel::result::Error> {
             diesel::insert_into(items).values(&new_item).execute(db)?;
             Ok(())
         }
-        
-        pub fn get_items_of_channel(chan_id: i32,  db: &SqliteConnection) ->  Result<Vec<Item>, diesel::result::Error> {
-            let res = items.filter(channel_id.eq(chan_id))
-                .load::<Item>(db)?;
-            
+
+        pub fn get_items_of_channel(
+            chan_id: i32,
+            db: &SqliteConnection,
+        ) -> Result<Vec<Item>, diesel::result::Error> {
+            let res = items.filter(channel_id.eq(chan_id)).load::<Item>(db)?;
+
             Ok(res)
         }
     }
 }
-
