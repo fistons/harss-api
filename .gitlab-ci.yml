@@ -1,5 +1,6 @@
 stages:
   - check
+  - package
 
 test:cargo:
   image: "rust:latest"
@@ -9,3 +10,20 @@ test:cargo:
   script:
     - rustc --version && cargo --version
     - cargo test --workspace --verbose
+
+docker:
+  # https://docs.gitlab.com/ee/ci/docker/using_kaniko.html
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  tags:
+    - docker
+  stage: package
+  before_script:
+    - 'echo "{\"auths\":{\"$CI_REGISTRY_IMAGE\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json'
+    - 'export DOCKER_IMAGE="$CI_REGISTRY_IMAGE${DOCKER_IMAGE_NAME:+/$DOCKER_IMAGE_NAME}:$CI_COMMIT_REF_SLUG-$CI_PIPELINE_IID"'
+  script:
+    - '/kaniko/executor --cache=true --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $DOCKER_IMAGE'
+    - echo "Image built and tagged $DOCKER_IMAGE"
+  needs:
+    - test:cargo
