@@ -1,3 +1,6 @@
 target/
 Dockerfile
 .gitlab-ci.yml
+.dockerignore
+README.md
+LICENSE
