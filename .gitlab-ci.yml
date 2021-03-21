@@ -4,6 +4,8 @@ stages:
 test:cargo:
   image: "rust:latest"
   stage: check
+  tags:
+    - docker
   script:
     - rustc --version && cargo --version
     - cargo test --workspace --verbose
