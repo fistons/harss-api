@@ -12,6 +12,7 @@ use crate::model::items::Item;
 
 mod model;
 mod schema;
+mod errors;
 
 type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 
