@@ -75,6 +75,7 @@ pub mod items {
         pub url: Option<String>,
         pub content: Option<String>,
         pub read: bool,
+        #[serde(skip_serializing)]
         pub channel_id: i32,
     }
 

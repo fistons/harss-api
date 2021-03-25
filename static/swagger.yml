@@ -1,0 +1,237 @@
+openapi: 3.0.3
+info:
+  title: RSS API
+  description: An RSS API in rust
+  version: 0.0.1
+  contact: 
+    name: Eric
+    email: eric@pedr0.net
+    url: https://pedr0.net
+servers:
+  - url: '{protocol}://api.rss.pedr0.net'
+    description: RSS Api
+    variables:
+      protocol:
+        enum:
+          - http
+          - https
+        default: https
+tags:
+  - name: Channels
+    description: Channels related operation
+  - name: Items
+    description: Items, a.k.a articles related operation
+paths:
+  /channels:
+    get:
+      operationId: get_channels
+      tags:
+        - Channels
+      summary: Returns a list of registred channels.
+      description: List all the rss channels registred.
+      responses:
+        '200':
+          description: A list of channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Channel'
+        default: 
+          $ref: '#/components/responses/Error'
+    post: 
+      operationId: new_channel
+      tags: 
+        - Channels
+      summary: Create a new channel.
+      description: Create a new RSS channel to be polled frequently.
+      requestBody:
+        required: true
+        description: Channel creation request.
+        content: 
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/CreateChannelRequest'
+      responses: 
+        '201':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
+  /channel/{id}:
+    get:
+      operationId: get_channel
+      tags:
+        - Channels
+      summary: Retrieve a single channel.
+      description: Retrieve a single RSS channel informations.
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of a channel
+          required: true
+          example: 1
+          schema: 
+            $ref: '#/components/schemas/ChannelID'
+      responses: 
+        '200':
+          description: A single channel
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+  /channel/{id}/refresh:
+    post:
+      operationId: refresh_channel
+      tags:
+        - Channels
+        - Items
+      summary: Refresh channel
+      description: Fetch items to refresh the channel
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of a channel
+          required: true
+          example: 1
+          schema:
+            $ref: '#/components/schemas/ChannelID'
+      responses:
+        '202':
+          $ref: '#/components/responses/NoContent'
+  /channel/{id}/items:
+    get:
+      operationId: get_items
+      tags:
+        - Channels
+        - Items
+      summary: Returns items
+      description: Returns the list of items of the given channel
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of a channel
+          required: true
+          example: 1
+          schema:
+            $ref: '#/components/schemas/ChannelID'
+      responses:
+        '200':
+          description: A list of item
+          content: 
+            application/json:
+              schema: 
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+  /refresh:
+    post:
+      operationId: refresh
+      tags:
+        - Channels
+        - Items
+      summary: Refresh all channels
+      description: Fetchs all items of all channels
+      responses: 
+        "202":
+          $ref: '#/components/responses/NoContent'
+components: 
+  schemas: 
+    CreateChannelRequest:
+      type: object
+      description: A RSS Channel creation request.
+      required: 
+        - name
+        - url
+      properties: 
+        name:
+          $ref: '#/components/schemas/ChannelName'
+        url:
+          $ref: '#/components/schemas/ChannelURL'
+    Channel:
+      type: object
+      description: A RSS Channel.
+      required: 
+        - id
+        - name
+        - url
+      properties: 
+        id:
+          $ref: '#/components/schemas/ChannelID'
+        name:
+          $ref: '#/components/schemas/ChannelName'
+        url:
+          $ref: '#/components/schemas/ChannelURL'
+    ChannelID:
+      type: integer
+      description: ID of a channel.
+      example: 1
+    ChannelName:
+      type: string
+      description: Name of channel.
+      minLength: 1
+      nullable: false
+      example: "Canard PC"
+    ChannelURL:
+      type: string
+      format: URL
+      minLength: 1
+      nullable: false
+      description: URL of a RSS channel.
+      example: "https://canardpc.com/rss.xml"
+      
+    Item:
+      type: object
+      required: 
+        - id
+        - title
+        - guid
+        - content
+        - read
+      properties: 
+        id: 
+          $ref: '#/components/schemas/ItemID'
+        title:
+          $ref: '#/components/schemas/ItemTitle'
+        guid:
+          $ref: '#/components/schemas/ItemGUID'
+        content:
+          $ref: '#/components/schemas/ItemContent'
+        read:
+          type: boolean
+          description: Is the item has already been read?
+          example: false
+    ItemID:
+      type: integer
+      description: Internal ID of an item.
+      example: 1
+    ItemTitle:
+      type: string
+      nullable: true
+      description: Title of a item.
+      example: "A Quick One Before The Eternal Worm Devours Connecticut"
+    ItemGUID:
+      type: string
+      nullable: true
+      description: GUID of an item.
+      example: "https://example.com/this-is-the-end"
+    ItemURL:
+      type: string
+      nullable: true
+      description: URL of an item.
+      example: "https://example.com/this-is-the-end"
+    ItemContent:
+      type: string
+      nullable: true
+      description: Content of an item.
+      example: >-
+        Once you beat the big badasses and clean out the moon base you're supposed to win, aren't you? Aren't you? Where's your fat reward and ticket home? What the hell is this? It's not supposed to end this way!
+
+        It stinks like rotten meat, but looks like the lost Deimos base. Looks like you're stuck on the shores of Hell. The only way out is through.
+
+        To continue the DOOM experience, play The Shores of Hell and its amazing sequel, Inferno! 
+  responses: 
+    NoContent:
+      description: The request succeeded, but the response does not contain any information.
+    Error:
+      description: Something went wrong.

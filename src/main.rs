@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate diesel;
 
+use actix_files as fs;
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer};
 use diesel::r2d2::ConnectionManager;
@@ -36,7 +37,7 @@ async fn get_channels(db: web::Data<DbPool>) -> web::Json<Vec<Channel>> {
     )
 }
 
-#[get("/items/{chan_id}")]
+#[get("/channel/{chan_id}/items")]
 async fn get_items(chan_id: web::Path<i32>, db: web::Data<DbPool>) -> web::Json<Vec<Item>> {
     let connection = db.get().unwrap();
     web::Json(
@@ -59,10 +60,10 @@ async fn new_channel(new_channel: web::Json<NewChannel>, db: web::Data<DbPool>) 
         .await
         .unwrap();
 
-    HttpResponse::new(StatusCode::ACCEPTED)
+    HttpResponse::new(StatusCode::CREATED)
 }
 
-#[post("/refresh/{channel_id}")]
+#[post("/channel/{channel_id}/refresh")]
 async fn refresh_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> HttpResponse {
     let id = id.into_inner();
     let connection = db.get().unwrap();
@@ -136,6 +137,7 @@ async fn main() -> std::io::Result<()> {
             .service(refresh)
             .service(refresh_channel)
             .service(get_items)
+            .service(fs::Files::new("/", "./static/").index_file("index.html"))
     })
     .bind("127.0.0.1:8080")?
     .run()
