@@ -1,29 +1,28 @@
-FROM rust:latest as cargo-build
+FROM rust:latest as planner
+WORKDIR app
+RUN cargo install cargo-chef 
+COPY . .
+RUN cargo chef prepare  --recipe-path recipe.json
 
-WORKDIR /usr/src/
+FROM rust:latest as cacher
+WORKDIR app
+RUN cargo install cargo-chef
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 
-# Build the dependencies. We do this in a seprate cargo build process to avoid redoing it for each build
-RUN cargo new --bin rss-aggregator
-WORKDIR /usr/src/rss-aggregator
-COPY ./Cargo.toml ./Cargo.toml 
-COPY ./Cargo.lock ./Cargo.lock
-RUN cargo build --release
+FROM rust:latest as builder
+RUN cargo install diesel_cli --no-default-features --features sqlite
+WORKDIR app
+COPY . .
+RUN diesel migration run
+COPY --from=cacher /app/target target
+RUN cargo build --release --bin rss-aggregator
 
-# Remove temporary files. Not sure it's useful, but it's cost nothing
-RUN rm -f target/release/deps/rss-aggregator* 
-RUN rm src/*.rs 
+FROM debian:stable-slim as runtime
+RUN apt-get update && apt-get install libssl-dev sqlite3 -y
+WORKDIR app
+COPY --from=builder /app/target/release/rss-aggregator /usr/local/bin
+COPY --from=builder /app/test.db .
+COPY static/ static/
 
-# Do the real build this time
-COPY ./src ./src
-RUN cargo build --release
-
-
-FROM debian:stable-slim
-LABEL maintainer="Eric <eric@pedr0.net>"
-
-RUN apt-get update && apt-get install libssl-dev -y
-COPY --from=cargo-build /usr/src/rss-aggregator/target/release/rss-aggregator /usr/local/bin/rss-aggregator
-COPY ./static ./static
-
-EXPOSE 8080
 ENTRYPOINT ["rss-aggregator"]
