@@ -14,6 +14,7 @@ FROM rust:latest as builder
 RUN cargo install diesel_cli --no-default-features --features sqlite
 WORKDIR app
 COPY . .
+RUN echo "DATABASE_URL=test.db" > .env
 RUN diesel migration run
 COPY --from=cacher /app/target target
 RUN cargo build --release --bin rss-aggregator

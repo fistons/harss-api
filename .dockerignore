@@ -5,3 +5,5 @@ Dockerfile
 README.md
 LICENSE
 *.db
+.gitignore
+.git/
