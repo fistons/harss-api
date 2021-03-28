@@ -1,3 +1,6 @@
+use diesel::SqliteConnection;
+use crate::model::channel::Channel;
+
 pub mod channel {
     use serde::{Deserialize, Serialize};
 
@@ -125,4 +128,32 @@ pub mod items {
             Ok(res)
         }
     }
+}
+pub async fn refresh(db: &SqliteConnection) -> Result<(), diesel::result::Error>{
+    let chans = channel::db::select_all(db)?;
+    
+    for chan in chans.iter() {
+        refresh_chan(db, &chan).await?;
+    }
+    
+    Ok(())
+}
+
+pub async fn refresh_chan(db: &SqliteConnection, channel: &Channel) -> Result<(), diesel::result::Error>{
+
+    println!("Fetching {}", &channel.name);
+
+    let content = reqwest::get(&channel.url)
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    let rss_channel = rss::Channel::read_from(&content[..]).unwrap();
+    for item in rss_channel.items.into_iter() {
+        let i = items::NewItem::from_rss_item(item, channel.id);
+        items::db::insert(i, &db).unwrap();
+    }
+
+    Ok(())
 }

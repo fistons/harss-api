@@ -10,6 +10,7 @@ use rss::Channel as RssChannel;
 
 use crate::model::channel::{Channel, NewChannel};
 use crate::model::items::Item;
+use crate::errors::ApiError;
 
 mod model;
 mod schema;
@@ -91,37 +92,19 @@ async fn refresh_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> HttpRespo
 }
 
 #[post("/refresh")]
-async fn refresh(db: web::Data<DbPool>) -> HttpResponse {
+async fn refresh(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
     println!("Refreshing");
-    let connection = db.get().unwrap();
+    model::refresh(&db.get().unwrap()).await?;
 
-    let channels = web::block(move || model::channel::db::select_all(&db.get().unwrap()))
-        .await
-        .unwrap();
-
-    for channel in channels {
-        println!("Fetching {}", &channel.name);
-
-        let content = reqwest::get(&channel.url)
-            .await
-            .unwrap()
-            .bytes()
-            .await
-            .unwrap();
-        let rss_channel = RssChannel::read_from(&content[..]).unwrap();
-        for item in rss_channel.items.into_iter() {
-            let i = model::items::NewItem::from_rss_item(item, channel.id);
-            model::items::db::insert(i, &connection).unwrap();
-        }
-    }
-
-    HttpResponse::new(StatusCode::ACCEPTED)
+    Ok(HttpResponse::new(StatusCode::ACCEPTED))
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+    
     // set up database connection pool
-    let connection_spec = "./test.db";
+    let connection_spec = std::env::var("DATABASE_URL").unwrap_or_else(|_| String::from("rss.db"));
     let manager = ConnectionManager::<SqliteConnection>::new(connection_spec);
     let pool: DbPool = r2d2::Pool::builder()
         .build(manager)
@@ -139,7 +122,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_items)
             .service(fs::Files::new("/", "./static/").index_file("index.html"))
     })
-    .bind("0.0.0.0:8080")?
+    .bind(std::env::var("LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")))?
     .run()
     .await
 }

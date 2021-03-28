@@ -6,7 +6,7 @@ use diesel::result::Error as DieselError;
 use serde_json::json;
 
 #[derive(Debug)]
-struct ApiError {
+pub struct ApiError {
     message: String,
 }
 
