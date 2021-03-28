@@ -127,7 +127,7 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool.");
 
-    println!("Starting");
+    println!("Starting!");
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
