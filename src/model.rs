@@ -1,6 +1,6 @@
 use crate::model::channel::Channel;
 use diesel::SqliteConnection;
-
+use log::debug;
 pub mod channel {
     use serde::{Deserialize, Serialize};
 
@@ -143,7 +143,7 @@ pub async fn refresh_chan(
     db: &SqliteConnection,
     channel: &Channel,
 ) -> Result<(), diesel::result::Error> {
-    println!("Fetching {}", &channel.name);
+    debug!("Fetching {}", &channel.name);
 
     let content = reqwest::get(&channel.url)
         .await

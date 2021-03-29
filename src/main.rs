@@ -10,7 +10,8 @@ use rss::Channel as RssChannel;
 
 use crate::errors::ApiError;
 use crate::model::channel::NewChannel;
-
+use log::{debug, info};
+use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 mod errors;
 mod model;
 mod schema;
@@ -52,7 +53,7 @@ async fn new_channel(
     new_channel: web::Json<NewChannel>,
     db: web::Data<DbPool>,
 ) -> Result<HttpResponse, ApiError> {
-    println!("Recording new channel {:?}", new_channel);
+    info!("Recording new channel {:?}", new_channel);
 
     let connection = db.get()?;
     let data = new_channel.into_inner();
@@ -69,12 +70,12 @@ async fn refresh_channel(
 ) -> Result<HttpResponse, ApiError> {
     let id = id.into_inner();
     let connection = db.get()?;
-    println!("Refreshing channel {}", id);
+    debug!("Refreshing channel {}", id);
 
     let channel =
         web::block(move || model::channel::db::select_by_id(id, &db.get().unwrap())).await?;
 
-    println!("Fetching {}", &channel.name);
+    debug!("Fetching {}", &channel.name);
 
     let content = reqwest::get(&channel.url)
         .await
@@ -93,7 +94,7 @@ async fn refresh_channel(
 
 #[post("/refresh")]
 async fn refresh(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
-    println!("Refreshing");
+    debug!("Refreshing");
     let connection = db.get()?;
     model::refresh(&connection).await?;
 
@@ -102,7 +103,17 @@ async fn refresh(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // Init dotenv
     dotenv::dotenv().ok();
+
+    // Init Logger
+    CombinedLogger::init(vec![TermLogger::new(
+        LevelFilter::Debug,
+        Config::default(),
+        TerminalMode::Mixed,
+        ColorChoice::Always,
+    )])
+    .unwrap();
 
     // set up database connection pool
     let connection_spec = std::env::var("DATABASE_URL").unwrap_or_else(|_| String::from("rss.db"));
@@ -111,7 +122,6 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool.");
 
-    println!("Starting!");
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
