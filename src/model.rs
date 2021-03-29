@@ -1,5 +1,5 @@
-use diesel::SqliteConnection;
 use crate::model::channel::Channel;
+use diesel::SqliteConnection;
 
 pub mod channel {
     use serde::{Deserialize, Serialize};
@@ -129,18 +129,20 @@ pub mod items {
         }
     }
 }
-pub async fn refresh(db: &SqliteConnection) -> Result<(), diesel::result::Error>{
+pub async fn refresh(db: &SqliteConnection) -> Result<(), diesel::result::Error> {
     let chans = channel::db::select_all(db)?;
-    
+
     for chan in chans.iter() {
         refresh_chan(db, &chan).await?;
     }
-    
+
     Ok(())
 }
 
-pub async fn refresh_chan(db: &SqliteConnection, channel: &Channel) -> Result<(), diesel::result::Error>{
-
+pub async fn refresh_chan(
+    db: &SqliteConnection,
+    channel: &Channel,
+) -> Result<(), diesel::result::Error> {
     println!("Fetching {}", &channel.name);
 
     let content = reqwest::get(&channel.url)

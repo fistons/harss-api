@@ -8,71 +8,71 @@ use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use rss::Channel as RssChannel;
 
-use crate::model::channel::{Channel, NewChannel};
-use crate::model::items::Item;
 use crate::errors::ApiError;
+use crate::model::channel::NewChannel;
 
+mod errors;
 mod model;
 mod schema;
-mod errors;
 
 type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 
 #[get("/channel/{id}")]
-async fn get_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> web::Json<Channel> {
-    let connection = db.get().unwrap();
-    web::Json(
-        web::block(move || model::channel::db::select_by_id(id.into_inner(), &connection))
-            .await
-            .unwrap(),
-    )
+async fn get_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
+    let connection = db.get()?;
+    let channel =
+        web::block(move || model::channel::db::select_by_id(id.into_inner(), &connection)).await?;
+
+    Ok(HttpResponse::Ok().json(channel))
 }
 
 #[get("/channels")]
-async fn get_channels(db: web::Data<DbPool>) -> web::Json<Vec<Channel>> {
-    let connection = db.get().unwrap();
-    web::Json(
-        web::block(move || model::channel::db::select_all(&connection))
-            .await
-            .unwrap(),
-    )
+async fn get_channels(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
+    let connection = db.get()?;
+    let channels = web::block(move || model::channel::db::select_all(&connection)).await?;
+    Ok(HttpResponse::Ok().json(channels))
 }
 
 #[get("/channel/{chan_id}/items")]
-async fn get_items(chan_id: web::Path<i32>, db: web::Data<DbPool>) -> web::Json<Vec<Item>> {
-    let connection = db.get().unwrap();
-    web::Json(
-        web::block(move || {
-            model::items::db::get_items_of_channel(chan_id.into_inner(), &connection)
-        })
-        .await
-        .unwrap(),
-    )
+async fn get_items(
+    chan_id: web::Path<i32>,
+    db: web::Data<DbPool>,
+) -> Result<HttpResponse, ApiError> {
+    let connection = db.get()?;
+    let items = web::block(move || {
+        model::items::db::get_items_of_channel(chan_id.into_inner(), &connection)
+    })
+    .await?;
+
+    Ok(HttpResponse::Ok().json(items))
 }
 
 #[post("/channels")]
-async fn new_channel(new_channel: web::Json<NewChannel>, db: web::Data<DbPool>) -> HttpResponse {
+async fn new_channel(
+    new_channel: web::Json<NewChannel>,
+    db: web::Data<DbPool>,
+) -> Result<HttpResponse, ApiError> {
     println!("Recording new channel {:?}", new_channel);
 
-    let connection = db.get().unwrap();
+    let connection = db.get()?;
     let data = new_channel.into_inner();
 
-    web::block(move || model::channel::db::insert(data, &connection))
-        .await
-        .unwrap();
+    web::block(move || model::channel::db::insert(data, &connection)).await?;
 
-    HttpResponse::new(StatusCode::CREATED)
+    Ok(HttpResponse::Created().finish())
 }
 
 #[post("/channel/{channel_id}/refresh")]
-async fn refresh_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> HttpResponse {
+async fn refresh_channel(
+    id: web::Path<i32>,
+    db: web::Data<DbPool>,
+) -> Result<HttpResponse, ApiError> {
     let id = id.into_inner();
-    let connection = db.get().unwrap();
+    let connection = db.get()?;
     println!("Refreshing channel {}", id);
 
-    let channel = web::block(move || model::channel::db::select_by_id(id, &db.get().unwrap()))
-        .await
-        .unwrap();
+    let channel =
+        web::block(move || model::channel::db::select_by_id(id, &db.get().unwrap())).await?;
 
     println!("Fetching {}", &channel.name);
 
@@ -85,16 +85,17 @@ async fn refresh_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> HttpRespo
     let rss_channel = RssChannel::read_from(&content[..]).unwrap();
     for item in rss_channel.items.into_iter() {
         let i = model::items::NewItem::from_rss_item(item, channel.id);
-        model::items::db::insert(i, &connection).unwrap();
+        model::items::db::insert(i, &connection)?;
     }
 
-    HttpResponse::new(StatusCode::ACCEPTED)
+    Ok(HttpResponse::Accepted().finish())
 }
 
 #[post("/refresh")]
 async fn refresh(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
     println!("Refreshing");
-    model::refresh(&db.get().unwrap()).await?;
+    let connection = db.get()?;
+    model::refresh(&connection).await?;
 
     Ok(HttpResponse::new(StatusCode::ACCEPTED))
 }
@@ -102,7 +103,7 @@ async fn refresh(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
-    
+
     // set up database connection pool
     let connection_spec = std::env::var("DATABASE_URL").unwrap_or_else(|_| String::from("rss.db"));
     let manager = ConnectionManager::<SqliteConnection>::new(connection_spec);
