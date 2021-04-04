@@ -1,6 +1,13 @@
-use crate::model::channel::Channel;
+use std::sync::Arc;
+use std::thread::sleep;
+use std::time::Duration;
+
 use diesel::SqliteConnection;
 use log::debug;
+
+use crate::DbPool;
+use crate::model::channel::Channel;
+
 pub mod channel {
     use serde::{Deserialize, Serialize};
 
@@ -29,27 +36,28 @@ pub mod channel {
 
         use super::Channel;
         use super::NewChannel;
+        use crate::DbPool;
+        use std::sync::Arc;
 
         pub fn insert(
             new_channel: NewChannel,
-            db: &SqliteConnection,
+            pool: Arc<DbPool>,
         ) -> Result<(), diesel::result::Error> {
             diesel::insert_into(channels)
                 .values(&new_channel)
-                .execute(db)?;
+                .execute(&pool.get().unwrap())?;
             Ok(())
         }
 
-        pub fn select_all(db: &SqliteConnection) -> Result<Vec<Channel>, diesel::result::Error> {
-            let r = channels.load::<Channel>(db)?;
-            Ok(r)
+        pub fn select_all(pool: &Arc<DbPool>) -> Result<Vec<Channel>, diesel::result::Error> {
+            channels.load::<Channel>(&pool.get().unwrap())
         }
 
         pub fn select_by_id(
             predicate: i32,
-            db: &SqliteConnection,
+            pool: &Arc<DbPool>,
         ) -> Result<Channel, diesel::result::Error> {
-            Ok(channels.filter(id.eq(predicate)).first::<Channel>(db)?)
+            channels.filter(id.eq(predicate)).first::<Channel>(&pool.get().unwrap())
         }
     }
 }
@@ -103,9 +111,12 @@ pub mod items {
     }
 
     pub mod db {
+        use std::sync::Arc;
+
         use diesel::prelude::*;
         use diesel::SqliteConnection;
 
+        use crate::DbPool;
         use crate::schema::items::dsl::*;
 
         use super::Item;
@@ -113,48 +124,44 @@ pub mod items {
 
         pub fn insert(
             new_item: NewItem,
-            db: &SqliteConnection,
+            pool: &Arc<DbPool>,
         ) -> Result<(), diesel::result::Error> {
-            diesel::insert_into(items).values(&new_item).execute(db)?;
+            diesel::insert_into(items).values(&new_item).execute(&pool.get().unwrap())?;
             Ok(())
         }
 
         pub fn get_items_of_channel(
             chan_id: i32,
-            db: &SqliteConnection,
+            pool: &Arc<DbPool>,
         ) -> Result<Vec<Item>, diesel::result::Error> {
-            let res = items.filter(channel_id.eq(chan_id)).load::<Item>(db)?;
-
-            Ok(res)
+            items.filter(channel_id.eq(chan_id)).load::<Item>(&pool.get().unwrap())
         }
     }
 }
-pub async fn refresh(db: &SqliteConnection) -> Result<(), diesel::result::Error> {
-    let chans = channel::db::select_all(db)?;
 
-    for chan in chans.iter() {
-        refresh_chan(db, &chan).await?;
+pub fn refresh(pool: &Arc<DbPool>) -> Result<(), diesel::result::Error> {
+    let channels = channel::db::select_all(pool)?;
+
+    for channel in channels.iter() {
+        refresh_chan(pool, &channel)?;
     }
-
     Ok(())
 }
 
-pub async fn refresh_chan(
-    db: &SqliteConnection,
+pub fn refresh_chan(
+    pool: &Arc<DbPool>,
     channel: &Channel,
 ) -> Result<(), diesel::result::Error> {
     debug!("Fetching {}", &channel.name);
-
-    let content = reqwest::get(&channel.url)
-        .await
+    
+    let content = reqwest::blocking::get(&channel.url)
         .unwrap()
         .bytes()
-        .await
         .unwrap();
     let rss_channel = rss::Channel::read_from(&content[..]).unwrap();
     for item in rss_channel.items.into_iter() {
         let i = items::NewItem::from_rss_item(item, channel.id);
-        items::db::insert(i, &db).unwrap();
+        items::db::insert(i, pool).unwrap();
     }
 
     Ok(())

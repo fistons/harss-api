@@ -12,6 +12,8 @@ use crate::errors::ApiError;
 use crate::model::channel::NewChannel;
 use log::{debug, info};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
+use std::thread::spawn;
+
 mod errors;
 mod model;
 mod schema;
@@ -20,28 +22,25 @@ type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 
 #[get("/channel/{id}")]
 async fn get_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
-    let connection = db.get()?;
     let channel =
-        web::block(move || model::channel::db::select_by_id(id.into_inner(), &connection)).await?;
+        web::block(move || model::channel::db::select_by_id(id.into_inner(), &db.into_inner())).await?;
 
     Ok(HttpResponse::Ok().json(channel))
 }
 
 #[get("/channels")]
 async fn get_channels(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
-    let connection = db.get()?;
-    let channels = web::block(move || model::channel::db::select_all(&connection)).await?;
+    let channels = web::block(move || model::channel::db::select_all(&db.into_inner())).await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
 #[get("/channel/{chan_id}/items")]
 async fn get_items(
     chan_id: web::Path<i32>,
-    db: web::Data<DbPool>,
+    pool: web::Data<DbPool>,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = db.get()?;
     let items = web::block(move || {
-        model::items::db::get_items_of_channel(chan_id.into_inner(), &connection)
+        model::items::db::get_items_of_channel(chan_id.into_inner(), &pool.into_inner())
     })
     .await?;
 
@@ -55,10 +54,9 @@ async fn new_channel(
 ) -> Result<HttpResponse, ApiError> {
     info!("Recording new channel {:?}", new_channel);
 
-    let connection = db.get()?;
     let data = new_channel.into_inner();
 
-    web::block(move || model::channel::db::insert(data, &connection)).await?;
+    web::block(move || model::channel::db::insert(data, db.into_inner())).await?;
 
     Ok(HttpResponse::Created().finish())
 }
@@ -66,14 +64,14 @@ async fn new_channel(
 #[post("/channel/{channel_id}/refresh")]
 async fn refresh_channel(
     id: web::Path<i32>,
-    db: web::Data<DbPool>,
+    pool: web::Data<DbPool>,
 ) -> Result<HttpResponse, ApiError> {
     let id = id.into_inner();
-    let connection = db.get()?;
+    let pool = pool.into_inner();
     debug!("Refreshing channel {}", id);
 
     let channel =
-        web::block(move || model::channel::db::select_by_id(id, &db.get().unwrap())).await?;
+        web::block(move || model::channel::db::select_by_id(id, &pool)).await?;
 
     debug!("Fetching {}", &channel.name);
 
@@ -86,7 +84,7 @@ async fn refresh_channel(
     let rss_channel = RssChannel::read_from(&content[..]).unwrap();
     for item in rss_channel.items.into_iter() {
         let i = model::items::NewItem::from_rss_item(item, channel.id);
-        model::items::db::insert(i, &connection)?;
+        model::items::db::insert(i, &pool)?;
     }
 
     Ok(HttpResponse::Accepted().finish())
@@ -95,8 +93,8 @@ async fn refresh_channel(
 #[post("/refresh")]
 async fn refresh(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
     debug!("Refreshing");
-    let connection = db.get()?;
-    model::refresh(&connection).await?;
+    
+    spawn(|| model::refresh(&db.into_inner()));
 
     Ok(HttpResponse::new(StatusCode::ACCEPTED))
 }
