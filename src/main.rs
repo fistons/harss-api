@@ -6,13 +6,12 @@ use actix_web::http::StatusCode;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
-use rss::Channel as RssChannel;
 
 use crate::errors::ApiError;
 use crate::model::channel::NewChannel;
 use log::{debug, info};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
-use std::thread::spawn;
+use std::thread;
 
 mod errors;
 mod model;
@@ -23,7 +22,8 @@ type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
 #[get("/channel/{id}")]
 async fn get_channel(id: web::Path<i32>, db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
     let channel =
-        web::block(move || model::channel::db::select_by_id(id.into_inner(), &db.into_inner())).await?;
+        web::block(move || model::channel::db::select_by_id(id.into_inner(), &db.into_inner()))
+            .await?;
 
     Ok(HttpResponse::Ok().json(channel))
 }
@@ -70,22 +70,7 @@ async fn refresh_channel(
     let pool = pool.into_inner();
     debug!("Refreshing channel {}", id);
 
-    let channel =
-        web::block(move || model::channel::db::select_by_id(id, &pool)).await?;
-
-    debug!("Fetching {}", &channel.name);
-
-    let content = reqwest::get(&channel.url)
-        .await
-        .unwrap()
-        .bytes()
-        .await
-        .unwrap();
-    let rss_channel = RssChannel::read_from(&content[..]).unwrap();
-    for item in rss_channel.items.into_iter() {
-        let i = model::items::NewItem::from_rss_item(item, channel.id);
-        model::items::db::insert(i, &pool)?;
-    }
+    thread::spawn(move || model::refresh_chan(&pool, id));
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -93,8 +78,8 @@ async fn refresh_channel(
 #[post("/refresh")]
 async fn refresh(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
     debug!("Refreshing");
-    
-    spawn(|| model::refresh(&db.into_inner()));
+
+    thread::spawn(move || model::refresh(&db.into_inner()));
 
     Ok(HttpResponse::new(StatusCode::ACCEPTED))
 }

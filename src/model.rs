@@ -1,12 +1,7 @@
 use std::sync::Arc;
-use std::thread::sleep;
-use std::time::Duration;
-
-use diesel::SqliteConnection;
 use log::debug;
 
 use crate::DbPool;
-use crate::model::channel::Channel;
 
 pub mod channel {
     use serde::{Deserialize, Serialize};
@@ -30,7 +25,6 @@ pub mod channel {
 
     pub mod db {
         use diesel::prelude::*;
-        use diesel::SqliteConnection;
 
         use crate::schema::channels::dsl::*;
 
@@ -57,7 +51,9 @@ pub mod channel {
             predicate: i32,
             pool: &Arc<DbPool>,
         ) -> Result<Channel, diesel::result::Error> {
-            channels.filter(id.eq(predicate)).first::<Channel>(&pool.get().unwrap())
+            channels
+                .filter(id.eq(predicate))
+                .first::<Channel>(&pool.get().unwrap())
         }
     }
 }
@@ -114,19 +110,17 @@ pub mod items {
         use std::sync::Arc;
 
         use diesel::prelude::*;
-        use diesel::SqliteConnection;
 
-        use crate::DbPool;
         use crate::schema::items::dsl::*;
+        use crate::DbPool;
 
         use super::Item;
         use super::NewItem;
 
-        pub fn insert(
-            new_item: NewItem,
-            pool: &Arc<DbPool>,
-        ) -> Result<(), diesel::result::Error> {
-            diesel::insert_into(items).values(&new_item).execute(&pool.get().unwrap())?;
+        pub fn insert(new_item: NewItem, pool: &Arc<DbPool>) -> Result<(), diesel::result::Error> {
+            diesel::insert_into(items)
+                .values(&new_item)
+                .execute(&pool.get().unwrap())?;
             Ok(())
         }
 
@@ -134,7 +128,9 @@ pub mod items {
             chan_id: i32,
             pool: &Arc<DbPool>,
         ) -> Result<Vec<Item>, diesel::result::Error> {
-            items.filter(channel_id.eq(chan_id)).load::<Item>(&pool.get().unwrap())
+            items
+                .filter(channel_id.eq(chan_id))
+                .load::<Item>(&pool.get().unwrap())
         }
     }
 }
@@ -143,17 +139,15 @@ pub fn refresh(pool: &Arc<DbPool>) -> Result<(), diesel::result::Error> {
     let channels = channel::db::select_all(pool)?;
 
     for channel in channels.iter() {
-        refresh_chan(pool, &channel)?;
+        refresh_chan(pool, channel.id)?;
     }
     Ok(())
 }
 
-pub fn refresh_chan(
-    pool: &Arc<DbPool>,
-    channel: &Channel,
-) -> Result<(), diesel::result::Error> {
+pub fn refresh_chan(pool: &Arc<DbPool>, channel_id: i32) -> Result<(), diesel::result::Error> {
+    let channel = channel::db::select_by_id(channel_id, pool)?;
     debug!("Fetching {}", &channel.name);
-    
+
     let content = reqwest::blocking::get(&channel.url)
         .unwrap()
         .bytes()
