@@ -1,10 +1,13 @@
+use std::thread;
+
 use actix_web::{get, post, web, HttpResponse};
 use log::{debug, info};
+use serde_json::json;
 
 use crate::errors::ApiError;
 use crate::model::channel::NewChannel;
-use crate::{model, DbPool};
-use std::thread;
+use crate::services;
+use crate::DbPool;
 
 #[get("/channel/{id}")]
 pub async fn get_channel(
@@ -12,7 +15,7 @@ pub async fn get_channel(
     db: web::Data<DbPool>,
 ) -> Result<HttpResponse, ApiError> {
     let channel =
-        web::block(move || model::channel::db::select_by_id(id.into_inner(), &db.into_inner()))
+        web::block(move || services::channels::select_by_id(id.into_inner(), &db.into_inner()))
             .await?;
 
     Ok(HttpResponse::Ok().json(channel))
@@ -20,7 +23,7 @@ pub async fn get_channel(
 
 #[get("/channels")]
 pub async fn get_channels(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
-    let channels = web::block(move || model::channel::db::select_all(&db.into_inner())).await?;
+    let channels = web::block(move || services::channels::select_all(&db.into_inner())).await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
@@ -33,9 +36,9 @@ async fn new_channel(
 
     let data = new_channel.into_inner();
 
-    web::block(move || model::channel::db::insert(data, db.into_inner())).await?;
+    let channel = web::block(move || services::channels::insert(data, db.into_inner())).await?;
 
-    Ok(HttpResponse::Created().finish())
+    Ok(HttpResponse::Created().json(json!({"id": channel.id})))
 }
 
 #[post("/channel/{channel_id}/refresh")]
@@ -47,7 +50,7 @@ async fn refresh_channel(
     let pool = pool.into_inner();
     debug!("Refreshing channel {}", id);
 
-    thread::spawn(move || model::refresh_chan(&pool, id));
+    thread::spawn(move || services::refresh_chan(&pool, id));
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -58,7 +61,7 @@ async fn get_items(
     pool: web::Data<DbPool>,
 ) -> Result<HttpResponse, ApiError> {
     let items = web::block(move || {
-        model::items::db::get_items_of_channel(chan_id.into_inner(), &pool.into_inner())
+        services::items::get_items_of_channel(chan_id.into_inner(), &pool.into_inner())
     })
     .await?;
 
