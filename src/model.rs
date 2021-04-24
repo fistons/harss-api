@@ -13,6 +13,7 @@ pub mod channel {
     pub struct NewChannel {
         pub name: String,
         pub url: String,
+        pub user_id: i32,
     }
 
     /// Source of articles, over da web
@@ -21,6 +22,7 @@ pub mod channel {
         pub id: i32,
         pub name: String,
         pub url: String,
+        pub user_id: i32,
     }
 
     pub mod db {

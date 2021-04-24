@@ -3,6 +3,7 @@ table! {
         id -> Integer,
         name -> Text,
         url -> Text,
+        user_id -> Integer,
     }
 }
 
@@ -18,6 +19,19 @@ table! {
     }
 }
 
+table! {
+    users (id) {
+        id -> Integer,
+        username -> Text,
+        password -> Text,
+    }
+}
+
+joinable!(channels -> users (user_id));
 joinable!(items -> channels (channel_id));
 
-allow_tables_to_appear_in_same_query!(channels, items,);
+allow_tables_to_appear_in_same_query!(
+    channels,
+    items,
+    users,
+);
