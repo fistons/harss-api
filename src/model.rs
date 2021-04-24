@@ -1,7 +1,29 @@
-use log::debug;
 use std::sync::Arc;
 
+use log::debug;
+
 use crate::DbPool;
+
+pub mod user {
+    use serde::{Deserialize, Serialize};
+
+    use crate::schema::users;
+
+    #[derive(Debug, Serialize, Deserialize, Clone, Insertable)]
+    #[table_name = "users"]
+    pub struct NewUser {
+        pub username: String,
+        pub password: String,
+    }
+
+    #[derive(Debug, Serialize, Deserialize, Clone, Queryable)]
+    pub struct User {
+        pub id: i32,
+        pub username: String,
+        pub password: String,
+    }
+}
+
 
 pub mod channel {
     use serde::{Deserialize, Serialize};
@@ -26,14 +48,15 @@ pub mod channel {
     }
 
     pub mod db {
+        use std::sync::Arc;
+
         use diesel::prelude::*;
 
+        use crate::DbPool;
         use crate::schema::channels::dsl::*;
 
         use super::Channel;
         use super::NewChannel;
-        use crate::DbPool;
-        use std::sync::Arc;
 
         pub fn insert(
             new_channel: NewChannel,
@@ -113,8 +136,8 @@ pub mod items {
 
         use diesel::prelude::*;
 
-        use crate::schema::items::dsl::*;
         use crate::DbPool;
+        use crate::schema::items::dsl::*;
 
         use super::Item;
         use super::NewItem;
