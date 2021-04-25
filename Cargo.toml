@@ -16,6 +16,7 @@ rss = { version = "1.10.0", features = ["validation", "atom"] }
 dotenv = "0.15"
 log="0.4"
 simplelog = "^0.10.0"
+rust-argon2 = "0.8"
 
 [dev-dependencies]
 actix-rt = "1"

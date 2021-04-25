@@ -1,10 +1,10 @@
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, HttpResponse, post, web};
 use log::info;
 use serde_json::json;
 
+use crate::DbPool;
 use crate::errors::ApiError;
 use crate::model::user::NewUser;
-use crate::DbPool;
 
 #[post("/users")]
 async fn new_user(
@@ -15,7 +15,7 @@ async fn new_user(
 
     let data = new_user.into_inner();
     let user =
-        web::block(move || crate::services::users::create_user(data, &db.into_inner())).await?;
+        web::block(move || crate::services::users::create_user(&data.username, &data.password, &db.into_inner())).await?;
 
     Ok(HttpResponse::Created().json(json!({"id": user.id})))
 }
