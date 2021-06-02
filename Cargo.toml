@@ -8,6 +8,7 @@ edition = "2018"
 reqwest = { version = "0.10", features = ["json", "blocking"] } # Request stuff over the web
 actix-web = { version = "3", features = ["compress"] } # Serve stuff over the web
 actix-files = "0.5"
+actix-web-httpauth = "0.5.0"
 r2d2 = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

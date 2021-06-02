@@ -6,7 +6,7 @@ use actix_web::{App, HttpServer};
 use diesel::r2d2::ConnectionManager;
 use diesel::{sql_types, SqliteConnection};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
-
+use actix_web_httpauth::middleware::HttpAuthentication;
 mod errors;
 mod model;
 mod routes;
@@ -37,9 +37,12 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool.");
 
+    
     HttpServer::new(move || {
+        let auth = HttpAuthentication::basic(services::validator);
         App::new()
             .data(pool.clone())
+            .wrap(auth)
             .configure(routes::channels::configure)
             .configure(routes::service::configure)
             .configure(routes::users::configure)

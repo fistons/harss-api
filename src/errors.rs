@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, error};
 
 use actix_web::error::BlockingError;
 use actix_web::http::StatusCode;
@@ -8,6 +8,7 @@ use r2d2::Error;
 use serde_json::json;
 use std::fmt::Error as FmtError;
 
+// TODO: This is a huge mess, fix this 
 #[derive(Debug)]
 pub struct ApiError {
     message: String,
@@ -58,3 +59,5 @@ impl ResponseError for ApiError {
             .json(json!({ "message": self.message }))
     }
 }
+
+impl error::Error for ApiError {}
