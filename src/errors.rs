@@ -1,12 +1,12 @@
-use std::{fmt, error};
+use std::{error, fmt};
+use std::fmt::Error as FmtError;
 
+use actix_web::{HttpResponse, ResponseError};
 use actix_web::error::BlockingError;
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, ResponseError};
 use diesel::result::Error as DieselError;
 use r2d2::Error;
 use serde_json::json;
-use std::fmt::Error as FmtError;
 
 // TODO: This is a huge mess, fix this 
 #[derive(Debug)]
@@ -15,35 +15,36 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    pub fn new(message: String) -> ApiError {
+    pub fn new(message: &str) -> ApiError {
+        let message = String::from(message);
         ApiError { message }
     }
 }
 
 impl From<DieselError> for ApiError {
     fn from(_: DieselError) -> ApiError {
-        ApiError::new(String::from("Database is all fucked up, yo"))
+        ApiError::new("Database is all fucked up, yo")
     }
 }
 
 impl<E> From<BlockingError<E>> for ApiError
-where
-    E: fmt::Debug,
+    where
+        E: fmt::Debug,
 {
     fn from(_: BlockingError<E>) -> ApiError {
-        ApiError::new(String::from("Blocked!"))
+        ApiError::new("Blocked!")
     }
 }
 
 impl From<FmtError> for ApiError {
     fn from(_: FmtError) -> Self {
-        ApiError::new(String::from("Error!"))
+        ApiError::new("Error!")
     }
 }
 
 impl From<Error> for ApiError {
     fn from(_: Error) -> Self {
-        ApiError::new(String::from("R2D2 Error!"))
+        ApiError::new("R2D2 Error!")
     }
 }
 
