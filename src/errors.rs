@@ -15,9 +15,8 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    pub fn new(message: &str) -> ApiError {
-        let message = String::from(message);
-        ApiError { message }
+    pub fn new<T>(message: T) -> ApiError where T: Into<String> {
+        ApiError { message: String::from(message.into()) }
     }
 }
 
