@@ -16,6 +16,8 @@ servers:
           - http
           - https
         default: https
+security:
+  - basicAuth: []
 tags:
   - name: Channels
     description: Channels related operation
@@ -135,7 +137,11 @@ paths:
       responses: 
         "202":
           $ref: '#/components/responses/NoContent'
-components: 
+components:
+  securitySchemes:
+    basicAuth: # <-- arbitrary name for the security scheme
+      type: http
+      scheme: basic
   schemas: 
     CreateChannelRequest:
       type: object
