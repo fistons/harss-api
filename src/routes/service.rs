@@ -12,7 +12,7 @@ use crate::services::auth::AuthedUser;
 #[post("/refresh")]
 pub async fn refresh(db: web::Data<DbPool>, auth: AuthedUser) -> Result<HttpResponse, ApiError> {
     debug!("Refreshing with {}", auth.login);
-    thread::spawn(move || services::refresh(&db.into_inner()));
+    thread::spawn(move || services::refresh(&db.into_inner(), auth.id));
 
     Ok(HttpResponse::new(StatusCode::ACCEPTED))
 }

@@ -5,11 +5,13 @@ use serde_json::json;
 use crate::DbPool;
 use crate::errors::ApiError;
 use crate::model::user::NewUser;
+use crate::services::auth::AuthedUser;
 
 #[post("/users")]
 async fn new_user(
     new_user: web::Json<NewUser>,
     db: web::Data<DbPool>,
+    _auth: Option<AuthedUser>, //Not needed for now
 ) -> Result<HttpResponse, ApiError> {
     info!("Recording new user {:?}", new_user);
 
@@ -21,7 +23,9 @@ async fn new_user(
 }
 
 #[get("/users")]
-async fn list_users(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
+async fn list_users(db: web::Data<DbPool>,
+                    _auth: AuthedUser, //No needed for now
+) -> Result<HttpResponse, ApiError> {
     info!("Get all users");
 
     let users = web::block(move || crate::services::users::list_users(&db.into_inner())).await?;
