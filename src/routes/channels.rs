@@ -1,14 +1,14 @@
 use std::thread;
 
-use actix_web::{get, HttpResponse, post, web};
+use actix_web::{get, post, web, HttpResponse};
 use log::{debug, info};
 use serde_json::json;
 
-use crate::DbPool;
 use crate::errors::ApiError;
 use crate::model::channel::NewChannel;
 use crate::services;
 use crate::services::auth::AuthedUser;
+use crate::DbPool;
 
 #[get("/channel/{id}")]
 pub async fn get_channel(
@@ -16,16 +16,22 @@ pub async fn get_channel(
     db: web::Data<DbPool>,
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let channel =
-        web::block(move || services::channels::select_by_id_and_user_id(auth.id, id.into_inner(), &db.into_inner()))
-            .await?;
+    let channel = web::block(move || {
+        services::channels::select_by_id_and_user_id(auth.id, id.into_inner(), &db.into_inner())
+    })
+    .await?;
 
     Ok(HttpResponse::Ok().json(channel))
 }
 
 #[get("/channels")]
-pub async fn get_channels(db: web::Data<DbPool>, auth: AuthedUser) -> Result<HttpResponse, ApiError> {
-    let channels = web::block(move || services::channels::select_all_by_user_id(&db.into_inner(), auth.id)).await?;
+pub async fn get_channels(
+    db: web::Data<DbPool>,
+    auth: AuthedUser,
+) -> Result<HttpResponse, ApiError> {
+    let channels =
+        web::block(move || services::channels::select_all_by_user_id(&db.into_inner(), auth.id))
+            .await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
@@ -68,11 +74,12 @@ async fn get_items(
 ) -> Result<HttpResponse, ApiError> {
     let items = web::block(move || {
         let pool = pool.into_inner();
-        let chan = services::channels::select_by_id_and_user_id(chan_id.into_inner(), auth.id, &pool)?;
-        
-        services::items::get_items_of_channel(chan.id,  &pool)
+        let chan =
+            services::channels::select_by_id_and_user_id(chan_id.into_inner(), auth.id, &pool)?;
+
+        services::items::get_items_of_channel(chan.id, &pool)
     })
-        .await?;
+    .await?;
 
     Ok(HttpResponse::Ok().json(items))
 }

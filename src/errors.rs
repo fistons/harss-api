@@ -1,14 +1,14 @@
-use std::{error, fmt};
 use std::fmt::Error as FmtError;
+use std::{error, fmt};
 
-use actix_web::{HttpResponse, ResponseError};
 use actix_web::error::BlockingError;
 use actix_web::http::StatusCode;
+use actix_web::{HttpResponse, ResponseError};
 use diesel::result::Error as DieselError;
 use r2d2::Error;
 use serde_json::json;
 
-// TODO: This is a huge mess, fix this 
+// TODO: This is a huge mess, fix this
 #[derive(Debug)]
 pub struct ApiError {
     message: String,
@@ -16,12 +16,24 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    pub fn default<T>(message: T) -> ApiError where T: Into<String> {
-        ApiError { message: String::from(message.into()), status: StatusCode::INTERNAL_SERVER_ERROR }
+    pub fn default<T>(message: T) -> ApiError
+    where
+        T: Into<String>,
+    {
+        ApiError {
+            message: String::from(message.into()),
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+        }
     }
-    
-    pub fn unauthorized<T>(message: T) -> ApiError where T: Into<String> {
-        ApiError { message: String::from(message.into()), status: StatusCode::UNAUTHORIZED }
+
+    pub fn unauthorized<T>(message: T) -> ApiError
+    where
+        T: Into<String>,
+    {
+        ApiError {
+            message: String::from(message.into()),
+            status: StatusCode::UNAUTHORIZED,
+        }
     }
 }
 
@@ -32,8 +44,8 @@ impl From<DieselError> for ApiError {
 }
 
 impl<E> From<BlockingError<E>> for ApiError
-    where
-        E: fmt::Debug,
+where
+    E: fmt::Debug,
 {
     fn from(_: BlockingError<E>) -> ApiError {
         ApiError::default("Blocked!")
@@ -60,8 +72,7 @@ impl fmt::Display for ApiError {
 
 impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
-        HttpResponse::build(self.status)
-            .json(json!({ "message": self.message }))
+        HttpResponse::build(self.status).json(json!({ "message": self.message }))
     }
 }
 

@@ -36,7 +36,6 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool.");
 
-    
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
