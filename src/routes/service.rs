@@ -5,13 +5,13 @@ use actix_web::{post, web, HttpResponse};
 use log::debug;
 
 use crate::errors::ApiError;
+use crate::services::auth::AuthedUser;
 use crate::{services, DbPool};
 
 #[post("/refresh")]
-pub async fn refresh(db: web::Data<DbPool>) -> Result<HttpResponse, ApiError> {
-    debug!("Refreshing");
-
-    thread::spawn(move || services::refresh(&db.into_inner()));
+pub async fn refresh(db: web::Data<DbPool>, auth: AuthedUser) -> Result<HttpResponse, ApiError> {
+    debug!("Refreshing with {}", auth.login);
+    thread::spawn(move || services::refresh(&db.into_inner(), auth.id));
 
     Ok(HttpResponse::new(StatusCode::ACCEPTED))
 }

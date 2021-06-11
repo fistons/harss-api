@@ -24,12 +24,22 @@ pub fn insert(
         .first::<Channel>(&connection)
 }
 
-pub fn select_all(pool: &Arc<DbPool>) -> Result<Vec<Channel>, diesel::result::Error> {
-    channels.load::<Channel>(&pool.get().unwrap())
+pub fn select_all_by_user_id(
+    pool: &Arc<DbPool>,
+    u_id: i32,
+) -> Result<Vec<Channel>, diesel::result::Error> {
+    channels
+        .filter(user_id.eq(u_id))
+        .load::<Channel>(&pool.get().unwrap())
+    // channels.load::<Channel>(&pool.get().unwrap())
 }
 
-pub fn select_by_id(predicate: i32, pool: &Arc<DbPool>) -> Result<Channel, diesel::result::Error> {
+pub fn select_by_id_and_user_id(
+    u_id: i32,
+    chan_id: i32,
+    pool: &Arc<DbPool>,
+) -> Result<Channel, diesel::result::Error> {
     channels
-        .filter(id.eq(predicate))
+        .filter(id.eq(chan_id).and(user_id.eq(u_id)))
         .first::<Channel>(&pool.get().unwrap())
 }

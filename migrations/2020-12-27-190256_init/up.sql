@@ -25,4 +25,4 @@ CREATE TABLE items
 );
 
 
-INSERT INTO users (id, username, password) VALUES (1, 'root', 'root')
+INSERT INTO users (id, username, password) VALUES (1, 'root', '$argon2i$v=19$m=4096,t=2,p=1$bGVwZXRpdGNlcmVib3M$MCSscpJ5MlsPvEpK7J5203kQ2tmdXKF5s2Oo47aQOyg')

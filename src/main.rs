@@ -6,7 +6,6 @@ use actix_web::{App, HttpServer};
 use diesel::r2d2::ConnectionManager;
 use diesel::{sql_types, SqliteConnection};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
-
 mod errors;
 mod model;
 mod routes;

@@ -1,21 +1,29 @@
-use crate::{services, DbPool};
-use log::debug;
 use std::sync::Arc;
+
+use log::debug;
+
+use crate::{services, DbPool};
+
+pub mod auth;
 pub mod channels;
 pub mod items;
 pub mod users;
 
-pub fn refresh(pool: &Arc<DbPool>) -> Result<(), diesel::result::Error> {
-    let channels = crate::services::channels::select_all(pool)?;
+pub fn refresh(pool: &Arc<DbPool>, user_id: i32) -> Result<(), diesel::result::Error> {
+    let channels = crate::services::channels::select_all_by_user_id(pool, user_id)?;
 
     for channel in channels.iter() {
-        refresh_chan(pool, channel.id)?;
+        refresh_chan(pool, channel.id, user_id)?;
     }
     Ok(())
 }
 
-pub fn refresh_chan(pool: &Arc<DbPool>, channel_id: i32) -> Result<(), diesel::result::Error> {
-    let channel = crate::services::channels::select_by_id(channel_id, pool)?;
+pub fn refresh_chan(
+    pool: &Arc<DbPool>,
+    channel_id: i32,
+    user_id: i32,
+) -> Result<(), diesel::result::Error> {
+    let channel = crate::services::channels::select_by_id_and_user_id(channel_id, user_id, pool)?;
     debug!("Fetching {}", &channel.name);
 
     let content = reqwest::blocking::get(&channel.url)
