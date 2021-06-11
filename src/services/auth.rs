@@ -1,4 +1,5 @@
 use actix_web::{dev, FromRequest, HttpRequest, web};
+use actix_web::http::HeaderMap;
 use actix_web::web::Data;
 use futures_util::future::{err, ok, Ready};
 use http_auth_basic::Credentials;
@@ -28,15 +29,9 @@ impl FromRequest for AuthedUser {
     fn from_request(req: &HttpRequest, _: &mut dev::Payload) -> Self::Future {
         let pool = req.app_data::<web::Data<DbPool>>().unwrap();
 
-        let token: &str = match req.headers().get("Authorization") {
-            None => return err(ApiError::new("No passaran")),
-            Some(header) => {
-                if let Ok(x) = header.to_str() {
-                    x
-                } else {
-                    return err(ApiError::new("fucked up"));
-                }
-            }
+        let token = match extract_value_authentication_header(req.headers()) {
+            Ok(header) => header,
+            Err(e) => return err(e)
         };
 
         return match extract_user_from_basic_auth(token, pool) {
@@ -46,13 +41,25 @@ impl FromRequest for AuthedUser {
     }
 }
 
+/// # Extract the authentication string form the Header
+fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, ApiError> {
+    let token: &str = match headers.get("Authorization") {
+        None => return Err(ApiError::default("No passaran")),
+        Some(header) => header.to_str().map_err(|_| ApiError::default("meh"))?
+    };
+
+    Ok(token)
+}
+
+
+/// # Verify user credentials
 fn extract_user_from_basic_auth(token: &str, pool: &Data<DbPool>) -> Result<User, ApiError> {
     let credentials = Credentials::from_header(token.into()).unwrap();
     let user = crate::services::users::get_user(&credentials.user_id, pool)
-        .map_err(|_| ApiError::new("Invalid credentials")).unwrap();
+        .map_err(|_| ApiError::unauthorized("Invalid credentials")).unwrap();
 
     if !crate::services::users::match_password(&user, &credentials.password) {
-        return Err(ApiError::new("Invalid credentials"));
+        return Err(ApiError::unauthorized("Invalid credentials"));
     }
 
     Ok(user)

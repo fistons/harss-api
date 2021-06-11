@@ -12,17 +12,22 @@ use serde_json::json;
 #[derive(Debug)]
 pub struct ApiError {
     message: String,
+    status: StatusCode,
 }
 
 impl ApiError {
-    pub fn new<T>(message: T) -> ApiError where T: Into<String> {
-        ApiError { message: String::from(message.into()) }
+    pub fn default<T>(message: T) -> ApiError where T: Into<String> {
+        ApiError { message: String::from(message.into()), status: StatusCode::INTERNAL_SERVER_ERROR }
+    }
+    
+    pub fn unauthorized<T>(message: T) -> ApiError where T: Into<String> {
+        ApiError { message: String::from(message.into()), status: StatusCode::UNAUTHORIZED }
     }
 }
 
 impl From<DieselError> for ApiError {
     fn from(_: DieselError) -> ApiError {
-        ApiError::new("Database is all fucked up, yo")
+        ApiError::default("Database is all fucked up, yo")
     }
 }
 
@@ -31,19 +36,19 @@ impl<E> From<BlockingError<E>> for ApiError
         E: fmt::Debug,
 {
     fn from(_: BlockingError<E>) -> ApiError {
-        ApiError::new("Blocked!")
+        ApiError::default("Blocked!")
     }
 }
 
 impl From<FmtError> for ApiError {
     fn from(_: FmtError) -> Self {
-        ApiError::new("Error!")
+        ApiError::default("Error!")
     }
 }
 
 impl From<Error> for ApiError {
     fn from(_: Error) -> Self {
-        ApiError::new("R2D2 Error!")
+        ApiError::default("R2D2 Error!")
     }
 }
 
@@ -55,7 +60,7 @@ impl fmt::Display for ApiError {
 
 impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
-        HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
+        HttpResponse::build(self.status)
             .json(json!({ "message": self.message }))
     }
 }
