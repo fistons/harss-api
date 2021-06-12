@@ -1778,9 +1778,11 @@ dependencies = [
  "actix-files",
  "actix-rt",
  "actix-web",
+ "chrono",
  "diesel",
  "dotenv",
  "futures-util",
+ "hmac",
  "http-auth-basic",
  "jwt",
  "log",
@@ -1790,6 +1792,7 @@ dependencies = [
  "rust-argon2",
  "serde",
  "serde_json",
+ "sha2",
  "simplelog",
 ]
 

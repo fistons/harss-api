@@ -64,6 +64,12 @@ impl From<Error> for ApiError {
     }
 }
 
+impl From<jwt::Error> for ApiError {
+    fn from(_: jwt::Error) -> Self {
+        ApiError::default("JWT encoding error!")
+    }
+}
+
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.message.as_str())
