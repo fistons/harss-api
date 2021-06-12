@@ -65,8 +65,8 @@ impl From<Error> for ApiError {
 }
 
 impl From<jwt::Error> for ApiError {
-    fn from(_: jwt::Error) -> Self {
-        ApiError::default("JWT encoding error!")
+    fn from(err: jwt::Error) -> Self {
+        ApiError::default(format!("JWT error: {}", err.to_string()))
     }
 }
 
