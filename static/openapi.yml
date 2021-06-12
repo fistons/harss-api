@@ -276,6 +276,8 @@ components:
           $ref: '#/components/schemas/ItemGUID'
         content:
           $ref: '#/components/schemas/ItemContent'
+        url:
+          $ref: '#/components/schemas/ItemURL'
         read:
           type: boolean
           description: Is the item has already been read?
