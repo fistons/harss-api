@@ -23,6 +23,8 @@ tags:
     description: Channels related operation
   - name: Items
     description: Items, a.k.a articles related operation
+  - name: Authentication
+    description: Login and stuff
 paths:
   /channels:
     get:
@@ -82,6 +84,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Channel'
+        default:
+          $ref: '#/components/responses/Error'
   /channel/{id}/refresh:
     post:
       operationId: refresh_channel
@@ -101,6 +105,8 @@ paths:
       responses:
         '202':
           $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
   /channel/{id}/items:
     get:
       operationId: get_items
@@ -126,6 +132,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Item'
+        default:
+          $ref: '#/components/responses/Error'
   /refresh:
     post:
       operationId: refresh
@@ -137,12 +145,78 @@ paths:
       responses: 
         "202":
           $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
+  /login:
+    post:
+      operationId: login
+      tags:
+        - Authentication
+      summary: Create a JWT
+      description: Creates a JWT. The generated token is available for 1 day. 
+      requestBody:
+        required: true
+        description: Users credentials.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: A JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        default:
+          $ref: '#/components/responses/Error'
 components:
   securitySchemes:
     basicAuth: # <-- arbitrary name for the security scheme
       type: http
       scheme: basic
-  schemas: 
+  schemas:
+    Token:
+      type: string
+      required: 
+        - access_token
+      properties:
+        access_token:
+          type: string
+          description: The JWT.
+    LoginRequest:
+      type: object
+      description: A login attempt request.
+      required:
+        - login
+        - password
+      properties:
+        login:
+          $ref: '#/components/schemas/UserLogin'
+        password:
+          $ref: '#/components/schemas/UserPassword'
+    UserLogin:
+      type: string
+      format: email
+      description: The user's login (i.e. it's email).
+      nullable: false
+      minLength: 1
+    UserPassword:
+      type: string
+      description: The user's password.
+      nullable: false
+      minLength: 1
+    UserID:
+      type: integer
+      description: The user's unique ID.
+      minimum: 1
+    UserName:
+      type: string
+      description: The user's name.
+      minLength: 1
+      nullable: false
     CreateChannelRequest:
       type: object
       description: A RSS Channel creation request.
@@ -185,7 +259,6 @@ components:
       nullable: false
       description: URL of a RSS channel.
       example: "https://canardpc.com/rss.xml"
-      
     Item:
       type: object
       required: 
@@ -235,9 +308,82 @@ components:
 
         It stinks like rotten meat, but looks like the lost Deimos base. Looks like you're stuck on the shores of Hell. The only way out is through.
 
-        To continue the DOOM experience, play The Shores of Hell and its amazing sequel, Inferno! 
-  responses: 
+        To continue the DOOM experience, play The Shores of Hell and its amazing sequel, Inferno!
+    GenericError:
+      type: object
+      properties:
+        message:
+          type: string
+    GenericProblem:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ProblemType'
+        title:
+          type: string
+          description: a short description of what went wrong
+        message:
+          type: string
+          description: Deprecated. Use `detail` instead
+          deprecated: true
+        detail:
+          type: string
+          description: A more detailed description of the problem
+        status:
+          type: integer
+          description: the HTTP response status
+    ProblemType:
+      type: string
+      description: |
+        a relative URI of the type of error. It can be used to identify what kind of error
+        this problem is about
+      example: /errors/something-bad
+      
+  responses:
+    default:
+      description: Something unexpected went wrong.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
     NoContent:
       description: The request succeeded, but the response does not contain any information.
     Error:
-      description: Something went wrong.
+      description: Something horrible and unexpected went wrong.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericError'
+    Forbidden:
+      description: This action is forbidden to the currently logged-in user.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericProblem'
+          examples:
+            forbidden:
+              value:
+                type: /errors/forbidden
+                title: Forbidden
+                status: 403
+                detail: Insufficient privileges.
+                message: Insufficient privileges.
+    Unauthorized:
+      description: The request contained invalid credentials, expired credentials,
+        or no credentials.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericProblem'
+          examples:
+            unauthorized:
+              value:
+                type: /errors/unauthorized
+                title: Unauthorized
+                status: 401
+                detail: Full authentication is required to access this resource
+                message: Full authentication is required to access this resource
+    
