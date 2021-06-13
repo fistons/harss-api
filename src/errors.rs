@@ -21,7 +21,7 @@ impl ApiError {
         T: Into<String>,
     {
         ApiError {
-            message: String::from(message.into()),
+            message: message.into(),
             status: StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -31,7 +31,7 @@ impl ApiError {
         T: Into<String>,
     {
         ApiError {
-            message: String::from(message.into()),
+            message: message.into(),
             status: StatusCode::UNAUTHORIZED,
         }
     }
@@ -61,6 +61,12 @@ impl From<FmtError> for ApiError {
 impl From<Error> for ApiError {
     fn from(_: Error) -> Self {
         ApiError::default("R2D2 Error!")
+    }
+}
+
+impl From<jwt::Error> for ApiError {
+    fn from(err: jwt::Error) -> Self {
+        ApiError::default(format!("JWT error: {}", err.to_string()))
     }
 }
 

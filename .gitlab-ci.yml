@@ -10,6 +10,26 @@ test:cargo:
   script:
     - rustc --version && cargo --version
     - cargo test --workspace --verbose
+      
+openapi linting:
+  image:
+    name: stoplight/spectral@sha256:3840979f18062e71ddf5cb31f1315315d24c2af446e53a4526fd3efc6aa6cb2e
+    entrypoint: [""]
+  tags:
+    - docker
+  stage: check
+  script:
+    - spectral lint --fail-severity=warn --format junit -o report.xml static/openapi.yml
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - report.xml
+    expire_in: 1 week
+    paths:
+      - report.xml
+  allow_failure: true
+  needs: []
 
 docker:
   # https://docs.gitlab.com/ee/ci/docker/using_kaniko.html

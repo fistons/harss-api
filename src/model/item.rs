@@ -35,12 +35,12 @@ impl NewItem {
         let read = false;
 
         NewItem {
-            title,
             guid,
+            title,
             url,
             content,
-            channel_id,
             read,
+            channel_id,
         }
     }
 }
