@@ -80,8 +80,10 @@ impl FromRequest for AuthedUser {
 /// # Extract the authentication string form the Header
 fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, ApiError> {
     let token: &str = match headers.get("Authorization") {
-        None => return Err(ApiError::default("No passaran")),
-        Some(header) => header.to_str().map_err(|_| ApiError::default("meh"))?,
+        None => return Err(ApiError::unauthorized("Missing Authorization header value")),
+        Some(header) => header.to_str().map_err(|x| {
+            ApiError::unauthorized(format!("Invalid Authentication header value: {}", x))
+        })?,
     };
 
     Ok(token)
