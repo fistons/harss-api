@@ -21,7 +21,7 @@ impl ApiError {
         T: Into<String>,
     {
         ApiError {
-            message: String::from(message.into()),
+            message: message.into(),
             status: StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -31,7 +31,7 @@ impl ApiError {
         T: Into<String>,
     {
         ApiError {
-            message: String::from(message.into()),
+            message: message.into(),
             status: StatusCode::UNAUTHORIZED,
         }
     }

@@ -135,5 +135,6 @@ fn verify_jwt(token: &str) -> Result<AuthedUser, ApiError> {
 }
 
 fn get_jwt_secret() -> String {
-    std::env::var("JWT_SECRET").unwrap_or(String::from("pouetpouet"))
+    std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| String::from("aecda4f3-08a2-43e4-8b42-575455ade8b0"))
 }
