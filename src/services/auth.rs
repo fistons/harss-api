@@ -55,11 +55,11 @@ impl FromRequest for AuthedUser {
             return err(ApiError::unauthorized("Invalid Authorization header value"));
         };
         return match (scheme, value) {
-            ("Bearer", token) => match verify_jwt(token) {
+            (bearer, token) if bearer.to_ascii_lowercase() == "bearer" => match verify_jwt(token) {
                 Ok(user) => ok(user),
                 Err(e) => err(e),
             },
-            ("Basic", _) => {
+            (basic, _) if basic.to_ascii_lowercase() == "basic" => {
                 let (user, password) = match extract_credentials_from_http_basic(header_value) {
                     Ok(credentials) => credentials,
                     Err(e) => return err(e),
