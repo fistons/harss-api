@@ -18,6 +18,7 @@ servers:
         default: https
 security:
   - basicAuth: []
+  - jwt: []
 tags:
   - name: Channels
     description: Channels related operation
@@ -174,9 +175,13 @@ paths:
           $ref: '#/components/responses/Error'
 components:
   securitySchemes:
-    basicAuth: # <-- arbitrary name for the security scheme
+    basicAuth:
       type: http
       scheme: basic
+    jwt: 
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     Token:
       type: string
