@@ -8,38 +8,35 @@ use crate::errors::ApiError;
 use crate::model::channel::NewChannel;
 use crate::services;
 use crate::services::auth::AuthedUser;
+use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
-use crate::DbPool;
 
 #[get("/channel/{id}")]
 pub async fn get_channel(
     id: web::Path<i32>,
-    db: web::Data<DbPool>,
+    channel_service: web::Data<ChannelService>,
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let channel = web::block(move || {
-        services::channels::select_by_id_and_user_id(auth.id, id.into_inner(), &db.into_inner())
-    })
-    .await?;
+    let channel =
+        web::block(move || channel_service.select_by_id_and_user_id(auth.id, id.into_inner()))
+            .await?;
 
     Ok(HttpResponse::Ok().json(channel))
 }
 
 #[get("/channels")]
 pub async fn get_channels(
-    db: web::Data<DbPool>,
+    channel_service: web::Data<ChannelService>,
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let channels =
-        web::block(move || services::channels::select_all_by_user_id(&db.into_inner(), auth.id))
-            .await?;
+    let channels = web::block(move || channel_service.select_all_by_user_id(auth.id)).await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
 #[post("/channels")]
 async fn new_channel(
     new_channel: web::Json<NewChannel>,
-    db: web::Data<DbPool>,
+    channel_service: web::Data<ChannelService>,
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
     info!("Recording new channel {:?}", new_channel);
@@ -47,7 +44,7 @@ async fn new_channel(
     let mut data = new_channel.into_inner();
     data.set_user_id(auth.id);
 
-    let channel = web::block(move || services::channels::insert(data, db.into_inner())).await?;
+    let channel = web::block(move || channel_service.insert(data)).await?;
 
     Ok(HttpResponse::Created().json(json!({"id": channel.id})))
 }
@@ -56,14 +53,13 @@ async fn new_channel(
 async fn refresh_channel(
     id: web::Path<i32>,
     item_service: web::Data<ItemService>,
-    pool: web::Data<DbPool>,
+    channel_service: web::Data<ChannelService>,
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
     let id = id.into_inner();
-    let pool = pool.into_inner();
     debug!("Refreshing channel {}", id);
 
-    thread::spawn(move || services::refresh_chan(&item_service.into_inner(), &pool, id, auth.id));
+    thread::spawn(move || services::refresh_chan(&item_service, &channel_service, id, auth.id));
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -72,14 +68,11 @@ async fn refresh_channel(
 async fn get_items(
     chan_id: web::Path<i32>,
     items_service: web::Data<ItemService>,
-    pool: web::Data<DbPool>,
+    channel_service: web::Data<ChannelService>,
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
     let items = web::block(move || {
-        let pool = pool.into_inner();
-        let chan =
-            services::channels::select_by_id_and_user_id(chan_id.into_inner(), auth.id, &pool)?;
-
+        let chan = channel_service.select_by_id_and_user_id(chan_id.into_inner(), auth.id)?;
         items_service.get_items_of_channel(chan.id)
     })
     .await?;

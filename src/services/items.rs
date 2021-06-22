@@ -9,7 +9,7 @@ use crate::{last_insert_rowid, DbPool};
 
 #[derive(Clone)]
 pub struct ItemService {
-    pub pool: Arc<DbPool>,
+    pub(crate) pool: Arc<DbPool>,
 }
 
 impl ItemService {
