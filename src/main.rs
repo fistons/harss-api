@@ -1,11 +1,14 @@
 #[macro_use]
 extern crate diesel;
 
+use crate::services::items::ItemService;
 use actix_files as fs;
 use actix_web::{App, HttpServer};
 use diesel::r2d2::ConnectionManager;
 use diesel::{sql_types, SqliteConnection};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
+use std::sync::Arc;
+
 mod errors;
 mod model;
 mod routes;
@@ -36,9 +39,14 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool.");
 
+    let item_service = ItemService {
+        pool: Arc::new(pool.clone()),
+    };
+
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
+            .data(item_service.clone())
             .configure(routes::channels::configure)
             .configure(routes::service::configure)
             .configure(routes::users::configure)

@@ -2,23 +2,29 @@ use std::sync::Arc;
 
 use log::debug;
 
-use crate::{services, DbPool};
+use crate::services::items::ItemService;
+use crate::DbPool;
 
 pub mod auth;
 pub mod channels;
 pub mod items;
 pub mod users;
 
-pub fn refresh(pool: &Arc<DbPool>, user_id: i32) -> Result<(), diesel::result::Error> {
+pub fn refresh(
+    pool: &Arc<DbPool>,
+    item_service: &ItemService,
+    user_id: i32,
+) -> Result<(), diesel::result::Error> {
     let channels = crate::services::channels::select_all_by_user_id(pool, user_id)?;
 
     for channel in channels.iter() {
-        refresh_chan(pool, channel.id, user_id)?;
+        refresh_chan(item_service, pool, channel.id, user_id)?;
     }
     Ok(())
 }
 
 pub fn refresh_chan(
+    item_service: &ItemService,
     pool: &Arc<DbPool>,
     channel_id: i32,
     user_id: i32,
@@ -33,7 +39,7 @@ pub fn refresh_chan(
     let rss_channel = rss::Channel::read_from(&content[..]).unwrap();
     for item in rss_channel.items.into_iter() {
         let i = crate::model::item::NewItem::from_rss_item(item, channel.id);
-        services::items::insert(i, pool).unwrap();
+        item_service.insert(i).unwrap();
     }
 
     Ok(())

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::ApiError;
 use crate::services::auth::AuthedUser;
+use crate::services::items::ItemService;
 use crate::{services, DbPool};
 use std::collections::HashMap;
 
@@ -17,9 +18,13 @@ pub struct LoginRequest {
 }
 
 #[post("/refresh")]
-pub async fn refresh(db: web::Data<DbPool>, auth: AuthedUser) -> Result<HttpResponse, ApiError> {
+pub async fn refresh(
+    db: web::Data<DbPool>,
+    auth: AuthedUser,
+    item_service: web::Data<ItemService>,
+) -> Result<HttpResponse, ApiError> {
     debug!("Refreshing with {}", auth.login);
-    thread::spawn(move || services::refresh(&db.into_inner(), auth.id));
+    thread::spawn(move || services::refresh(&db.into_inner(), &item_service, auth.id));
 
     Ok(HttpResponse::new(StatusCode::ACCEPTED))
 }

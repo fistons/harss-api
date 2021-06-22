@@ -8,6 +8,7 @@ use crate::errors::ApiError;
 use crate::model::channel::NewChannel;
 use crate::services;
 use crate::services::auth::AuthedUser;
+use crate::services::items::ItemService;
 use crate::DbPool;
 
 #[get("/channel/{id}")]
@@ -54,6 +55,7 @@ async fn new_channel(
 #[post("/channel/{channel_id}/refresh")]
 async fn refresh_channel(
     id: web::Path<i32>,
+    item_service: web::Data<ItemService>,
     pool: web::Data<DbPool>,
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
@@ -61,7 +63,7 @@ async fn refresh_channel(
     let pool = pool.into_inner();
     debug!("Refreshing channel {}", id);
 
-    thread::spawn(move || services::refresh_chan(&pool, id, auth.id));
+    thread::spawn(move || services::refresh_chan(&item_service.into_inner(), &pool, id, auth.id));
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -69,6 +71,7 @@ async fn refresh_channel(
 #[get("/channel/{chan_id}/items")]
 async fn get_items(
     chan_id: web::Path<i32>,
+    items_service: web::Data<ItemService>,
     pool: web::Data<DbPool>,
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
@@ -77,7 +80,7 @@ async fn get_items(
         let chan =
             services::channels::select_by_id_and_user_id(chan_id.into_inner(), auth.id, &pool)?;
 
-        services::items::get_items_of_channel(chan.id, &pool)
+        items_service.get_items_of_channel(chan.id)
     })
     .await?;
 
