@@ -7,10 +7,14 @@ use diesel::r2d2::ConnectionManager;
 use diesel::{sql_types, SqliteConnection};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 
+use crate::model::configuration::ApplicationConfiguration;
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
 use crate::services::users::UserService;
 use crate::services::GlobalService;
+use std::error::Error;
+use std::fs::File;
+use std::io::BufReader;
 
 mod errors;
 mod model;
@@ -47,12 +51,15 @@ async fn main() -> std::io::Result<()> {
     let user_service = UserService::new(pool.clone());
     let global_service = GlobalService::new(item_service.clone(), channel_service.clone());
 
+    let configuration = load_configuration().unwrap();
+
     HttpServer::new(move || {
         App::new()
             .data(global_service.clone())
             .data(item_service.clone())
             .data(channel_service.clone())
             .data(user_service.clone())
+            .data(configuration.clone())
             .configure(routes::channels::configure)
             .configure(routes::service::configure)
             .configure(routes::users::configure)
@@ -61,4 +68,14 @@ async fn main() -> std::io::Result<()> {
     .bind(std::env::var("LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")))?
     .run()
     .await
+}
+
+fn load_configuration() -> Result<ApplicationConfiguration, Box<dyn Error>> {
+    let file = File::open(
+        std::env::var("CONFIG_PATH").unwrap_or_else(|_| String::from("configuration.yaml")),
+    )?;
+    let reader = BufReader::new(file);
+    let configuration = serde_yaml::from_reader(reader)?;
+
+    Ok(configuration)
 }
