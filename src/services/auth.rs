@@ -11,7 +11,7 @@ use sha2::Sha256;
 
 use crate::errors::ApiError;
 use crate::model::user::User;
-use crate::DbPool;
+use crate::services::users::UserService;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AuthedUser {
@@ -40,7 +40,7 @@ impl FromRequest for AuthedUser {
     type Config = ();
 
     fn from_request(req: &HttpRequest, _: &mut dev::Payload) -> Self::Future {
-        let pool = req.app_data::<web::Data<DbPool>>().unwrap();
+        let user_service = req.app_data::<web::Data<UserService>>().unwrap();
 
         let header_value = match extract_value_authentication_header(req.headers()) {
             Ok(header) => header,
@@ -64,7 +64,7 @@ impl FromRequest for AuthedUser {
                     Ok(credentials) => credentials,
                     Err(e) => return err(e),
                 };
-                match get_and_check_user(&user, &password, pool) {
+                match get_and_check_user(&user, &password, &user_service) {
                     Ok(u) => ok(AuthedUser::from_user(&u)),
                     Err(e) => err(e),
                 }
@@ -90,8 +90,13 @@ fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, ApiE
 }
 
 /// # Retrieve a user and check its credentials
-fn get_and_check_user(user: &str, password: &str, pool: &Data<DbPool>) -> Result<User, ApiError> {
-    let user = crate::services::users::get_user(user, pool)
+fn get_and_check_user(
+    user: &str,
+    password: &str,
+    user_service: &UserService,
+) -> Result<User, ApiError> {
+    let user = user_service
+        .get_user(user)
         .map_err(|_| ApiError::unauthorized("Invalid credentials"))
         .unwrap();
 
@@ -109,8 +114,12 @@ fn extract_credentials_from_http_basic(token: &str) -> Result<(String, String), 
 }
 
 /// # Generate a JWT for the given user password
-pub fn get_jwt(user: &str, password: &str, pool: &Data<DbPool>) -> Result<String, ApiError> {
-    let user = get_and_check_user(user, password, pool)?;
+pub fn get_jwt(
+    user: &str,
+    password: &str,
+    user_service: Data<UserService>,
+) -> Result<String, ApiError> {
+    let user = get_and_check_user(user, password, &user_service)?;
 
     let authed_user = AuthedUser::from_user(&user);
     let utc: DateTime<Utc> = Utc::now() + Duration::days(1);

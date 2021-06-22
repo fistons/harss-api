@@ -6,6 +6,12 @@ use actix_web::{App, HttpServer};
 use diesel::r2d2::ConnectionManager;
 use diesel::{sql_types, SqliteConnection};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
+
+use crate::services::channels::ChannelService;
+use crate::services::items::ItemService;
+use crate::services::users::UserService;
+use crate::services::GlobalService;
+
 mod errors;
 mod model;
 mod routes;
@@ -36,9 +42,17 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool.");
 
+    let item_service = ItemService::new(pool.clone());
+    let channel_service = ChannelService::new(pool.clone());
+    let user_service = UserService::new(pool.clone());
+    let global_service = GlobalService::new(item_service.clone(), channel_service.clone());
+
     HttpServer::new(move || {
         App::new()
-            .data(pool.clone())
+            .data(global_service.clone())
+            .data(item_service.clone())
+            .data(channel_service.clone())
+            .data(user_service.clone())
             .configure(routes::channels::configure)
             .configure(routes::service::configure)
             .configure(routes::users::configure)
