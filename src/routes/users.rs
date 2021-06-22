@@ -3,6 +3,7 @@ use log::info;
 use serde_json::json;
 
 use crate::errors::ApiError;
+use crate::model::configuration::ApplicationConfiguration;
 use crate::model::user::NewUser;
 use crate::services::auth::AuthedUser;
 use crate::services::users::UserService;
@@ -11,14 +12,20 @@ use crate::services::users::UserService;
 async fn new_user(
     new_user: web::Json<NewUser>,
     user_service: web::Data<UserService>,
-    _auth: Option<AuthedUser>, //Not needed for now
+    auth: Option<AuthedUser>, //Not needed for now
+    configuration: web::Data<ApplicationConfiguration>,
 ) -> Result<HttpResponse, ApiError> {
-    info!("Recording new user {:?}", new_user);
+    if configuration.allow_account_creation || auth.is_some() {
+        info!("Recording new user {:?}", new_user);
+        let data = new_user.into_inner();
+        let user =
+            web::block(move || user_service.create_user(&data.username, &data.password)).await?;
 
-    let data = new_user.into_inner();
-    let user = web::block(move || user_service.create_user(&data.username, &data.password)).await?;
-
-    Ok(HttpResponse::Created().json(json!({"id": user.id})))
+        Ok(HttpResponse::Created().json(json!({"id": user.id})))
+    } else {
+        log::debug!("User creation attempt while it's disabled");
+        Ok(HttpResponse::Unauthorized().finish())
+    }
 }
 
 #[get("/users")]
