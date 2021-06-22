@@ -6,10 +6,10 @@ use serde_json::json;
 
 use crate::errors::ApiError;
 use crate::model::channel::NewChannel;
-use crate::services;
 use crate::services::auth::AuthedUser;
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
+use crate::services::GlobalService;
 
 #[get("/channel/{id}")]
 pub async fn get_channel(
@@ -52,14 +52,13 @@ async fn new_channel(
 #[post("/channel/{channel_id}/refresh")]
 async fn refresh_channel(
     id: web::Path<i32>,
-    item_service: web::Data<ItemService>,
-    channel_service: web::Data<ChannelService>,
+    global_service: web::Data<GlobalService>,
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
     let id = id.into_inner();
     debug!("Refreshing channel {}", id);
 
-    thread::spawn(move || services::refresh_chan(&item_service, &channel_service, id, auth.id));
+    thread::spawn(move || global_service.refresh_chan(id, auth.id));
 
     Ok(HttpResponse::Accepted().finish())
 }
