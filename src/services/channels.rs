@@ -9,10 +9,16 @@ use crate::{last_insert_rowid, DbPool};
 
 #[derive(Clone)]
 pub struct ChannelService {
-    pub(crate) pool: Arc<DbPool>,
+    pool: Arc<DbPool>,
 }
 
 impl ChannelService {
+    pub fn new(pool: DbPool) -> Self {
+        Self {
+            pool: Arc::new(pool),
+        }
+    }
+
     pub fn insert(&self, new_channel: NewChannel) -> Result<Channel, diesel::result::Error> {
         let connection = self.pool.get().unwrap();
 

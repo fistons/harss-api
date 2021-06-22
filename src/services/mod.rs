@@ -12,11 +12,18 @@ pub mod users;
 
 #[derive(Clone)]
 pub struct GlobalService {
-    pub(crate) item_service: Arc<ItemService>,
-    pub(crate) channel_service: Arc<ChannelService>,
+    item_service: Arc<ItemService>,
+    channel_service: Arc<ChannelService>,
 }
 
 impl GlobalService {
+    pub fn new(item_service: ItemService, channel_service: ChannelService) -> Self {
+        Self {
+            item_service: Arc::new(item_service),
+            channel_service: Arc::new(channel_service),
+        }
+    }
+
     pub fn refresh(
         &self,
         // item_service: &ItemService,

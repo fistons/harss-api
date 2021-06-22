@@ -9,10 +9,16 @@ use crate::{last_insert_rowid, DbPool};
 
 #[derive(Clone)]
 pub struct UserService {
-    pub(crate) pool: Arc<DbPool>,
+    pool: Arc<DbPool>,
 }
 
 impl UserService {
+    pub fn new(pool: DbPool) -> Self {
+        Self {
+            pool: Arc::new(pool),
+        }
+    }
+
     pub fn create_user(&self, login: &str, pwd: &str) -> Result<User, diesel::result::Error> {
         let connection = self.pool.get().unwrap();
 

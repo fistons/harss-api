@@ -1,16 +1,16 @@
 #[macro_use]
 extern crate diesel;
 
-use crate::services::channels::ChannelService;
-use crate::services::items::ItemService;
-use crate::services::users::UserService;
-use crate::services::GlobalService;
 use actix_files as fs;
 use actix_web::{App, HttpServer};
 use diesel::r2d2::ConnectionManager;
 use diesel::{sql_types, SqliteConnection};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
-use std::sync::Arc;
+
+use crate::services::channels::ChannelService;
+use crate::services::items::ItemService;
+use crate::services::users::UserService;
+use crate::services::GlobalService;
 
 mod errors;
 mod model;
@@ -42,22 +42,10 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool.");
 
-    let item_service = ItemService {
-        pool: Arc::new(pool.clone()),
-    };
-
-    let channel_service = ChannelService {
-        pool: Arc::new(pool.clone()),
-    };
-
-    let user_service = UserService {
-        pool: Arc::new(pool.clone()),
-    };
-
-    let global_service = GlobalService {
-        channel_service: Arc::new(channel_service.clone()),
-        item_service: Arc::new(item_service.clone()),
-    };
+    let item_service = ItemService::new(pool.clone());
+    let channel_service = ChannelService::new(pool.clone());
+    let user_service = UserService::new(pool.clone());
+    let global_service = GlobalService::new(item_service.clone(), channel_service.clone());
 
     HttpServer::new(move || {
         App::new()
