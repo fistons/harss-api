@@ -3,6 +3,7 @@ extern crate diesel;
 
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
+use crate::services::users::UserService;
 use actix_files as fs;
 use actix_web::{App, HttpServer};
 use diesel::r2d2::ConnectionManager;
@@ -48,11 +49,16 @@ async fn main() -> std::io::Result<()> {
         pool: Arc::new(pool.clone()),
     };
 
+    let user_service = UserService {
+        pool: Arc::new(pool.clone()),
+    };
+
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
             .data(item_service.clone())
             .data(channel_service.clone())
+            .data(user_service.clone())
             .configure(routes::channels::configure)
             .configure(routes::service::configure)
             .configure(routes::users::configure)

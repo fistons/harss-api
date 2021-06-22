@@ -6,10 +6,11 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::ApiError;
+use crate::services;
 use crate::services::auth::AuthedUser;
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
-use crate::{services, DbPool};
+use crate::services::users::UserService;
 use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize)]
@@ -33,9 +34,9 @@ pub async fn refresh(
 #[post("/login")]
 pub async fn login(
     login: web::Json<LoginRequest>,
-    db: web::Data<DbPool>,
+    user_service: web::Data<UserService>,
 ) -> Result<HttpResponse, ApiError> {
-    let token = crate::services::auth::get_jwt(&login.login, &login.password, &db)?;
+    let token = crate::services::auth::get_jwt(&login.login, &login.password, user_service)?;
     let mut tok = HashMap::new();
 
     //TODO: refresh token one day maybe (cf https://git.pedr0.net/twitch/rss-aggregator/-/issues/6)

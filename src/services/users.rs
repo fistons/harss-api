@@ -7,35 +7,38 @@ use crate::model::user::{NewUser, User};
 use crate::schema::users::dsl::*;
 use crate::{last_insert_rowid, DbPool};
 
-pub fn create_user(
-    login: &str,
-    pwd: &str,
-    pool: &Arc<DbPool>,
-) -> Result<User, diesel::result::Error> {
-    let connection = pool.get().unwrap();
-
-    let new_user = NewUser {
-        username: String::from(login),
-        password: encode_password(pwd),
-    };
-
-    diesel::insert_into(users)
-        .values(&new_user)
-        .execute(&connection)?;
-
-    let generated_id: i32 = select(last_insert_rowid).first(&connection).unwrap();
-
-    users.filter(id.eq(generated_id)).first::<User>(&connection)
+#[derive(Clone)]
+pub struct UserService {
+    pub(crate) pool: Arc<DbPool>,
 }
 
-pub fn list_users(pool: &Arc<DbPool>) -> Result<Vec<User>, diesel::result::Error> {
-    users.load::<User>(&pool.get().unwrap())
-}
+impl UserService {
+    pub fn create_user(&self, login: &str, pwd: &str) -> Result<User, diesel::result::Error> {
+        let connection = self.pool.get().unwrap();
 
-pub fn get_user(wanted_username: &str, pool: &Arc<DbPool>) -> Result<User, diesel::result::Error> {
-    users
-        .filter(username.eq(wanted_username))
-        .first::<User>(&pool.get().unwrap())
+        let new_user = NewUser {
+            username: String::from(login),
+            password: encode_password(pwd),
+        };
+
+        diesel::insert_into(users)
+            .values(&new_user)
+            .execute(&connection)?;
+
+        let generated_id: i32 = select(last_insert_rowid).first(&connection).unwrap();
+
+        users.filter(id.eq(generated_id)).first::<User>(&connection)
+    }
+
+    pub fn list_users(&self) -> Result<Vec<User>, diesel::result::Error> {
+        users.load::<User>(&self.pool.get().unwrap())
+    }
+
+    pub fn get_user(&self, wanted_username: &str) -> Result<User, diesel::result::Error> {
+        users
+            .filter(username.eq(wanted_username))
+            .first::<User>(&self.pool.get().unwrap())
+    }
 }
 
 fn encode_password(pwd: &str) -> String {
