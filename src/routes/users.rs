@@ -15,7 +15,7 @@ async fn new_user(
     auth: Option<AuthedUser>, //Not needed for now
     configuration: web::Data<ApplicationConfiguration>,
 ) -> Result<HttpResponse, ApiError> {
-    if configuration.allow_account_creation || auth.is_some() {
+    if configuration.allow_account_creation.unwrap_or(false) || auth.is_some() {
         info!("Recording new user {:?}", new_user);
         let data = new_user.into_inner();
         let user =

@@ -2,7 +2,7 @@
 extern crate diesel;
 
 use actix_files as fs;
-use actix_web::{App, HttpServer};
+use actix_web::{web, App, HttpServer};
 use diesel::r2d2::ConnectionManager;
 use diesel::{sql_types, SqliteConnection};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
@@ -15,6 +15,8 @@ use crate::services::GlobalService;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
+use std::sync::Mutex;
+use ttl_cache::TtlCache;
 
 mod errors;
 mod model;
@@ -53,6 +55,8 @@ async fn main() -> std::io::Result<()> {
 
     let configuration = load_configuration().unwrap();
 
+    let cache = web::Data::new(Cache::new());
+
     HttpServer::new(move || {
         App::new()
             .data(global_service.clone())
@@ -60,9 +64,11 @@ async fn main() -> std::io::Result<()> {
             .data(channel_service.clone())
             .data(user_service.clone())
             .data(configuration.clone())
+            .app_data(cache.clone())
             .configure(routes::channels::configure)
             .configure(routes::service::configure)
             .configure(routes::users::configure)
+            .configure(routes::auth::configure)
             .service(fs::Files::new("/", "./static/").index_file("index.html"))
     })
     .bind(std::env::var("LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")))?
@@ -78,4 +84,16 @@ fn load_configuration() -> Result<ApplicationConfiguration, Box<dyn Error>> {
     let configuration = serde_yaml::from_reader(reader)?;
 
     Ok(configuration)
+}
+
+pub struct Cache {
+    pub cache: Mutex<TtlCache<String, String>>,
+}
+
+impl Cache {
+    fn new() -> Self {
+        Cache {
+            cache: Mutex::new(TtlCache::new(1024)),
+        }
+    }
 }
