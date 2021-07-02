@@ -33,7 +33,7 @@ pub async fn login(
     )?;
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4().to_string());
 
-    let mut cache = cache.cache.lock().unwrap();
+    let mut cache = cache.cache_mutex.lock().unwrap();
     cache.insert(
         String::from(&refresh_token),
         String::from(&login.login),
@@ -50,29 +50,21 @@ pub async fn refresh_auth(
     user_service: web::Data<UserService>,
     cache: web::Data<Cache>,
 ) -> Result<HttpResponse, ApiError> {
-    let mut cache = cache.cache.lock().unwrap();
+    let cache = cache.cache_mutex.lock().unwrap();
     match cache.get(&refresh_token.token) {
         Some(user_login) => {
             let user = user_service.get_user(&user_login)?;
 
-            /* Create a new pair of tokens */
+            /* Create a new JWT */
             let access_token = crate::services::auth::get_jwt(&user)?;
-            let new_refresh_token =
-                format!("user.{}.{}", &user.username, Uuid::new_v4().to_string());
 
-            cache.remove(&refresh_token.token); /* Remove the old token */
-            cache.insert(
-                String::from(&new_refresh_token),
-                String::from(&user.username),
-                get_duration(),
-            );
-            Ok(HttpResponse::Ok()
-                .json(json!({"access_token": access_token, "refresh_token": new_refresh_token})))
+            Ok(HttpResponse::Ok().json(json!({ "access_token": access_token })))
         }
         _ => Ok(HttpResponse::Unauthorized().finish()),
     }
 }
 
+/// # Return the duration of the refresh token
 fn get_duration() -> Duration {
     Duration::from_secs(60 * 60 * 24 * 5) // 5 Days
 }

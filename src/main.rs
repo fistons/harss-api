@@ -87,13 +87,13 @@ fn load_configuration() -> Result<ApplicationConfiguration, Box<dyn Error>> {
 }
 
 pub struct Cache {
-    pub cache: Mutex<TtlCache<String, String>>,
+    pub cache_mutex: Mutex<TtlCache<String, String>>,
 }
 
 impl Cache {
     fn new() -> Self {
         Cache {
-            cache: Mutex::new(TtlCache::new(1024)),
+            cache_mutex: Mutex::new(TtlCache::new(1024)),
         }
     }
 }
