@@ -193,11 +193,13 @@ paths:
               $ref: '#/components/schemas/RefreshRequest'
       responses:
         '200':
-          description: A token pair
+          description: A new JWT
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Token'
+                properties:
+                  access_token:
+                    $ref: '#/components/schemas/Jwt'
         '401':
           $ref: '#/components/responses/Unauthorized'
         default:
@@ -362,11 +364,6 @@ components:
         It stinks like rotten meat, but looks like the lost Deimos base. Looks like you're stuck on the shores of Hell. The only way out is through.
 
         To continue the DOOM experience, play The Shores of Hell and its amazing sequel, Inferno!
-    GenericError:
-      type: object
-      properties:
-        message:
-          type: string
     GenericProblem:
       type: object
       properties:
@@ -375,10 +372,6 @@ components:
         title:
           type: string
           description: a short description of what went wrong
-        message:
-          type: string
-          description: Deprecated. Use `detail` instead
-          deprecated: true
         detail:
           type: string
           description: A more detailed description of the problem
@@ -398,10 +391,7 @@ components:
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              message:
-                type: string
+            $ref: '#/components/schemas/GenericProblem'
     NoContent:
       description: The request succeeded, but the response does not contain any information.
     Error:
@@ -409,7 +399,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/GenericError'
+            $ref: '#/components/schemas/GenericProblem'
     Forbidden:
       description: This action is forbidden to the currently logged-in user.
       content:
