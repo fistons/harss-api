@@ -3,7 +3,7 @@ info:
   title: RSS API
   description: An RSS API in rust
   version: 0.0.1
-  contact: 
+  contact:
     name: Eric
     email: eric@pedr0.net
     url: https://pedr0.net
@@ -17,8 +17,8 @@ servers:
           - https
         default: https
 security:
-  - basicAuth: []
-  - jwt: []
+  - basicAuth: [ ]
+  - jwt: [ ]
 tags:
   - name: Channels
     description: Channels related operation
@@ -43,22 +43,22 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Channel'
-        default: 
+        default:
           $ref: '#/components/responses/Error'
-    post: 
+    post:
       operationId: new_channel
-      tags: 
+      tags:
         - Channels
       summary: Create a new channel.
       description: Create a new RSS channel to be polled frequently.
       requestBody:
         required: true
         description: Channel creation request.
-        content: 
+        content:
           application/json:
-            schema: 
+            schema:
               $ref: '#/components/schemas/CreateChannelRequest'
-      responses: 
+      responses:
         '201':
           $ref: '#/components/responses/NoContent'
         default:
@@ -76,12 +76,12 @@ paths:
           description: Unique ID of a channel
           required: true
           example: 1
-          schema: 
+          schema:
             $ref: '#/components/schemas/ChannelID'
-      responses: 
+      responses:
         '200':
           description: A single channel
-          content: 
+          content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Channel'
@@ -127,9 +127,9 @@ paths:
       responses:
         '200':
           description: A list of item
-          content: 
+          content:
             application/json:
-              schema: 
+              schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Item'
@@ -143,18 +143,20 @@ paths:
         - Items
       summary: Refresh all channels
       description: Fetchs all items of all channels
-      responses: 
+      responses:
         "202":
           $ref: '#/components/responses/NoContent'
         default:
           $ref: '#/components/responses/Error'
-  /login:
+  /auth/login:
     post:
       operationId: login
       tags:
         - Authentication
-      summary: Create a JWT
-      description: Creates a JWT. The generated token is available for 1 day. 
+      summary: Create a JWT and a refresh token
+      description: |
+        Creates a JWT/refresh token. The generated token is valid for 15 minutes. The refresh token is valid
+        for 5 days
       requestBody:
         required: true
         description: Users credentials.
@@ -164,11 +166,40 @@ paths:
               $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: A JWT
+          description: A token pair
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Token'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        default:
+          $ref: '#/components/responses/Error'
+  /auth/refresh:
+    post:
+      operationId: refresh_auth
+      tags:
+        - Authentication
+      summary: Refresh the JWT
+      description: |
+        Creates a JWT/refresh token. The generated JWT is valid for 15 minutes. The refresh token is valid
+        for 5 days
+      requestBody:
+        required: true
+        description: Refresh token.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: A new JWT
+          content:
+            application/json:
+              schema:
+                properties:
+                  access_token:
+                    $ref: '#/components/schemas/Jwt'
         '401':
           $ref: '#/components/responses/Unauthorized'
         default:
@@ -178,19 +209,36 @@ components:
     basicAuth:
       type: http
       scheme: basic
-    jwt: 
+    jwt:
       type: http
       scheme: bearer
       bearerFormat: JWT
   schemas:
     Token:
-      type: string
-      required: 
+      type: object
+      required:
         - access_token
+        - refresh_token
       properties:
         access_token:
-          type: string
-          description: The JWT.
+          $ref: '#/components/schemas/Jwt'
+        refresh_token:
+          $ref: '#/components/schemas/RefreshToken'
+    Jwt:
+      type: string
+      description: The JWT.
+      minLength: 1
+    RefreshToken:
+      type: string
+      description: The refresh token.
+      minLength: 1
+    RefreshRequest:
+      type : object
+      required: 
+        - token
+      properties: 
+        token:
+          $ref: '#/components/schemas/RefreshToken'
     LoginRequest:
       type: object
       description: A login attempt request.
@@ -225,10 +273,10 @@ components:
     CreateChannelRequest:
       type: object
       description: A RSS Channel creation request.
-      required: 
+      required:
         - name
         - url
-      properties: 
+      properties:
         name:
           $ref: '#/components/schemas/ChannelName'
         url:
@@ -236,11 +284,11 @@ components:
     Channel:
       type: object
       description: A RSS Channel.
-      required: 
+      required:
         - id
         - name
         - url
-      properties: 
+      properties:
         id:
           $ref: '#/components/schemas/ChannelID'
         name:
@@ -266,14 +314,14 @@ components:
       example: "https://canardpc.com/rss.xml"
     Item:
       type: object
-      required: 
+      required:
         - id
         - title
         - guid
         - content
         - read
-      properties: 
-        id: 
+      properties:
+        id:
           $ref: '#/components/schemas/ItemID'
         title:
           $ref: '#/components/schemas/ItemTitle'
@@ -316,11 +364,6 @@ components:
         It stinks like rotten meat, but looks like the lost Deimos base. Looks like you're stuck on the shores of Hell. The only way out is through.
 
         To continue the DOOM experience, play The Shores of Hell and its amazing sequel, Inferno!
-    GenericError:
-      type: object
-      properties:
-        message:
-          type: string
     GenericProblem:
       type: object
       properties:
@@ -329,10 +372,6 @@ components:
         title:
           type: string
           description: a short description of what went wrong
-        message:
-          type: string
-          description: Deprecated. Use `detail` instead
-          deprecated: true
         detail:
           type: string
           description: A more detailed description of the problem
@@ -345,17 +384,14 @@ components:
         a relative URI of the type of error. It can be used to identify what kind of error
         this problem is about
       example: /errors/something-bad
-      
+
   responses:
     default:
       description: Something unexpected went wrong.
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              message:
-                type: string
+            $ref: '#/components/schemas/GenericProblem'
     NoContent:
       description: The request succeeded, but the response does not contain any information.
     Error:
@@ -363,7 +399,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/GenericError'
+            $ref: '#/components/schemas/GenericProblem'
     Forbidden:
       description: This action is forbidden to the currently logged-in user.
       content:

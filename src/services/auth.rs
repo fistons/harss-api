@@ -114,17 +114,22 @@ fn extract_credentials_from_http_basic(token: &str) -> Result<(String, String), 
 }
 
 /// # Generate a JWT for the given user password
-pub fn get_jwt(
+pub fn get_jwt_from_login_request(
     user: &str,
     password: &str,
     user_service: Data<UserService>,
 ) -> Result<String, ApiError> {
     let user = get_and_check_user(user, password, &user_service)?;
 
-    let authed_user = AuthedUser::from_user(&user);
-    let utc: DateTime<Utc> = Utc::now() + Duration::days(1);
+    get_jwt(&user)
+}
 
+/// # Generate a JWT for the given user
+pub fn get_jwt(user: &User) -> Result<String, ApiError> {
+    let utc: DateTime<Utc> = Utc::now() + Duration::minutes(15);
     let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_secret().as_bytes()).unwrap();
+
+    let authed_user = AuthedUser::from_user(user);
 
     let claim = Claims {
         user: authed_user,
