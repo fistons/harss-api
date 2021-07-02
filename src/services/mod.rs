@@ -24,12 +24,7 @@ impl GlobalService {
         }
     }
 
-    pub fn refresh(
-        &self,
-        // item_service: &ItemService,
-        // channel_service: &ChannelService,
-        user_id: i32,
-    ) -> Result<(), diesel::result::Error> {
+    pub fn refresh(&self, user_id: i32) -> Result<(), diesel::result::Error> {
         let channels = self.channel_service.select_all_by_user_id(user_id)?;
 
         for channel in channels.iter() {
@@ -38,17 +33,15 @@ impl GlobalService {
         Ok(())
     }
 
-    pub fn refresh_chan(
-        &self,
-        // item_service: &ItemService,
-        // channel_service: &ChannelService,
-        channel_id: i32,
-        user_id: i32,
-    ) -> Result<(), diesel::result::Error> {
+    pub fn refresh_chan(&self, channel_id: i32, user_id: i32) -> Result<(), diesel::result::Error> {
         let channel = self
             .channel_service
             .select_by_id_and_user_id(channel_id, user_id)?;
         debug!("Fetching {}", &channel.name);
+
+        // Get the ids of the already fetched items
+        let items = self.item_service.get_items_of_channel(channel_id)?;
+        let items: Vec<&String> = items.iter().map(|x| x.guid.as_ref()).flatten().collect();
 
         let content = reqwest::blocking::get(&channel.url)
             .unwrap()
@@ -57,7 +50,12 @@ impl GlobalService {
         let rss_channel = rss::Channel::read_from(&content[..]).unwrap();
         for item in rss_channel.items.into_iter() {
             let i = crate::model::item::NewItem::from_rss_item(item, channel.id);
-            self.item_service.insert(i).unwrap();
+            match i.guid {
+                Some(ref x) if !items.contains(&x) => {
+                    self.item_service.insert(i).unwrap();
+                }
+                _ => {}
+            };
         }
 
         Ok(())
