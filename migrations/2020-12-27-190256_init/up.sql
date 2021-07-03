@@ -9,13 +9,14 @@ CREATE TABLE channels (
     name varchar(512) not null,
     url varchar(512) not null,
     user_id integer not null,
-    FOREIGN KEY (user_id) REFERENCES users (id) on delete cascade on update cascade
+    FOREIGN KEY (user_id) REFERENCES users (id) on delete cascade on update cascade,
+    UNIQUE(url, user_id)
 );
 
 CREATE TABLE items
 (
     id         integer not null primary key autoincrement,
-    guid       text    null,
+    guid       text    not null,
     title      text    null,
     url        text    null,
     content    text    null,

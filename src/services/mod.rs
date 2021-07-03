@@ -41,7 +41,7 @@ impl GlobalService {
 
         // Get the ids of the already fetched items
         let items = self.item_service.get_items_of_channel(channel_id)?;
-        let items: Vec<&String> = items.iter().map(|x| x.guid.as_ref()).flatten().collect();
+        let items: Vec<&String> = items.iter().map(|x| &x.guid).collect();
 
         let content = reqwest::blocking::get(&channel.url)
             .unwrap()
@@ -50,12 +50,9 @@ impl GlobalService {
         let rss_channel = rss::Channel::read_from(&content[..]).unwrap();
         for item in rss_channel.items.into_iter() {
             let i = crate::model::item::NewItem::from_rss_item(item, channel.id);
-            match i.guid {
-                Some(ref x) if !items.contains(&x) => {
-                    self.item_service.insert(i).unwrap();
-                }
-                _ => {}
-            };
+            if !items.contains(&&i.guid) {
+                self.item_service.insert(i).unwrap();
+            }
         }
 
         Ok(())

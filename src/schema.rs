@@ -10,7 +10,7 @@ table! {
 table! {
     items (id) {
         id -> Integer,
-        guid -> Nullable<Text>,
+        guid -> Text,
         title -> Nullable<Text>,
         url -> Nullable<Text>,
         content -> Nullable<Text>,
@@ -30,4 +30,8 @@ table! {
 joinable!(channels -> users (user_id));
 joinable!(items -> channels (channel_id));
 
-allow_tables_to_appear_in_same_query!(channels, items, users,);
+allow_tables_to_appear_in_same_query!(
+    channels,
+    items,
+    users,
+);
