@@ -1,33 +1,37 @@
 table! {
     channels (id) {
-        id -> Integer,
-        name -> Text,
-        url -> Text,
-        user_id -> Integer,
+        id -> Int4,
+        name -> Varchar,
+        url -> Varchar,
+        user_id -> Int4,
     }
 }
 
 table! {
     items (id) {
-        id -> Integer,
+        id -> Int4,
         guid -> Nullable<Text>,
         title -> Nullable<Text>,
         url -> Nullable<Text>,
         content -> Nullable<Text>,
         read -> Bool,
-        channel_id -> Integer,
+        channel_id -> Int4,
     }
 }
 
 table! {
     users (id) {
-        id -> Integer,
-        username -> Text,
-        password -> Text,
+        id -> Int4,
+        username -> Varchar,
+        password -> Varchar,
     }
 }
 
 joinable!(channels -> users (user_id));
 joinable!(items -> channels (channel_id));
 
-allow_tables_to_appear_in_same_query!(channels, items, users,);
+allow_tables_to_appear_in_same_query!(
+    channels,
+    items,
+    users,
+);
