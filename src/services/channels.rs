@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use diesel::prelude::*;
-use diesel::select;
 
 use crate::model::channel::{Channel, NewChannel};
 use crate::schema::channels::dsl::*;
-use crate::{last_insert_rowid, DbPool};
+use crate::DbPool;
 
 #[derive(Clone)]
 pub struct ChannelService {
@@ -22,11 +21,10 @@ impl ChannelService {
     pub fn insert(&self, new_channel: NewChannel) -> Result<Channel, diesel::result::Error> {
         let connection = self.pool.get().unwrap();
 
-        diesel::insert_into(channels)
+        let generated_id: i32 = diesel::insert_into(channels)
             .values(&new_channel)
-            .execute(&connection)?;
-
-        let generated_id: i32 = select(last_insert_rowid).first(&connection).unwrap();
+            .returning(id)
+            .get_result(&connection)?;
 
         channels
             .filter(id.eq(generated_id))

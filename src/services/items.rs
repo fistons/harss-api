@@ -1,11 +1,9 @@
 use std::sync::Arc;
 
-use diesel::prelude::*;
-use diesel::select;
-
 use crate::model::item::{Item, NewItem};
 use crate::schema::items::dsl::*;
-use crate::{last_insert_rowid, DbPool};
+use crate::DbPool;
+use diesel::prelude::*;
 
 #[derive(Clone)]
 pub struct ItemService {
@@ -22,11 +20,10 @@ impl ItemService {
     pub fn insert(&self, new_item: NewItem) -> Result<Item, diesel::result::Error> {
         let connection = self.pool.get().unwrap();
 
-        diesel::insert_into(items)
+        let generated_id: i32 = diesel::insert_into(items)
             .values(&new_item)
-            .execute(&connection)?;
-
-        let generated_id: i32 = select(last_insert_rowid).first(&connection).unwrap();
+            .returning(id)
+            .get_result(&connection)?;
 
         items.filter(id.eq(generated_id)).first::<Item>(&connection)
     }

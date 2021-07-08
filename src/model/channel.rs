@@ -7,6 +7,7 @@ use crate::schema::channels;
 pub struct NewChannel {
     pub name: String,
     pub url: String,
+    #[serde(skip)]
     pub user_id: i32,
 }
 

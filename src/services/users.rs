@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use diesel::prelude::*;
-use diesel::select;
 
 use crate::model::user::{NewUser, User};
 use crate::schema::users::dsl::*;
-use crate::{last_insert_rowid, DbPool};
+use crate::DbPool;
 
 #[derive(Clone)]
 pub struct UserService {
@@ -27,11 +26,10 @@ impl UserService {
             password: encode_password(pwd),
         };
 
-        diesel::insert_into(users)
+        let generated_id: i32 = diesel::insert_into(users)
             .values(&new_user)
-            .execute(&connection)?;
-
-        let generated_id: i32 = select(last_insert_rowid).first(&connection).unwrap();
+            .returning(id)
+            .get_result(&connection)?;
 
         users.filter(id.eq(generated_id)).first::<User>(&connection)
     }

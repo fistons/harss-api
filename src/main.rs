@@ -4,7 +4,7 @@ extern crate diesel;
 use actix_files as fs;
 use actix_web::{web, App, HttpServer};
 use diesel::r2d2::ConnectionManager;
-use diesel::{sql_types, SqliteConnection};
+use diesel::PgConnection;
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 
 use crate::model::configuration::ApplicationConfiguration;
@@ -24,8 +24,7 @@ mod routes;
 mod schema;
 mod services;
 
-type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
-no_arg_sql_function!(last_insert_rowid, sql_types::Integer);
+type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -43,7 +42,7 @@ async fn main() -> std::io::Result<()> {
 
     // set up database connection pool
     let connection_spec = std::env::var("DATABASE_URL").unwrap_or_else(|_| String::from("rss.db"));
-    let manager = ConnectionManager::<SqliteConnection>::new(connection_spec);
+    let manager = ConnectionManager::<PgConnection>::new(connection_spec);
     let pool: DbPool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool.");

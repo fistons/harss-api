@@ -1,29 +1,29 @@
 table! {
     channels (id) {
-        id -> Integer,
-        name -> Text,
-        url -> Text,
-        user_id -> Integer,
+        id -> Int4,
+        name -> Varchar,
+        url -> Varchar,
+        user_id -> Int4,
     }
 }
 
 table! {
     items (id) {
-        id -> Integer,
+        id -> Int4,
         guid -> Nullable<Text>,
         title -> Nullable<Text>,
         url -> Nullable<Text>,
         content -> Nullable<Text>,
         read -> Bool,
-        channel_id -> Integer,
+        channel_id -> Int4,
     }
 }
 
 table! {
     users (id) {
-        id -> Integer,
-        username -> Text,
-        password -> Text,
+        id -> Int4,
+        username -> Varchar,
+        password -> Varchar,
     }
 }
 
