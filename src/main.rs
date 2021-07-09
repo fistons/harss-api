@@ -16,7 +16,6 @@ use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::sync::Mutex;
-use ttl_cache::TtlCache;
 
 mod errors;
 mod model;
@@ -25,6 +24,7 @@ mod schema;
 mod services;
 
 type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
+type RedisConnection = redis::Connection;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -54,7 +54,7 @@ async fn main() -> std::io::Result<()> {
 
     let configuration = load_configuration().unwrap();
 
-    let cache = web::Data::new(Cache::new());
+    let redis = web::Data::new(RefreshTokenStore::new());
 
     HttpServer::new(move || {
         App::new()
@@ -63,7 +63,7 @@ async fn main() -> std::io::Result<()> {
             .data(channel_service.clone())
             .data(user_service.clone())
             .data(configuration.clone())
-            .app_data(cache.clone())
+            .app_data(redis.clone())
             .configure(routes::channels::configure)
             .configure(routes::service::configure)
             .configure(routes::users::configure)
@@ -85,14 +85,21 @@ fn load_configuration() -> Result<ApplicationConfiguration, Box<dyn Error>> {
     Ok(configuration)
 }
 
-pub struct Cache {
-    pub cache_mutex: Mutex<TtlCache<String, String>>,
+pub struct RefreshTokenStore {
+    pub store: Mutex<RedisConnection>,
 }
 
-impl Cache {
+impl RefreshTokenStore {
     fn new() -> Self {
-        Cache {
-            cache_mutex: Mutex::new(TtlCache::new(1024)),
+        let connection = redis::Client::open(
+            std::env::var("REDIS_URL").unwrap_or_else(|_| String::from("redis://127.0.0.1")),
+        )
+        .unwrap()
+        .get_connection()
+        .unwrap();
+
+        RefreshTokenStore {
+            store: Mutex::new(connection),
         }
     }
 }

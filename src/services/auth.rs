@@ -139,6 +139,10 @@ pub fn get_jwt(user: &User) -> Result<String, ApiError> {
     Ok(claim.sign_with_key(&key)?)
 }
 
+pub fn extract_login_from_refresh_token(token: &str) -> &str {
+    token.split('.').collect::<Vec<&str>>()[1]
+}
+
 fn verify_jwt(token: &str) -> Result<AuthedUser, ApiError> {
     let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_secret().as_bytes()).unwrap();
     let claims: Claims = token.verify_with_key(&key)?;
