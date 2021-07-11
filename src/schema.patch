@@ -1,0 +1,13 @@
+diff --git a/src/schema.rs b/src/schema.rs
+index afdaed8..2d9e2e2 100644
+--- a/src/schema.rs
++++ b/src/schema.rs
+@@ -1,6 +1,8 @@
++#![allow(unused_imports)]
++
+ table! {
+     use diesel::sql_types::*;
+     use crate::model::user::User_role;
+ 
+     channels (id) {
+         id -> Int4,

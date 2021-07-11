@@ -1,0 +1,2 @@
+# Don't need to lint a generated file
+ignore = ["src/schema.rs"]

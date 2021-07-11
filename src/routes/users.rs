@@ -18,8 +18,10 @@ async fn new_user(
     if configuration.allow_account_creation.unwrap_or(false) || auth.is_some() {
         info!("Recording new user {:?}", new_user);
         let data = new_user.into_inner();
-        let user =
-            web::block(move || user_service.create_user(&data.username, &data.password)).await?;
+        let user = web::block(move || {
+            user_service.create_user(&data.username, &data.password, &data.role)
+        })
+        .await?;
 
         Ok(HttpResponse::Created().json(json!({"id": user.id})))
     } else {

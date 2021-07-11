@@ -1,4 +1,9 @@
+#![allow(unused_imports)]
+
 table! {
+    use diesel::sql_types::*;
+    use crate::model::user::User_role;
+
     channels (id) {
         id -> Int4,
         name -> Varchar,
@@ -8,6 +13,9 @@ table! {
 }
 
 table! {
+    use diesel::sql_types::*;
+    use crate::model::user::User_role;
+
     items (id) {
         id -> Int4,
         guid -> Nullable<Text>,
@@ -20,14 +28,22 @@ table! {
 }
 
 table! {
+    use diesel::sql_types::*;
+    use crate::model::user::User_role;
+
     users (id) {
         id -> Int4,
         username -> Varchar,
         password -> Varchar,
+        role -> User_role,
     }
 }
 
 joinable!(channels -> users (user_id));
 joinable!(items -> channels (channel_id));
 
-allow_tables_to_appear_in_same_query!(channels, items, users,);
+allow_tables_to_appear_in_same_query!(
+    channels,
+    items,
+    users,
+);
