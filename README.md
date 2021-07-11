@@ -10,7 +10,7 @@ RSS, but in rust
 docker-compose up
 ```
 
-This will create the databases (postgres + redis) and do the necessary migration
+This will create the databases (postgres + redis) and do the necessary migrations
 
 ## How to init/migrate database
 
