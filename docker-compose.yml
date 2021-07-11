@@ -1,0 +1,51 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    links:
+      - redis
+      - postgres
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
+      JWT_SECRETS: 6ce319be-880a-419f-a39e-0058bceec28a
+      CONFIG_PATH: /data/configuration.yaml
+      REDIS_URL: redis://redis
+    volumes:
+      - ${PWD}/configuration.yaml:/data/configuration.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+  redis:
+    image: redis:alpine
+  postgres:
+    image: postgres:alpine
+    environment:
+      POSTGRES_DB: rss-aggregator
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      PGDATA: /data/postgres
+    volumes:
+      - database:/data/postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  migration:
+    image: clux/diesel-cli
+    command: diesel migration run
+    volumes:
+    - "$PWD:/volume"
+    links:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
+    working_dir: /volume
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  database: {}

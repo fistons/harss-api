@@ -2,6 +2,15 @@
 
 RSS, but in rust
 
+## How to launch it
+
+## Using docker-compose
+
+```shell
+docker-compose up
+```
+
+This will create the databases (postgres + redis) and do the necessary migrations
 
 ## How to init/migrate database
 
