@@ -10,13 +10,14 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
 use crate::errors::ApiError;
-use crate::model::user::User;
+use crate::model::user::{User, UserRole};
 use crate::services::users::UserService;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AuthedUser {
     pub id: i32,
     pub login: String,
+    pub role: UserRole
 }
 
 impl AuthedUser {
@@ -24,7 +25,12 @@ impl AuthedUser {
         AuthedUser {
             id: user.id,
             login: user.username.clone(),
+            role: user.role.clone()
         }
+    }
+    
+    pub fn is_admin(&self) -> bool {
+        self.role == UserRole::Admin
     }
 }
 

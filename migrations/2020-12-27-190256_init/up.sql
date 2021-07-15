@@ -2,7 +2,7 @@ CREATE TYPE user_role AS ENUM ('basic', 'admin');
 CREATE TABLE users
 (
     id       serial primary key,
-    username varchar(512) not null,
+    username varchar(512) not null unique,
     password varchar(512) not null,
     role     user_role     not null
 );

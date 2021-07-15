@@ -20,7 +20,7 @@ pub struct User {
     pub role: UserRole,
 }
 
-#[derive(DbEnum, Debug, Serialize, Deserialize, Clone)]
+#[derive(DbEnum, Debug, Serialize, Deserialize, Clone, PartialOrd, PartialEq)]
 #[PgType = "user_role"]
 #[DieselType = "User_role"]
 pub enum UserRole {
