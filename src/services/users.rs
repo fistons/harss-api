@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use diesel::prelude::*;
 
-use crate::model::user::{NewUser, User};
+use crate::model::user::{NewUser, User, UserRole};
 use crate::schema::users::dsl::*;
 use crate::DbPool;
 
@@ -18,12 +18,18 @@ impl UserService {
         }
     }
 
-    pub fn create_user(&self, login: &str, pwd: &str) -> Result<User, diesel::result::Error> {
+    pub fn create_user(
+        &self,
+        login: &str,
+        pwd: &str,
+        user_role: &UserRole,
+    ) -> Result<User, diesel::result::Error> {
         let connection = self.pool.get().unwrap();
 
         let new_user = NewUser {
             username: String::from(login),
             password: encode_password(pwd),
+            role: user_role.clone(),
         };
 
         let generated_id: i32 = diesel::insert_into(users)
