@@ -27,5 +27,7 @@ sha2 = "0.9.5"
 chrono = "0.4"
 uuid = { version = "0.8.2", features = ["v4"] }
 redis = { version = "0.20" }
+clokwerk = "0.3.5"
+
 [dev-dependencies]
 actix-rt = "1"

@@ -14,7 +14,7 @@ pub async fn refresh(
     global_service: web::Data<GlobalService>,
 ) -> Result<HttpResponse, ApiError> {
     debug!("Refreshing with {}", auth.login);
-    thread::spawn(move || global_service.refresh(auth.id));
+    thread::spawn(move || global_service.refresh_channel_of_user(auth.id));
 
     Ok(HttpResponse::new(StatusCode::ACCEPTED))
 }
