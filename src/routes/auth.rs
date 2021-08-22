@@ -51,7 +51,7 @@ pub async fn refresh_auth(
         let user_login =
             crate::services::auth::extract_login_from_refresh_token(&refresh_token.token);
 
-        let user = user_service.get_user(&user_login)?;
+        let user = user_service.get_user(user_login)?;
 
         /* Create a new JWT */
         let access_token = crate::services::auth::get_jwt(&user)?;

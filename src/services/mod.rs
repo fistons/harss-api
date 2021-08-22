@@ -66,7 +66,7 @@ impl GlobalService {
             let i = crate::model::item::NewItem::from_rss_item(item, channel.id);
             log::debug!("{:?}", i);
             match i.guid.as_ref().or_else(|| i.url.as_ref()) {
-                Some(ref x) if !items.contains(&x) => {
+                Some(ref x) if !items.contains(x) => {
                     self.item_service.insert(i).unwrap();
                 }
                 _ => ()

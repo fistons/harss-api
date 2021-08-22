@@ -70,7 +70,7 @@ impl FromRequest for AuthedUser {
                     Ok(credentials) => credentials,
                     Err(e) => return err(e),
                 };
-                match get_and_check_user(&user, &password, &user_service) {
+                match get_and_check_user(&user, &password, user_service) {
                     Ok(u) => ok(AuthedUser::from_user(&u)),
                     Err(e) => err(e),
                 }
@@ -106,7 +106,7 @@ fn get_and_check_user(
         .map_err(|_| ApiError::unauthorized("Invalid credentials"))
         .unwrap();
 
-    if !crate::services::users::match_password(&user, &password) {
+    if !crate::services::users::match_password(&user, password) {
         return Err(ApiError::unauthorized("Invalid credentials"));
     }
 
