@@ -61,8 +61,11 @@ async fn main() -> std::io::Result<()> {
 
     let mut scheduler = Scheduler::new();
     let global = global_service.clone();
-    scheduler
-        .every(1.minutes())
+    
+    let polling = std::env::var("POLLING_INTERVAL").unwrap_or_else(|_| String::from("300")).parse::<u32>().unwrap().seconds();
+    log::info!("Poll every {:?}", polling);
+    
+    scheduler.every(polling)
         .run(move || global.refresh_all_channels().unwrap());
     let _thread_handle = scheduler.watch_thread(Duration::from_millis(100));
 

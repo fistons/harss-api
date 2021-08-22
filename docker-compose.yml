@@ -11,6 +11,7 @@ services:
       JWT_SECRETS: 6ce319be-880a-419f-a39e-0058bceec28a
       CONFIG_PATH: /data/configuration.yaml
       REDIS_URL: redis://redis
+      POLLING_INTERVAL: 300
     volumes:
       - ${PWD}/configuration.yaml:/data/configuration.yaml
     depends_on:
