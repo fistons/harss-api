@@ -36,6 +36,10 @@ impl ChannelService {
             .filter(user_id.eq(u_id))
             .load::<Channel>(&self.pool.get().unwrap())
     }
+    
+    pub fn select_all(&self) -> Result<Vec<Channel>, diesel::result::Error> {
+        channels.load::<Channel>(&self.pool.get().unwrap())
+    }
 
     pub fn select_by_id_and_user_id(
         &self,

@@ -58,7 +58,7 @@ async fn refresh_channel(
     let id = id.into_inner();
     debug!("Refreshing channel {}", id);
 
-    thread::spawn(move || global_service.refresh_chan(id, auth.id));
+    thread::spawn(move || global_service.refresh_channel(id, auth.id));
 
     Ok(HttpResponse::Accepted().finish())
 }

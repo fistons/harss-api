@@ -23,25 +23,39 @@ impl GlobalService {
             channel_service: Arc::new(channel_service),
         }
     }
-
-    pub fn refresh(&self, user_id: i32) -> Result<(), diesel::result::Error> {
-        let channels = self.channel_service.select_all_by_user_id(user_id)?;
+    
+    pub fn refresh_all_channels(&self) -> Result<(), diesel::result::Error> {
+        log::info!("Refreshing all channels");
+        let channels = self.channel_service.select_all()?;
 
         for channel in channels.iter() {
-            self.refresh_chan(channel.id, user_id)?;
+            log::debug!("yo {} {}", channel.id, channel.user_id);
+            self.refresh_channel(channel.id, channel.user_id)?;
+            log::debug!("done");
         }
         Ok(())
     }
 
-    pub fn refresh_chan(&self, channel_id: i32, user_id: i32) -> Result<(), diesel::result::Error> {
+    pub fn refresh_channel_of_user(&self, user_id: i32) -> Result<(), diesel::result::Error> {
+        log::debug!("Refreshing channels of user {}", user_id);
+        let channels = self.channel_service.select_all_by_user_id(user_id)?;
+
+        for channel in channels.iter() {
+            self.refresh_channel(channel.id, user_id)?;
+        }
+        Ok(())
+    }
+
+    pub fn refresh_channel(&self, channel_id: i32, user_id: i32) -> Result<(), diesel::result::Error> {
+        debug!("channel {} user {}", channel_id, user_id);
         let channel = self
             .channel_service
-            .select_by_id_and_user_id(channel_id, user_id)?;
+            .select_by_id_and_user_id(user_id, channel_id)?;
         debug!("Fetching {}", &channel.name);
 
         // Get the ids of the already fetched items
         let items = self.item_service.get_items_of_channel(channel_id)?;
-        let items: Vec<&String> = items.iter().map(|x| x.guid.as_ref()).flatten().collect();
+        let items: Vec<&String> = items.iter().map(|x| x.guid.as_ref().or_else(|| x.url.as_ref())).flatten().collect();
 
         let content = reqwest::blocking::get(&channel.url)
             .unwrap()
@@ -50,11 +64,12 @@ impl GlobalService {
         let rss_channel = rss::Channel::read_from(&content[..]).unwrap();
         for item in rss_channel.items.into_iter() {
             let i = crate::model::item::NewItem::from_rss_item(item, channel.id);
-            match i.guid {
-                Some(ref x) if !items.contains(&x) => {
+            log::debug!("{:?}", i);
+            match i.guid.as_ref().or_else(|| i.url.as_ref()) {
+                Some(ref x) if !items.contains(x) => {
                     self.item_service.insert(i).unwrap();
                 }
-                _ => {}
+                _ => ()
             };
         }
 

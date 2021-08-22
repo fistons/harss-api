@@ -1,8 +1,15 @@
 #[macro_use]
 extern crate diesel;
 
+use std::error::Error;
+use std::fs::File;
+use std::io::BufReader;
+use std::sync::Mutex;
+use std::time::Duration;
+
 use actix_files as fs;
 use actix_web::{web, App, HttpServer};
+use clokwerk::{Scheduler, TimeUnits};
 use diesel::r2d2::ConnectionManager;
 use diesel::PgConnection;
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
@@ -12,10 +19,6 @@ use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
 use crate::services::users::UserService;
 use crate::services::GlobalService;
-use std::error::Error;
-use std::fs::File;
-use std::io::BufReader;
-use std::sync::Mutex;
 
 mod errors;
 mod model;
@@ -55,6 +58,16 @@ async fn main() -> std::io::Result<()> {
     let configuration = load_configuration().unwrap();
 
     let redis = web::Data::new(RefreshTokenStore::new());
+
+    let mut scheduler = Scheduler::new();
+    let global = global_service.clone();
+    
+    let polling = std::env::var("POLLING_INTERVAL").unwrap_or_else(|_| String::from("300")).parse::<u32>().unwrap().seconds();
+    log::info!("Poll every {:?}", polling);
+    
+    scheduler.every(polling)
+        .run(move || global.refresh_all_channels().unwrap());
+    let _thread_handle = scheduler.watch_thread(Duration::from_millis(100));
 
     HttpServer::new(move || {
         App::new()
