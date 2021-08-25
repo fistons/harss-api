@@ -8,7 +8,6 @@ table! {
         id -> Int4,
         name -> Varchar,
         url -> Varchar,
-        user_id -> Int4,
     }
 }
 
@@ -39,7 +38,6 @@ table! {
     }
 }
 
-joinable!(channels -> users (user_id));
 joinable!(items -> channels (channel_id));
 
 allow_tables_to_appear_in_same_query!(

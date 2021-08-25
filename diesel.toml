@@ -5,3 +5,4 @@
 file = "src/schema.rs"
 import_types = ["diesel::sql_types::*", "crate::model::user::User_role"]
 patch_file = "src/schema.patch"
+filter = { except_tables = ["channels_users"]}
