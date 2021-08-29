@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use diesel::prelude::*;
 
-use crate::model::user::{NewUser, User, UserRole};
+use crate::model::{NewUser, User, UserRole};
 use crate::schema::users::dsl::*;
 use crate::DbPool;
 

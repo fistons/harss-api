@@ -7,7 +7,7 @@ index afdaed8..2d9e2e2 100644
 +
  table! {
      use diesel::sql_types::*;
-     use crate::model::user::User_role;
+     use crate::model::User_role;
  
      channels (id) {
          id -> Int4,

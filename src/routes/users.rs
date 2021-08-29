@@ -4,7 +4,7 @@ use serde_json::json;
 
 use crate::errors::ApiError;
 use crate::model::configuration::ApplicationConfiguration;
-use crate::model::user::NewUser;
+use crate::model::NewUser;
 use crate::services::auth::AuthedUser;
 use crate::services::users::UserService;
 

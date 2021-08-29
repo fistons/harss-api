@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::model::item::{Item, NewItem};
+use crate::model::{Item, NewItem};
 use crate::schema::items::dsl::*;
 use crate::DbPool;
 use diesel::prelude::*;
@@ -29,7 +29,7 @@ impl ItemService {
     }
 
     pub fn get_items_of_channel(&self, chan_id: i32) -> Result<Vec<Item>, diesel::result::Error> {
-        log::debug!("Refreshing items of channel {}", chan_id);
+        log::debug!("Getting items of channel {}", chan_id);
         items
             .filter(channel_id.eq(chan_id))
             .load::<Item>(&self.pool.get().unwrap())

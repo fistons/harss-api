@@ -21,9 +21,10 @@ CREATE TABLE channels
 
 CREATE UNIQUE INDEX ON channels (url);
 
-CREATE TABLE channels_users (
+CREATE TABLE channel_users (
     channel_id integer not null,
     user_id integer not null,
+    PRIMARY KEY (channel_id, user_id),
     FOREIGN KEY (channel_id) REFERENCES channels (id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
 );

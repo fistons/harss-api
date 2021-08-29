@@ -2,7 +2,17 @@
 
 table! {
     use diesel::sql_types::*;
-    use crate::model::user::User_role;
+    use crate::model::User_role;
+
+    channel_users (channel_id, user_id) {
+        channel_id -> Int4,
+        user_id -> Int4,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
+    use crate::model::User_role;
 
     channels (id) {
         id -> Int4,
@@ -13,7 +23,7 @@ table! {
 
 table! {
     use diesel::sql_types::*;
-    use crate::model::user::User_role;
+    use crate::model::User_role;
 
     items (id) {
         id -> Int4,
@@ -28,7 +38,7 @@ table! {
 
 table! {
     use diesel::sql_types::*;
-    use crate::model::user::User_role;
+    use crate::model::User_role;
 
     users (id) {
         id -> Int4,
@@ -38,9 +48,12 @@ table! {
     }
 }
 
+joinable!(channel_users -> channels (channel_id));
+joinable!(channel_users -> users (user_id));
 joinable!(items -> channels (channel_id));
 
 allow_tables_to_appear_in_same_query!(
+    channel_users,
     channels,
     items,
     users,

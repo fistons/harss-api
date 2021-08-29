@@ -87,27 +87,6 @@ paths:
                 $ref: '#/components/schemas/Channel'
         default:
           $ref: '#/components/responses/Error'
-  /channel/{id}/refresh:
-    post:
-      operationId: refresh_channel
-      tags:
-        - Channels
-        - Items
-      summary: Refresh channel
-      description: Fetch items to refresh the channel
-      parameters:
-        - name: id
-          in: path
-          description: Unique ID of a channel
-          required: true
-          example: 1
-          schema:
-            $ref: '#/components/schemas/ChannelID'
-      responses:
-        '202':
-          $ref: '#/components/responses/NoContent'
-        default:
-          $ref: '#/components/responses/Error'
   /channel/{id}/items:
     get:
       operationId: get_items
@@ -133,19 +112,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Item'
-        default:
-          $ref: '#/components/responses/Error'
-  /refresh:
-    post:
-      operationId: refresh
-      tags:
-        - Channels
-        - Items
-      summary: Refresh all channels
-      description: Fetchs all items of all channels
-      responses:
-        "202":
-          $ref: '#/components/responses/NoContent'
         default:
           $ref: '#/components/responses/Error'
   /auth/login:

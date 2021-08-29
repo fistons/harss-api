@@ -9,12 +9,14 @@ use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_json::json;
 use std::collections::HashMap;
+use std::error::Error;
 
 /// # Contains the list of all problem types.
 mod problems_uri {
     pub const GENERIC: &str = "/problem/generic";
     pub const AUTHENTICATION: &str = "/problem/authentication";
     pub const DATABASE: &str = "/problem/authentication";
+    pub const NOT_FOUND: &str = "/problem/not-found";
 }
 
 #[derive(Debug)]
@@ -50,6 +52,24 @@ impl ApiError {
             detail: message.into(),
             status: StatusCode::UNAUTHORIZED,
             more: HashMap::with_capacity(0),
+        }
+    }
+
+    pub fn not_found<T>(message: T, object_type: String, object_id: i32) -> ApiError
+        where
+            T: Into<String>,
+    {
+        
+        let mut more : HashMap<String, String> = HashMap::new();
+        more.insert(String::from("object_type"), object_type);
+        more.insert(String::from("object_id"), object_id.to_string());
+        
+        ApiError {
+            problem_type: problems_uri::NOT_FOUND.into(),
+            title: "Object not found".into(),
+            detail: message.into(),
+            status: StatusCode::NOT_FOUND,
+            more,
         }
     }
 
@@ -92,9 +112,9 @@ impl Serialize for ApiError {
 
 impl<E> From<BlockingError<E>> for ApiError
 where
-    E: fmt::Debug,
+    E: fmt::Debug + Error
 {
-    fn from(err: BlockingError<E>) -> ApiError {
+    fn from(err: BlockingError<E>) -> ApiError where E: Error {
         log::error!("Blocking error: {:?}", err);
         ApiError::unexpected("Blocked!")
     }
