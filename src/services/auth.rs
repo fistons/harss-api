@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
 use crate::errors::ApiError;
-use crate::model::user::{User, UserRole};
+use crate::model::{User, UserRole};
 use crate::services::users::UserService;
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -78,7 +78,6 @@ async fn main() -> std::io::Result<()> {
             .data(configuration.clone())
             .app_data(redis.clone())
             .configure(routes::channels::configure)
-            .configure(routes::service::configure)
             .configure(routes::users::configure)
             .configure(routes::auth::configure)
             .service(fs::Files::new("/", "./static/").index_file("index.html"))

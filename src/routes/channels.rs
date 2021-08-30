@@ -1,15 +1,12 @@
-use std::thread;
-
 use actix_web::{get, post, web, HttpResponse};
-use log::{debug, info};
+use log::info;
 use serde_json::json;
 
 use crate::errors::ApiError;
-use crate::model::channel::NewChannel;
+use crate::model::NewChannel;
 use crate::services::auth::AuthedUser;
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
-use crate::services::GlobalService;
 
 #[get("/channel/{id}")]
 pub async fn get_channel(
@@ -41,26 +38,10 @@ async fn new_channel(
 ) -> Result<HttpResponse, ApiError> {
     info!("Recording new channel {:?}", new_channel);
 
-    let mut data = new_channel.into_inner();
-    data.set_user_id(auth.id);
-
-    let channel = web::block(move || channel_service.insert(data)).await?;
+    let data = new_channel.into_inner();
+    let channel = web::block(move || channel_service.create_or_link_channel(data, auth.id)).await?;
 
     Ok(HttpResponse::Created().json(json!({"id": channel.id})))
-}
-
-#[post("/channel/{channel_id}/refresh")]
-async fn refresh_channel(
-    id: web::Path<i32>,
-    global_service: web::Data<GlobalService>,
-    auth: AuthedUser,
-) -> Result<HttpResponse, ApiError> {
-    let id = id.into_inner();
-    debug!("Refreshing channel {}", id);
-
-    thread::spawn(move || global_service.refresh_channel(id, auth.id));
-
-    Ok(HttpResponse::Accepted().finish())
 }
 
 #[get("/channel/{chan_id}/items")]
@@ -71,7 +52,8 @@ async fn get_items(
     auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
     let items = web::block(move || {
-        let chan = channel_service.select_by_id_and_user_id(chan_id.into_inner(), auth.id)?;
+        log::info!("{} {}", chan_id, auth.id);
+        let chan = channel_service.select_by_id_and_user_id(auth.id, chan_id.into_inner())?;
         items_service.get_items_of_channel(chan.id)
     })
     .await?;
@@ -83,6 +65,5 @@ pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(get_channels)
         .service(get_channel)
         .service(new_channel)
-        .service(refresh_channel)
         .service(get_items);
 }

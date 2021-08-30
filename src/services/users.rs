@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use diesel::prelude::*;
 
-use crate::model::user::{NewUser, User, UserRole};
+use crate::model::{NewUser, User, UserRole};
 use crate::schema::users::dsl::*;
 use crate::DbPool;
+use crate::errors::ApiError;
 
 #[derive(Clone)]
 pub struct UserService {
@@ -23,7 +24,7 @@ impl UserService {
         login: &str,
         pwd: &str,
         user_role: &UserRole,
-    ) -> Result<User, diesel::result::Error> {
+    ) -> Result<User, ApiError> {
         let connection = self.pool.get().unwrap();
 
         let new_user = NewUser {
@@ -37,17 +38,17 @@ impl UserService {
             .returning(id)
             .get_result(&connection)?;
 
-        users.filter(id.eq(generated_id)).first::<User>(&connection)
+        Ok(users.filter(id.eq(generated_id)).first::<User>(&connection)?)
     }
 
-    pub fn list_users(&self) -> Result<Vec<User>, diesel::result::Error> {
-        users.load::<User>(&self.pool.get().unwrap())
+    pub fn list_users(&self) -> Result<Vec<User>, ApiError> {
+        Ok(users.load::<User>(&self.pool.get().unwrap())?)
     }
 
-    pub fn get_user(&self, wanted_username: &str) -> Result<User, diesel::result::Error> {
-        users
+    pub fn get_user(&self, wanted_username: &str) -> Result<User, ApiError> {
+        Ok(users
             .filter(username.eq(wanted_username))
-            .first::<User>(&self.pool.get().unwrap())
+            .first::<User>(&self.pool.get().unwrap())?)
     }
 }
 

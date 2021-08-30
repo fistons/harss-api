@@ -14,9 +14,19 @@ CREATE TABLE channels
 (
     id      serial primary key,
     name    varchar(512) not null,
-    url     varchar(512) not null,
-    user_id integer      not null,
-    FOREIGN KEY (user_id) REFERENCES users (id) on delete cascade on update cascade
+    url     varchar(512) not null
+    --user_id integer      not null,
+    --FOREIGN KEY (user_id) REFERENCES users (id) on delete cascade on update cascade
+);
+
+CREATE UNIQUE INDEX ON channels (url);
+
+CREATE TABLE channel_users (
+    channel_id integer not null,
+    user_id integer not null,
+    PRIMARY KEY (channel_id, user_id),
+    FOREIGN KEY (channel_id) REFERENCES channels (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE items
