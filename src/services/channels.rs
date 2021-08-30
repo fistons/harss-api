@@ -66,7 +66,7 @@ impl ChannelService {
     pub fn select_all_by_user_id(&self, u_id: i32) -> Result<Vec<Channel>, ApiError> {
         let channel_ids = channel_users
             .filter(user_id.eq(u_id))
-            .select(crate::schema::channel_users::columns::channel_id);
+            .select(channel_id);
 
         Ok(channels
             .filter(id.eq(any(channel_ids)))
@@ -77,12 +77,6 @@ impl ChannelService {
         Ok(channels.load::<Channel>(&self.pool.get().unwrap())?)
     }
 
-    pub fn select_by_id(&self, other_channel_id: i32) -> Result<Channel, ApiError> {
-        Ok(channels
-            .filter(id.eq(other_channel_id))
-            .first::<Channel>(&self.pool.get().unwrap())?)
-    }
-
     pub fn select_by_id_and_user_id(
         &self,
         u_id: i32,
@@ -90,7 +84,7 @@ impl ChannelService {
     ) -> Result<Channel, ApiError> {
         let channel_ids = channel_users
             .filter(user_id.eq(u_id))
-            .select(crate::schema::channel_users::columns::channel_id);
+            .select(channel_id);
 
         Ok(channels
             .filter(id.eq(any(channel_ids)).and(id.eq(chan_id)))

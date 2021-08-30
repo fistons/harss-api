@@ -37,16 +37,6 @@ impl GlobalService {
         Ok(())
     }
 
-    pub fn refresh_channel_of_user(&self, user_id: i32) -> Result<(), ApiError> {
-        log::debug!("Refreshing channels of user {}", user_id);
-        let channels = self.channel_service.select_all_by_user_id(user_id)?;
-
-        for channel in channels.iter() {
-            self.refresh_channel(channel)?;
-        }
-        Ok(())
-    }
-
     pub fn refresh_channel(&self, channel: &Channel) -> Result<(), ApiError> {
         debug!("Fetching {}", &channel.name);
         // Get the ids of the already fetched items
