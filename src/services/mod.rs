@@ -5,6 +5,7 @@ use log::debug;
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
 use crate::model::Channel;
+use crate::errors::ApiError;
 
 pub mod auth;
 pub mod channels;
@@ -25,7 +26,7 @@ impl GlobalService {
         }
     }
     
-    pub fn refresh_all_channels(&self) -> Result<(), diesel::result::Error> {
+    pub fn refresh_all_channels(&self) -> Result<(), ApiError> {
         log::info!("Refreshing all channels");
         let channels = self.channel_service.select_all()?;
 
@@ -36,7 +37,7 @@ impl GlobalService {
         Ok(())
     }
 
-    pub fn refresh_channel_of_user(&self, user_id: i32) -> Result<(), diesel::result::Error> {
+    pub fn refresh_channel_of_user(&self, user_id: i32) -> Result<(), ApiError> {
         log::debug!("Refreshing channels of user {}", user_id);
         let channels = self.channel_service.select_all_by_user_id(user_id)?;
 
@@ -46,7 +47,7 @@ impl GlobalService {
         Ok(())
     }
 
-    pub fn refresh_channel(&self, channel: &Channel) -> Result<(), diesel::result::Error> {
+    pub fn refresh_channel(&self, channel: &Channel) -> Result<(), ApiError> {
         debug!("Fetching {}", &channel.name);
         // Get the ids of the already fetched items
         let items = self.item_service.get_items_of_channel(channel.id)?;

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::fmt::Debug;
 use std::str::FromStr;
 use std::{error, fmt};
 
@@ -8,8 +10,6 @@ use diesel::result::Error as DieselError;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_json::json;
-use std::collections::HashMap;
-use std::error::Error;
 
 /// # Contains the list of all problem types.
 mod problems_uri {
@@ -55,21 +55,16 @@ impl ApiError {
         }
     }
 
-    pub fn not_found<T>(message: T, object_type: String, object_id: i32) -> ApiError
-        where
-            T: Into<String>,
+    pub fn not_found<T>(message: T) -> ApiError
+    where
+        T: Into<String>,
     {
-        
-        let mut more : HashMap<String, String> = HashMap::new();
-        more.insert(String::from("object_type"), object_type);
-        more.insert(String::from("object_id"), object_id.to_string());
-        
         ApiError {
             problem_type: problems_uri::NOT_FOUND.into(),
             title: "Object not found".into(),
             detail: message.into(),
             status: StatusCode::NOT_FOUND,
-            more,
+            more: HashMap::with_capacity(0),
         }
     }
 
@@ -112,11 +107,14 @@ impl Serialize for ApiError {
 
 impl<E> From<BlockingError<E>> for ApiError
 where
-    E: fmt::Debug + Error
+    E: fmt::Debug + Into<ApiError>,
 {
-    fn from(err: BlockingError<E>) -> ApiError where E: Error {
+    fn from(err: BlockingError<E>) -> ApiError {
         log::error!("Blocking error: {:?}", err);
-        ApiError::unexpected("Blocked!")
+        match err {
+            BlockingError::Error(x) => x.into(),
+            _ => ApiError::unexpected("Blocked!"),
+        }
     }
 }
 
@@ -136,13 +134,17 @@ impl From<r2d2::Error> for ApiError {
 impl From<DieselError> for ApiError {
     fn from(err: DieselError) -> ApiError {
         log::error!("diesel error: {}", err);
-        ApiError::custom(
-            Uri::from_str(problems_uri::DATABASE).unwrap(),
-            "Database issue".into(),
-            format!("Database issue: {:?}", err),
-            StatusCode::INTERNAL_SERVER_ERROR,
-            HashMap::with_capacity(0),
-        )
+
+        match err {
+            DieselError::NotFound => ApiError::not_found("Entity not found"), //FIXME: Ok that's nice and all, but I lose the context
+            _ => ApiError::custom(
+                Uri::from_str(problems_uri::DATABASE).unwrap(),
+                "Database issue".into(),
+                format!("Database issue: {:?}", err),
+                StatusCode::INTERNAL_SERVER_ERROR,
+                HashMap::with_capacity(0),
+            ),
+        }
     }
 }
 

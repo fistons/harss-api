@@ -4,6 +4,7 @@ use crate::model::{Item, NewItem};
 use crate::schema::items::dsl::*;
 use crate::DbPool;
 use diesel::prelude::*;
+use crate::errors::ApiError;
 
 #[derive(Clone)]
 pub struct ItemService {
@@ -17,7 +18,7 @@ impl ItemService {
         }
     }
 
-    pub fn insert(&self, new_item: NewItem) -> Result<Item, diesel::result::Error> {
+    pub fn insert(&self, new_item: NewItem) -> Result<Item, ApiError> {
         let connection = self.pool.get().unwrap();
 
         let generated_id: i32 = diesel::insert_into(items)
@@ -25,13 +26,13 @@ impl ItemService {
             .returning(id)
             .get_result(&connection)?;
 
-        items.filter(id.eq(generated_id)).first::<Item>(&connection)
+        Ok(items.filter(id.eq(generated_id)).first::<Item>(&connection)?)
     }
 
-    pub fn get_items_of_channel(&self, chan_id: i32) -> Result<Vec<Item>, diesel::result::Error> {
+    pub fn get_items_of_channel(&self, chan_id: i32) -> Result<Vec<Item>, ApiError> {
         log::debug!("Getting items of channel {}", chan_id);
-        items
+        Ok(items
             .filter(channel_id.eq(chan_id))
-            .load::<Item>(&self.pool.get().unwrap())
+            .load::<Item>(&self.pool.get().unwrap())?)
     }
 }
