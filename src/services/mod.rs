@@ -11,6 +11,7 @@ pub mod auth;
 pub mod channels;
 pub mod items;
 pub mod users;
+pub mod categories;
 
 #[derive(Clone)]
 pub struct GlobalService {

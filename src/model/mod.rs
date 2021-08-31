@@ -5,6 +5,7 @@ use crate::schema::channels;
 use crate::schema::items;
 use crate::schema::users;
 use crate::schema::channel_users;
+use crate::schema::categories;
 
 pub mod configuration;
 
@@ -98,4 +99,20 @@ impl NewItem {
             channel_id,
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Queryable)]
+pub struct Category {
+    pub id: i32,
+    pub name: String,
+    pub description: Option<String>,
+    pub user_id: i32
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Insertable)]
+#[table_name = "categories"]
+pub struct NewCategory {
+    pub name: String,
+    pub description: Option<String>,
+    pub user_id: i32
 }

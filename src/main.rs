@@ -19,6 +19,7 @@ use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
 use crate::services::users::UserService;
 use crate::services::GlobalService;
+use crate::services::categories::CategoryService;
 
 mod errors;
 mod model;
@@ -54,6 +55,7 @@ async fn main() -> std::io::Result<()> {
     let channel_service = ChannelService::new(pool.clone());
     let user_service = UserService::new(pool.clone());
     let global_service = GlobalService::new(item_service.clone(), channel_service.clone());
+    let category_service = CategoryService::new(pool.clone());
 
     let configuration = load_configuration().unwrap();
 
@@ -76,10 +78,12 @@ async fn main() -> std::io::Result<()> {
             .data(channel_service.clone())
             .data(user_service.clone())
             .data(configuration.clone())
+            .data(category_service.clone())
             .app_data(redis.clone())
             .configure(routes::channels::configure)
             .configure(routes::users::configure)
             .configure(routes::auth::configure)
+            .configure(routes::categories::configure)
             .service(fs::Files::new("/", "./static/").index_file("index.html"))
     })
     .bind(std::env::var("LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")))?

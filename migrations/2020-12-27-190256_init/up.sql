@@ -10,6 +10,16 @@ CREATE TABLE users
 -- Ok let's use high start sequence, so our root user won't interfere
 ALTER SEQUENCE users_id_seq RESTART WITH 666;
 
+
+CREATE TABLE categories
+(
+    id serial primary key,
+    name varchar(64) not null,
+    description text,
+    user_id integer not null,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE 
+);
+
 CREATE TABLE channels
 (
     id      serial primary key,
