@@ -2,7 +2,7 @@
 name = "rss-aggregator"
 version = "0.1.0"
 authors = ["Eric <Fistons> <eric@pedr0.net>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 reqwest = { version = "0.10", features = ["json", "blocking"] } # Request stuff over the web
