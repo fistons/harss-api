@@ -42,6 +42,7 @@ build api image:
     - 'echo "{\"auths\":{\"$CI_REGISTRY_IMAGE\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json'
     - 'export DOCKER_IMAGE="$CI_REGISTRY_IMAGE${DOCKER_IMAGE_NAME:+/$DOCKER_IMAGE_NAME}:$CI_COMMIT_REF_SLUG-$CI_PIPELINE_IID"'
   script:
+    - cp Cargo.lock rss-aggregator-api/Cargo.lock # Ugliest hack ever
     - '/kaniko/executor --cache=true --context $CI_PROJECT_DIR/rss-aggregator-api --dockerfile $CI_PROJECT_DIR/rss-aggregator-api/Dockerfile --destination $DOCKER_IMAGE'
     - echo "Image built and tagged $DOCKER_IMAGE"
   needs:
