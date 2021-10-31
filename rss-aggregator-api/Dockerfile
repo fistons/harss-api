@@ -15,7 +15,7 @@ RUN cargo build --release
 
 ### Build our app
 # Add our source
-ADD . . 
+ADD .. . 
 # Touch our main to change its last access date
 RUN touch src/main.rs
 # build our source
@@ -30,7 +30,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install libssl-dev libpq-dev ca-certificates -y
 
 COPY --from=builder /app/rss-aggregator/target/release/rss-aggregator /usr/local/bin
-COPY static/ static/
+COPY static static/
 
 EXPOSE 8080
 

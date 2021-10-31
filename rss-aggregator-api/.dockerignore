@@ -4,5 +4,4 @@ Dockerfile
 .dockerignore
 README.md
 LICENSE
-.gitignore
 .git/

@@ -7,7 +7,7 @@ services:
       api:
         condition: service_started
   api:
-    build: .
+    build: rss-aggregator-api/Dockerfile
     ports:
       - "8080:8080"
     links:
@@ -20,14 +20,14 @@ services:
       REDIS_URL: redis://redis
       POLLING_INTERVAL: 300
     volumes:
-      - ${PWD}/configuration.yaml:/data/configuration.yaml
+      - ${PWD}/rss-aggregator-api/configuration.yaml:/data/configuration.yaml
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
-    healthcheck: 
-      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
   redis:
     image: redis:alpine
   postgres:
