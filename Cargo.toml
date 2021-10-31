@@ -1,2 +1,4 @@
 [workspace]
-members = ["rss-aggregator-api"]
+members = ["rss-aggregator-api", "rss-aggregator-client"]
+default-members = ["rss-aggregator-api", "rss-aggregator-client"]
+
