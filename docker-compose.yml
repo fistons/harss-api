@@ -2,7 +2,7 @@ services:
   client:
     image: git.pedr0.net:5005/rust/rss-agg-client:master-1
     ports:
-      - "8090:80"
+      - "9090:80"
     depends_on: 
       api:
         condition: service_started
