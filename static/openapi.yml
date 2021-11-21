@@ -26,7 +26,51 @@ tags:
     description: Items, a.k.a articles related operation
   - name: Authentication
     description: Login and stuff
+  - name: Users
+    description: User management
 paths:
+  /users:
+    get:
+      operationId: list_users
+      tags:
+        - Users
+      summary: Return a list of all users
+      description: |
+        __Available to administrators only.__
+        
+        List all registered users. 
+      responses: 
+        '200':
+          description: A list of registred users
+          content: 
+            application/json:
+              schema: 
+                type: array
+                items: 
+                  $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: new_user
+      tags:
+        - Users
+      summary: Create a new user
+      description: |
+        __Available to administrators only or to everyone if specicied in the configuration file.__
+        
+        Register a new user. __Only an administrator can create a new administrator__
+      requestBody:
+        required: true
+        description: User creation request.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/ObjectCreatedResponse'
+        default:
+          $ref: '#/components/responses/Error'
   /channels:
     get:
       operationId: get_channels
@@ -60,7 +104,7 @@ paths:
               $ref: '#/components/schemas/CreateChannelRequest'
       responses:
         '201':
-          $ref: '#/components/responses/NoContent'
+          $ref: '#/components/responses/ObjectCreatedResponse'
         default:
           $ref: '#/components/responses/Error'
   /channel/{id}:
@@ -216,10 +260,38 @@ components:
           $ref: '#/components/schemas/UserLogin'
         password:
           $ref: '#/components/schemas/UserPassword'
+    CreateUserRequest:
+      type: object
+      description: User Creation request
+      required: 
+        - username
+        - password
+        - role
+      properties: 
+        username:
+          $ref: '#/components/schemas/UserName'
+        password:
+          $ref: '#/components/schemas/UserPassword'
+        role:
+          $ref: '#/components/schemas/UserRole'
+    User:
+      type: object
+      properties: 
+        id:
+          $ref: '#/components/schemas/UserID'
+        username:
+          $ref: '#/components/schemas/UserName'
+        role:
+          $ref: '#/components/schemas/UserRole'
     UserLogin:
       type: string
       format: email
       description: The user's login (i.e. it's email).
+      nullable: false
+      minLength: 1
+    UserRole:
+      type: string
+      description: The user's role (i.e. admin or not).
       nullable: false
       minLength: 1
     UserPassword:
@@ -350,7 +422,12 @@ components:
         a relative URI of the type of error. It can be used to identify what kind of error
         this problem is about
       example: /errors/something-bad
-
+    ObjectCreatedId:
+      type: object
+      description: ID of the created object.
+      properties: 
+        id: 
+          type: integer
   responses:
     default:
       description: Something unexpected went wrong.
@@ -360,6 +437,12 @@ components:
             $ref: '#/components/schemas/GenericProblem'
     NoContent:
       description: The request succeeded, but the response does not contain any information.
+    ObjectCreatedResponse:
+      description: The requested object has been created
+      content: 
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/ObjectCreatedId'
     Error:
       description: Something horrible and unexpected went wrong.
       content:
