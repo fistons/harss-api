@@ -4,7 +4,7 @@ use serde_json::json;
 
 use crate::errors::ApiError;
 use crate::model::configuration::ApplicationConfiguration;
-use crate::model::NewUser;
+use crate::model::{NewUser, UserRole};
 use crate::services::auth::AuthedUser;
 use crate::services::users::UserService;
 
@@ -15,11 +15,18 @@ async fn new_user(
     auth: Option<AuthedUser>,
     configuration: web::Data<ApplicationConfiguration>,
 ) -> Result<HttpResponse, ApiError> {
+    let admin = auth.map(|x| x.is_admin()).unwrap_or(false);
     if configuration.allow_account_creation.unwrap_or(false)
-        || auth.map(|x| x.is_admin()).unwrap_or(false)
+        || admin
     {
         info!("Recording new user {:?}", new_user);
         let data = new_user.into_inner();
+        
+        if data.role == UserRole::Admin && admin {
+            log::debug!("Tried to create a new admin with a non admin user");
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
+        
         let user = web::block(move || {
             user_service.create_user(&data.username, &data.password, &data.role)
         })
