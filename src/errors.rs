@@ -6,7 +6,7 @@ use std::{error, fmt};
 use actix_web::error::BlockingError;
 use actix_web::http::{StatusCode, Uri};
 use actix_web::{HttpResponse, ResponseError};
-use diesel::result::Error as DieselError;
+// use diesel::result::Error as DieselError;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_json::json;
@@ -131,22 +131,22 @@ impl From<r2d2::Error> for ApiError {
     }
 }
 
-impl From<DieselError> for ApiError {
-    fn from(err: DieselError) -> ApiError {
-        log::error!("diesel error: {}", err);
-
-        match err {
-            DieselError::NotFound => ApiError::not_found("Entity not found"), //FIXME: Ok that's nice and all, but I lose the context
-            _ => ApiError::custom(
-                Uri::from_str(problems_uri::DATABASE).unwrap(),
-                "Database issue".into(),
-                format!("Database issue: {:?}", err),
-                StatusCode::INTERNAL_SERVER_ERROR,
-                HashMap::with_capacity(0),
-            ),
-        }
-    }
-}
+// impl From<DieselError> for ApiError {
+//     fn from(err: DieselError) -> ApiError {
+//         log::error!("diesel error: {}", err);
+// 
+//         match err {
+//             DieselError::NotFound => ApiError::not_found("Entity not found"), //FIXME: Ok that's nice and all, but I lose the context
+//             _ => ApiError::custom(
+//                 Uri::from_str(problems_uri::DATABASE).unwrap(),
+//                 "Database issue".into(),
+//                 format!("Database issue: {:?}", err),
+//                 StatusCode::INTERNAL_SERVER_ERROR,
+//                 HashMap::with_capacity(0),
+//             ),
+//         }
+//     }
+// }
 
 impl From<jwt::Error> for ApiError {
     fn from(err: jwt::Error) -> Self {

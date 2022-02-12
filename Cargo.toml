@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Eric <Fistons> <eric@pedr0.net>"]
 edition = "2021"
 
+[workspace]
+members = [".", "migration"]
+
 [dependencies]
 reqwest = { version = "0.10", features = ["json", "blocking"] } # Request stuff over the web
 actix-web = { version = "3", features = ["compress"] } # Serve stuff over the web
@@ -27,6 +30,7 @@ uuid = { version = "0.8.2", features = ["v4"] }
 redis = { version = "0.20" }
 clokwerk = "0.3.5"
 sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "debug-print"], default-features = false }
+migration = { path = "migration" }
 
 [dev-dependencies]
 actix-rt = "1"
