@@ -4,6 +4,12 @@ RSS, but in rust
 
 ## How to launch it
 
+## What does it use
+
+* `diesel` for the database migration since I have difficulties with SeaORM migration
+* `SeaORM` for async database stuff
+* `ActixWeb`
+
 ## Using docker-compose
 
 ```shell
@@ -14,7 +20,7 @@ This will create the databases (postgres + redis) and do the necessary migration
 
 ## How to init/migrate database
 
-## Using docker
+### Using docker
 
 ```shell
 docker run --rm \
@@ -24,7 +30,7 @@ docker run --rm \
     -it clux/diesel-cli diesel migration run
 ```
 
-## Using diesel cli directly
+### Using diesel cli directly
 
 Requires rust and cargo 
 
@@ -33,3 +39,14 @@ cargo install diesel_cli --no-default-features --features postgres
 # Time to take a coffee brake ☕
 DATABASE_URL="postgres://rss-aggregator:rss-aggregator@localhost/rss-aggregator" diesel migration run
 ```
+
+## How to (re)build entities
+
+Database migrate must be already done.
+
+```shell
+cargo install sea-orm-cli # if needed
+DATABASE_URL="postgres://rss-aggregator:rss-aggregator@localhost/rss-aggregator" sea-orm-cli generate entity -o src/entity
+```
+
+Cf. SeaORM [documentation](https://www.sea-ql.org/SeaORM/docs/generate-entity/sea-orm-cli)
