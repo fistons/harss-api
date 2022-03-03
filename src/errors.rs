@@ -15,7 +15,7 @@ use serde_json::json;
 mod problems_uri {
     pub const GENERIC: &str = "/problem/generic";
     pub const AUTHENTICATION: &str = "/problem/authentication";
-    pub const DATABASE: &str = "/problem/authentication";
+    pub const DATABASE: &str = "/problem/database";
     pub const NOT_FOUND: &str = "/problem/not-found";
 }
 
@@ -105,22 +105,22 @@ impl Serialize for ApiError {
     }
 }
 
-impl<E> From<BlockingError<E>> for ApiError
-where
-    E: fmt::Debug + Into<ApiError>,
-{
-    fn from(err: BlockingError<E>) -> ApiError {
-        log::error!("Blocking error: {:?}", err);
-        match err {
-            BlockingError::Error(x) => x.into(),
-            _ => ApiError::unexpected("Blocked!"),
-        }
-    }
-}
+// impl From<BlockingError> for ApiError
+// where
+//     E: fmt::Debug + Into<ApiError>,
+// {
+//     fn from(err: BlockingError<E>) -> ApiError {
+//         log::error!("Blocking error: {:?}", err);
+//         match err {
+//             BlockingError::Error(x) => x.into(),
+//             _ => ApiError::unexpected("Blocked!"),
+//         }
+//     }
+// }
 
-impl From<r2d2::Error> for ApiError {
-    fn from(err: r2d2::Error) -> Self {
-        log::error!("r2d2 error: {}", err);
+impl From<sea_orm::DbErr> for ApiError {
+    fn from(err: sea_orm::DbErr) -> Self {
+        log::error!("sea_orm error: {}", err);
         ApiError::custom(
             Uri::from_str(problems_uri::DATABASE).unwrap(),
             "Database issue".into(),
