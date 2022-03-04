@@ -1,10 +1,9 @@
 use actix_web::{get, HttpResponse, post, web};
-use log::info;
+use actix_web::http::StatusCode;
 use serde_json::json;
 
-use crate::AppState;
 use crate::errors::ApiError;
-// use crate::model::NewChannel;
+use crate::model::HttpNewChannel;
 // use crate::services::auth::AuthedUser;
 use crate::services::channels::ChannelService;
 
@@ -15,49 +14,42 @@ use crate::services::channels::ChannelService;
 pub async fn get_channel(
     id: web::Path<i32>,
     channel_service: web::Data<ChannelService>,
-    app_state: web::Data<AppState>,
+    // auth: AuthedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let conn = &app_state.conn;
-    channel_service.select_by_id_and_user_id(conn, 1, id.into_inner()).await?;
+    let res = channel_service.select_by_id_and_user_id(1, id.into_inner()).await?;
 
-    Ok(HttpResponse::Ok().json({}))
+    log::debug!("{:?}", res);
+
+    match res {
+        Some(data) => Ok(HttpResponse::Ok().json(data)),
+        None => Ok(HttpResponse::new(StatusCode::NOT_FOUND))
+    }
 }
 
-// #[get("/channel/{id}")]
-// pub async fn get_channel(
-//     id: web::Path<i32>,
-//     channel_service: web::Data<ChannelService>,
-//     // auth: AuthedUser,
-// ) -> Result<HttpResponse, ApiError> {
-//     let channel =
-//         web::block(move || channel_service.select_by_id_and_user_id(auth.id, id.into_inner()))
-//             .await?;
-// 
-//     Ok(HttpResponse::Ok().json(channel))
-// }
-// 
-// #[get("/channels")]
-// pub async fn get_channels(
-//     channel_service: web::Data<ChannelService>,
-//     auth: AuthedUser,
-// ) -> Result<HttpResponse, ApiError> {
-//     let channels = web::block(move || channel_service.select_all_by_user_id(auth.id)).await?;
-//     Ok(HttpResponse::Ok().json(channels))
-// }
-// 
-// #[post("/channels")]
-// async fn new_channel(
-//     new_channel: web::Json<NewChannel>,
-//     channel_service: web::Data<ChannelService>,
-//     auth: AuthedUser,
-// ) -> Result<HttpResponse, ApiError> {
-//     info!("Recording new channel {:?}", new_channel);
-// 
-//     let data = new_channel.into_inner();
-//     let channel = web::block(move || channel_service.create_or_link_channel(data, auth.id)).await?;
-// 
-//     Ok(HttpResponse::Created().json(json!({"id": channel.id})))
-// }
+#[get("/channels")]
+pub async fn get_channels(
+    channel_service: web::Data<ChannelService>,
+    // auth: AuthedUser,
+) -> Result<HttpResponse, ApiError> {
+    let channels = channel_service.select_all_by_user_id(1).await?;
+    Ok(HttpResponse::Ok().json(channels))
+}
+
+
+#[post("/channels")]
+async fn new_channel(
+    new_channel: web::Json<HttpNewChannel>,
+    channel_service: web::Data<ChannelService>,
+    // auth: AuthedUser,
+) -> Result<HttpResponse, ApiError> {
+    log::info!("Recording new channel {:?}", new_channel);
+
+    let data = new_channel.into_inner();
+    let channel = channel_service.create_or_link_channel(data, 1).await?;
+
+    Ok(HttpResponse::Created().json(json!({"id": channel.id})))
+}
+
 // 
 // #[get("/channel/{chan_id}/items")]
 // async fn get_items(
@@ -77,10 +69,9 @@ pub async fn get_channel(
 // }
 
 pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
-    // cfg.service(get_channels)
-    //     .service(get_channel)
-    //     .service(new_channel)
     //     .service(get_items);
 
-    cfg.service(get_channel);
+    cfg.service(get_channel)
+        .service(get_channels)
+        .service(new_channel);
 }

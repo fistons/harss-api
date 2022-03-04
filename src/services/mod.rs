@@ -7,10 +7,10 @@ use log::debug;
 // use crate::model::Channel;
 use crate::errors::ApiError;
 
-// pub mod auth;
+pub mod auth;
 pub mod channels;
 // pub mod items;
-// pub mod users;
+pub mod users;
 
 // #[derive(Clone)]
 // pub struct GlobalService {

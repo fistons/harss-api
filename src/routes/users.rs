@@ -1,16 +1,18 @@
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, HttpResponse, post, web};
 use log::info;
 use serde_json::json;
 
+use entity::sea_orm_active_enums::UserRole;
+
 use crate::errors::ApiError;
+use crate::model::{HttpNewUser, HttpUser};
 use crate::model::configuration::ApplicationConfiguration;
-use crate::model::{NewUser, UserRole};
 use crate::services::auth::AuthedUser;
 use crate::services::users::UserService;
 
 #[post("/users")]
 async fn new_user(
-    new_user: web::Json<NewUser>,
+    new_user: web::Json<HttpNewUser>,
     user_service: web::Data<UserService>,
     auth: Option<AuthedUser>,
     configuration: web::Data<ApplicationConfiguration>,
@@ -21,16 +23,13 @@ async fn new_user(
     {
         info!("Recording new user {:?}", new_user);
         let data = new_user.into_inner();
-        
+
         if data.role == UserRole::Admin && admin {
             log::debug!("Tried to create a new admin with a non admin user");
             return Ok(HttpResponse::Unauthorized().finish());
         }
-        
-        let user = web::block(move || {
-            user_service.create_user(&data.username, &data.password, &data.role)
-        })
-        .await?;
+
+        let user = user_service.create_user(&data.username, &data.password, data.role).await?;
 
         Ok(HttpResponse::Created().json(json!({"id": user.id})))
     } else {
@@ -46,7 +45,9 @@ async fn list_users(
 ) -> Result<HttpResponse, ApiError> {
     if auth.is_admin() {
         info!("Get all users");
-        let users = web::block(move || user_service.list_users()).await?;
+        let users: Vec<HttpUser> = user_service.list_users().await?.into_iter()
+            .map(|u| u.into())
+            .collect();
         Ok(HttpResponse::Ok().json(users))
     } else {
         Ok(HttpResponse::Unauthorized().finish())
@@ -54,6 +55,6 @@ async fn list_users(
 }
 
 pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
-    cfg.service(new_user);
-    cfg.service(list_users);
+    cfg.service(new_user)
+        .service(list_users);
 }

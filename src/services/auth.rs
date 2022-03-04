@@ -1,6 +1,6 @@
-use actix_web::http::HeaderMap;
+use actix_web::{dev, FromRequest, HttpRequest, web};
+use actix_web::http::header::HeaderMap;
 use actix_web::web::Data;
-use actix_web::{dev, web, FromRequest, HttpRequest};
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use futures_util::future::{err, ok, Ready};
 use hmac::{Hmac, NewMac};
@@ -8,27 +8,30 @@ use http_auth_basic::Credentials;
 use jwt::{SignWithKey, VerifyWithKey};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
+use tokio;
+
+use entity::sea_orm_active_enums::UserRole;
+use entity::users;
 
 use crate::errors::ApiError;
-use crate::model::{User, UserRole};
 use crate::services::users::UserService;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AuthedUser {
     pub id: i32,
     pub login: String,
-    pub role: UserRole
+    pub role: UserRole,
 }
 
 impl AuthedUser {
-    pub fn from_user(user: &User) -> Self {
+    pub fn from_user(user: &users::Model) -> Self {
         AuthedUser {
             id: user.id,
             login: user.username.clone(),
-            role: user.role.clone()
+            role: user.role.clone(),
         }
     }
-    
+
     pub fn is_admin(&self) -> bool {
         self.role == UserRole::Admin
     }
@@ -43,7 +46,6 @@ struct Claims {
 impl FromRequest for AuthedUser {
     type Error = ApiError;
     type Future = Ready<Result<Self, Self::Error>>;
-    type Config = ();
 
     fn from_request(req: &HttpRequest, _: &mut dev::Payload) -> Self::Future {
         let user_service = req.app_data::<web::Data<UserService>>().unwrap();
@@ -70,10 +72,8 @@ impl FromRequest for AuthedUser {
                     Ok(credentials) => credentials,
                     Err(e) => return err(e),
                 };
-                match get_and_check_user(&user, &password, user_service) {
-                    Ok(u) => ok(AuthedUser::from_user(&u)),
-                    Err(e) => err(e),
-                }
+
+                return get_and_check_user(&user, &password, user_service);
             }
             (error, _) => err(ApiError::unauthorized(format!(
                 "Unknown Authorization scheme: {}",
@@ -96,15 +96,16 @@ fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, ApiE
 }
 
 /// # Retrieve a user and check its credentials
-fn get_and_check_user(
+async fn get_and_check_user(
     user: &str,
     password: &str,
     user_service: &UserService,
-) -> Result<User, ApiError> {
-    let user = user_service
-        .get_user(user)
-        .map_err(|_| ApiError::unauthorized("Invalid credentials"))
-        .unwrap();
+) -> Result<users::Model, ApiError> {
+    
+    let user = match user_service.get_user(user).await? {
+        None => return Err(ApiError::unauthorized("Invalid credentials")),
+        Some(u) => u
+    };
 
     if !crate::services::users::match_password(&user, password) {
         return Err(ApiError::unauthorized("Invalid credentials"));
@@ -120,18 +121,18 @@ fn extract_credentials_from_http_basic(token: &str) -> Result<(String, String), 
 }
 
 /// # Generate a JWT for the given user password
-pub fn get_jwt_from_login_request(
+pub async fn get_jwt_from_login_request(
     user: &str,
     password: &str,
     user_service: Data<UserService>,
 ) -> Result<String, ApiError> {
-    let user = get_and_check_user(user, password, &user_service)?;
+    let user = get_and_check_user(user, password, &user_service).await?;
 
     get_jwt(&user)
 }
 
 /// # Generate a JWT for the given user
-pub fn get_jwt(user: &User) -> Result<String, ApiError> {
+pub fn get_jwt(user: &users::Model) -> Result<String, ApiError> {
     let utc: DateTime<Utc> = Utc::now() + Duration::minutes(15);
     let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_secret().as_bytes()).unwrap();
 

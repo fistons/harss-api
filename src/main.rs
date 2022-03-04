@@ -7,7 +7,7 @@ use std::io::BufReader;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use actix_files as fs;
+// use actix_files as fs;
 use actix_web::{App, HttpServer, web};
 use actix_web::web::Data;
 use clokwerk::{Scheduler, TimeUnits};
@@ -15,8 +15,10 @@ use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 // use diesel::r2d2::ConnectionManager;
 // use diesel::PgConnection;
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TerminalMode, TermLogger};
+use crate::model::configuration::ApplicationConfiguration;
 
 use crate::services::channels::ChannelService;
+use crate::services::users::UserService;
 
 // use crate::model::configuration::ApplicationConfiguration;
 // use crate::services::channels::ChannelService;
@@ -25,7 +27,7 @@ use crate::services::channels::ChannelService;
 // use crate::services::GlobalService;
 
 mod errors;
-// mod model;
+mod model;
 mod routes;
 // mod schema;
 mod services;
@@ -52,28 +54,27 @@ async fn main() -> std::io::Result<()> {
     let mut opt = ConnectOptions::new(connection_spec.to_owned());
     opt.max_connections(100)
         .min_connections(5)
+        .max_connections(10)
         .connect_timeout(Duration::from_secs(8))
         .idle_timeout(Duration::from_secs(8))
         .max_lifetime(Duration::from_secs(8))
         .sqlx_logging(true);
 
     let db = Database::connect(opt).await.expect("Could not connect to postgres");
-    let app_state = AppState { conn: db };
     // let manager = ConnectionManager::<PgConnection>::new(connection_spec);
     // let pool: DbPool = r2d2::Pool::builder()
     //     .build(manager)
     //     .expect("Failed to create pool.");
 
     // let item_service = ItemService::new(pool.clone());
-    let channel_service = ChannelService::new();
-    // let user_service = UserService::new(pool.clone());
+    let channel_service = ChannelService::new(db.clone());
+    let user_service = UserService::new(db.clone());
     // let global_service = GlobalService::new(item_service.clone(), channel_service.clone());
 
-    // let configuration = load_configuration().unwrap();
+    let configuration = load_configuration().unwrap();
 
-    let redis = web::Data::new(RefreshTokenStore::new());
 
-    let mut scheduler = Scheduler::new();
+    // let mut scheduler = Scheduler::new();
     // let global = global_service.clone();
 
     let polling = std::env::var("POLLING_INTERVAL").unwrap_or_else(|_| String::from("300")).parse::<u32>().unwrap().seconds();
@@ -81,19 +82,18 @@ async fn main() -> std::io::Result<()> {
 
     // scheduler.every(polling)
     //     .run(move || global.refresh_all_channels().unwrap());
-    let _thread_handle = scheduler.watch_thread(Duration::from_millis(100));
+    // let _thread_handle = scheduler.watch_thread(Duration::from_millis(100));
 
     HttpServer::new(move || {
         App::new()
             // .data(global_service.clone())
             // .data(item_service.clone())
             .app_data(Data::new(channel_service.clone()))
-            .app_data(Data::new(app_state.clone()))
-            // .data(user_service.clone())
-            // .data(configuration.clone())
-            .app_data(redis.clone())
+            .app_data(Data::new(user_service.clone()))
+            .app_data(Data::new(configuration.clone()))
+            .app_data(Data::new(RefreshTokenStore::new()))
             .configure(routes::channels::configure)
-        // .configure(routes::users::configure)
+            .configure(routes::users::configure)
         // .configure(routes::auth::configure)
         // .service(fs::Files::new("/", "./static/").index_file("index.html"))
     })
@@ -102,19 +102,15 @@ async fn main() -> std::io::Result<()> {
         .await
 }
 
-#[derive(Debug, Clone)]
-struct AppState {
-    conn: DatabaseConnection,
+fn load_configuration() -> Result<ApplicationConfiguration, Box<dyn Error>> {
+    let file = File::open(
+        std::env::var("CONFIG_PATH").unwrap_or_else(|_| String::from("configuration.yaml")),
+    )?;
+    let reader = BufReader::new(file);
+    let configuration = serde_yaml::from_reader(reader)?;
+
+    Ok(configuration)
 }
-// fn load_configuration() -> Result<ApplicationConfiguration, Box<dyn Error>> {
-//     let file = File::open(
-//         std::env::var("CONFIG_PATH").unwrap_or_else(|_| String::from("configuration.yaml")),
-//     )?;
-//     let reader = BufReader::new(file);
-//     let configuration = serde_yaml::from_reader(reader)?;
-// 
-//     Ok(configuration)
-// }
 
 pub struct RefreshTokenStore {
     pub store: Mutex<RedisConnection>,
