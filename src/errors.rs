@@ -3,10 +3,8 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use std::{error, fmt};
 
-use actix_web::error::BlockingError;
 use actix_web::http::{StatusCode, Uri};
 use actix_web::{HttpResponse, ResponseError};
-// use diesel::result::Error as DieselError;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_json::json;
@@ -121,7 +119,7 @@ impl From<sea_orm::DbErr> for ApiError {
 impl From<jwt::Error> for ApiError {
     fn from(err: jwt::Error) -> Self {
         log::error!("jwt error: {}", err);
-        ApiError::unauthorized(format!("JWT error: {}", err.to_string()))
+        ApiError::unauthorized(format!("JWT error: {}", err))
     }
 }
 

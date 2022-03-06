@@ -6,8 +6,7 @@ use crate::errors::ApiError;
 use crate::model::HttpNewChannel;
 use crate::services::auth::AuthenticatedUser;
 use crate::services::channels::ChannelService;
-
-// use crate::services::items::ItemService;
+use crate::services::items::ItemService;
 
 #[get("/channel/{id}")]
 pub async fn get_channel(
@@ -52,28 +51,30 @@ async fn new_channel(
     Ok(HttpResponse::Created().json(json!({"id": channel.id})))
 }
 
-//
-// #[get("/channel/{chan_id}/items")]
-// async fn get_items(
-//     chan_id: web::Path<i32>,
-//     items_service: web::Data<ItemService>,
-//     channel_service: web::Data<ChannelService>,
-//     auth: AuthedUser,
-// ) -> Result<HttpResponse, ApiError> {
-//     let items = web::block(move || {
-//         log::info!("{} {}", chan_id, auth.id);
-//         let chan = channel_service.select_by_id_and_user_id(auth.id, chan_id.into_inner())?;
-//         items_service.get_items_of_channel(chan.id)
-//     })
-//     .await?;
-//
-//     Ok(HttpResponse::Ok().json(items))
-// }
+#[get("/channel/{chan_id}/items")]
+async fn get_items(
+    chan_id: web::Path<i32>,
+    items_service: web::Data<ItemService>,
+    channel_service: web::Data<ChannelService>,
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    log::info!("{:?} {}", chan_id, auth.id);
+
+    let chan = channel_service
+        .select_by_id_and_user_id(auth.id, chan_id.into_inner())
+        .await?;
+
+    if chan == None {
+        return Ok(HttpResponse::NotFound().finish());
+    }
+
+    let items = items_service.get_items_of_channel(chan.unwrap().id).await?;
+    Ok(HttpResponse::Ok().json(items))
+}
 
 pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
-    //     .service(get_items);
-
     cfg.service(get_channel)
         .service(get_channels)
-        .service(new_channel);
+        .service(new_channel)
+        .service(get_items);
 }

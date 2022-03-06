@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+
 use entity::sea_orm_active_enums::UserRole;
 use entity::users::Model;
 
@@ -37,14 +38,13 @@ impl From<entity::users::Model> for HttpUser {
         HttpUser {
             id: u.id,
             username: u.username,
-            role: u.role
+            role: u.role,
         }
     }
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct NewItem {
+pub struct HttpNewItem {
     pub guid: Option<String>,
     pub title: Option<String>,
     pub url: Option<String>,
@@ -65,16 +65,16 @@ pub struct HttpItem {
     pub channel_id: i32,
 }
 
-impl NewItem {
+impl HttpNewItem {
     /// Create an item to be inserted in the database, from a rss item.
-    pub fn from_rss_item(item: rss::Item, channel_id: i32) -> NewItem {
+    pub fn from_rss_item(item: rss::Item, channel_id: i32) -> HttpNewItem {
         let title = item.title;
         let guid = item.guid.map(|x| x.value);
         let url = item.link;
         let content = item.description;
         let read = false;
 
-        NewItem {
+        HttpNewItem {
             guid,
             title,
             url,

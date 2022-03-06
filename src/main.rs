@@ -1,38 +1,27 @@
-// #[macro_use]
-//extern crate diesel;
-
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::sync::Mutex;
 use std::time::Duration;
 
-// use actix_files as fs;
-use actix_web::{App, HttpServer, web};
+use actix_files as fs;
 use actix_web::web::Data;
+use actix_web::{App, HttpServer};
 use clokwerk::{Scheduler, TimeUnits};
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
-// use diesel::r2d2::ConnectionManager;
-// use diesel::PgConnection;
-use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TerminalMode, TermLogger};
+use sea_orm::{ConnectOptions, Database};
+use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
+
 use crate::model::configuration::ApplicationConfiguration;
-
 use crate::services::channels::ChannelService;
+use crate::services::items::ItemService;
 use crate::services::users::UserService;
-
-// use crate::model::configuration::ApplicationConfiguration;
-// use crate::services::channels::ChannelService;
-// use crate::services::items::ItemService;
-// use crate::services::users::UserService;
-// use crate::services::GlobalService;
+use crate::services::GlobalService;
 
 mod errors;
 mod model;
 mod routes;
-// mod schema;
 mod services;
 
-// type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 type RedisConnection = redis::Connection;
 
 #[actix_web::main]
@@ -47,7 +36,7 @@ async fn main() -> std::io::Result<()> {
         TerminalMode::Mixed,
         ColorChoice::Always,
     )])
-        .unwrap();
+    .unwrap();
 
     // set up database connection pool
     let connection_spec = std::env::var("DATABASE_URL").unwrap_or_else(|_| String::from("rss.db"));
@@ -60,46 +49,49 @@ async fn main() -> std::io::Result<()> {
         .max_lifetime(Duration::from_secs(8))
         .sqlx_logging(true);
 
-    let db = Database::connect(opt).await.expect("Could not connect to postgres");
-    // let manager = ConnectionManager::<PgConnection>::new(connection_spec);
-    // let pool: DbPool = r2d2::Pool::builder()
-    //     .build(manager)
-    //     .expect("Failed to create pool.");
+    let db = Database::connect(opt)
+        .await
+        .expect("Could not connect to postgres");
 
-    // let item_service = ItemService::new(pool.clone());
+    let item_service = ItemService::new(db.clone());
     let channel_service = ChannelService::new(db.clone());
     let user_service = UserService::new(db.clone());
-    // let global_service = GlobalService::new(item_service.clone(), channel_service.clone());
+    let global_service = GlobalService::new(item_service.clone(), channel_service.clone());
 
     let configuration = load_configuration().unwrap();
 
+    let mut scheduler = Scheduler::new();
+    let global = global_service.clone();
 
-    // let mut scheduler = Scheduler::new();
-    // let global = global_service.clone();
-
-    let polling = std::env::var("POLLING_INTERVAL").unwrap_or_else(|_| String::from("300")).parse::<u32>().unwrap().seconds();
+    let polling = std::env::var("POLLING_INTERVAL")
+        .unwrap_or_else(|_| String::from("300"))
+        .parse::<u32>()
+        .unwrap()
+        .seconds();
     log::info!("Poll every {:?}", polling);
 
-    // scheduler.every(polling)
-    //     .run(move || global.refresh_all_channels().unwrap());
-    // let _thread_handle = scheduler.watch_thread(Duration::from_millis(100));
+    // scheduler
+    //     .every(polling)
+    //     .run(move || task::spawn_blocking( || {global.refresh_all_channels().await}));
+
+    let _thread_handle = scheduler.watch_thread(Duration::from_millis(100));
 
     HttpServer::new(move || {
         App::new()
-            // .data(global_service.clone())
-            // .data(item_service.clone())
+            .app_data(Data::new(global_service.clone()))
+            .app_data(Data::new(item_service.clone()))
             .app_data(Data::new(channel_service.clone()))
             .app_data(Data::new(user_service.clone()))
             .app_data(Data::new(configuration.clone()))
             .app_data(Data::new(RefreshTokenStore::new()))
             .configure(routes::channels::configure)
             .configure(routes::users::configure)
-        // .configure(routes::auth::configure)
-        // .service(fs::Files::new("/", "./static/").index_file("index.html"))
+            .configure(routes::auth::configure)
+            .service(fs::Files::new("/", "./static/").index_file("index.html"))
     })
-        .bind(std::env::var("LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")))?
-        .run()
-        .await
+    .bind(std::env::var("LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")))?
+    .run()
+    .await
 }
 
 fn load_configuration() -> Result<ApplicationConfiguration, Box<dyn Error>> {
@@ -121,9 +113,9 @@ impl RefreshTokenStore {
         let connection = redis::Client::open(
             std::env::var("REDIS_URL").unwrap_or_else(|_| String::from("redis://127.0.0.1")),
         )
-            .unwrap()
-            .get_connection()
-            .unwrap();
+        .unwrap()
+        .get_connection()
+        .unwrap();
 
         RefreshTokenStore {
             store: Mutex::new(connection),
