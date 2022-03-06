@@ -7,17 +7,17 @@ use entity::sea_orm_active_enums::UserRole;
 use crate::errors::ApiError;
 use crate::model::{HttpNewUser, HttpUser};
 use crate::model::configuration::ApplicationConfiguration;
-use crate::services::auth::AuthedUser;
+use crate::services::auth::AuthenticatedUser;
 use crate::services::users::UserService;
 
 #[post("/users")]
 async fn new_user(
     new_user: web::Json<HttpNewUser>,
     user_service: web::Data<UserService>,
-    auth: Option<AuthedUser>,
+    user: Option<AuthenticatedUser>,
     configuration: web::Data<ApplicationConfiguration>,
 ) -> Result<HttpResponse, ApiError> {
-    let admin = auth.map(|x| x.is_admin()).unwrap_or(false);
+    let admin = user.map(|x| x.is_admin()).unwrap_or(false);
     if configuration.allow_account_creation.unwrap_or(false)
         || admin
     {
@@ -41,9 +41,9 @@ async fn new_user(
 #[get("/users")]
 async fn list_users(
     user_service: web::Data<UserService>,
-    auth: AuthedUser,
+    user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    if auth.is_admin() {
+    if user.is_admin() {
         info!("Get all users");
         let users: Vec<HttpUser> = user_service.list_users().await?.into_iter()
             .map(|u| u.into())

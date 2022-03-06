@@ -105,19 +105,6 @@ impl Serialize for ApiError {
     }
 }
 
-// impl From<BlockingError> for ApiError
-// where
-//     E: fmt::Debug + Into<ApiError>,
-// {
-//     fn from(err: BlockingError<E>) -> ApiError {
-//         log::error!("Blocking error: {:?}", err);
-//         match err {
-//             BlockingError::Error(x) => x.into(),
-//             _ => ApiError::unexpected("Blocked!"),
-//         }
-//     }
-// }
-
 impl From<sea_orm::DbErr> for ApiError {
     fn from(err: sea_orm::DbErr) -> Self {
         log::error!("sea_orm error: {}", err);
@@ -130,23 +117,6 @@ impl From<sea_orm::DbErr> for ApiError {
         )
     }
 }
-
-// impl From<DieselError> for ApiError {
-//     fn from(err: DieselError) -> ApiError {
-//         log::error!("diesel error: {}", err);
-// 
-//         match err {
-//             DieselError::NotFound => ApiError::not_found("Entity not found"), //FIXME: Ok that's nice and all, but I lose the context
-//             _ => ApiError::custom(
-//                 Uri::from_str(problems_uri::DATABASE).unwrap(),
-//                 "Database issue".into(),
-//                 format!("Database issue: {:?}", err),
-//                 StatusCode::INTERNAL_SERVER_ERROR,
-//                 HashMap::with_capacity(0),
-//             ),
-//         }
-//     }
-// }
 
 impl From<jwt::Error> for ApiError {
     fn from(err: jwt::Error) -> Self {
