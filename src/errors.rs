@@ -11,7 +11,6 @@ use serde_json::json;
 
 /// # Contains the list of all problem types.
 mod problems_uri {
-    pub const GENERIC: &str = "/problem/generic";
     pub const AUTHENTICATION: &str = "/problem/authentication";
     pub const DATABASE: &str = "/problem/database";
     pub const NOT_FOUND: &str = "/problem/not-found";
@@ -27,18 +26,6 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    pub fn unexpected<T>(message: T) -> ApiError
-    where
-        T: Into<String>,
-    {
-        ApiError {
-            problem_type: problems_uri::GENERIC.into(),
-            title: "Unexpected error".into(),
-            detail: message.into(),
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            more: HashMap::with_capacity(0),
-        }
-    }
 
     pub fn unauthorized<T>(message: T) -> ApiError
     where

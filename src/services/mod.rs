@@ -28,15 +28,23 @@ impl GlobalService {
         }
     }
 
-    pub async fn refresh_all_channels(&self) -> Result<(), ApiError> {
+    pub async fn refresh_all_channels(&self) {
         log::info!("Refreshing all channels");
-        let channels = self.channel_service.select_all().await?;
-
-        for channel in channels.iter() {
-            self.refresh_channel(channel).await?;
-            log::debug!("done");
+        match self.channel_service.select_all().await {
+            Ok(channels) => {
+                for channel in channels.iter() {
+                    if let Err(oops) = self.refresh_channel(channel).await {
+                        log::error!("Couldn't refresg channel {}: {:?}", channel.id, oops);
+                    }
+                }
+            },
+            Err(oops) => {
+                log::error!("Couldn't get channels to refresh {:?}", oops);
+            }
         }
-        Ok(())
+
+        
+        
     }
 
     pub async fn refresh_channel(&self, channel: &channel::Model) -> Result<(), ApiError> {

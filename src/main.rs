@@ -7,7 +7,7 @@ use std::time::Duration;
 use actix_files as fs;
 use actix_web::web::Data;
 use actix_web::{App, HttpServer};
-use clokwerk::{Scheduler, TimeUnits};
+use clokwerk::{AsyncScheduler,  TimeUnits};
 use sea_orm::{ConnectOptions, Database};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 
@@ -60,7 +60,7 @@ async fn main() -> std::io::Result<()> {
 
     let configuration = load_configuration().unwrap();
 
-    let mut scheduler = Scheduler::new();
+    let mut scheduler = AsyncScheduler::new();
     let global = global_service.clone();
 
     let polling = std::env::var("POLLING_INTERVAL")
@@ -69,12 +69,14 @@ async fn main() -> std::io::Result<()> {
         .unwrap()
         .seconds();
     log::info!("Poll every {:?}", polling);
-
-    // scheduler
-    //     .every(polling)
-    //     .run(move || task::spawn_blocking( || {global.refresh_all_channels().await}));
-
-    let _thread_handle = scheduler.watch_thread(Duration::from_millis(100));
+    
+    scheduler.every(polling).run(move || refresh(global.clone()));
+    tokio::spawn(async move {
+        loop {
+            scheduler.run_pending().await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    });
 
     HttpServer::new(move || {
         App::new()
@@ -92,6 +94,10 @@ async fn main() -> std::io::Result<()> {
     .bind(std::env::var("LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")))?
     .run()
     .await
+}
+
+async fn refresh(service: GlobalService) {
+    service.refresh_all_channels().await;
 }
 
 fn load_configuration() -> Result<ApplicationConfiguration, Box<dyn Error>> {
