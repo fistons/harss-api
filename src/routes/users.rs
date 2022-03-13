@@ -3,9 +3,10 @@ use log::info;
 use serde_json::json;
 
 use entity::sea_orm_active_enums::UserRole;
+use entity::users;
 
 use crate::errors::ApiError;
-use crate::model::{HttpNewUser, HttpUser};
+use crate::model::{HttpNewUser, HttpUser, PagedResult, PageParameters};
 use crate::model::configuration::ApplicationConfiguration;
 use crate::services::auth::AuthenticatedUser;
 use crate::services::users::UserService;
@@ -41,13 +42,16 @@ async fn new_user(
 #[get("/users")]
 async fn list_users(
     user_service: web::Data<UserService>,
+    page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     if user.is_admin() {
         info!("Get all users");
-        let users: Vec<HttpUser> = user_service.list_users().await?.into_iter()
-            .map(|u| u.into())
-            .collect();
+        
+        let truc = |x: users::Model| -> HttpUser { x.into()}; 
+        
+        let users: PagedResult<HttpUser> = user_service.list_users(page.get_page(), page.get_size()).await?
+            .map_content(truc);
         Ok(HttpResponse::Ok().json(users))
     } else {
         Err(ApiError::unauthorized("You are not allowed to do that"))

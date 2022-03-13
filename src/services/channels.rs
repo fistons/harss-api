@@ -7,7 +7,7 @@ use entity::{channel_users, channels};
 use entity::channels::Entity as Channel;
 
 use crate::errors::ApiError;
-use crate::model::HttpNewChannel;
+use crate::model::{HttpNewChannel, PagedResult};
 
 #[derive(Clone)]
 pub struct ChannelService {
@@ -38,12 +38,26 @@ impl ChannelService {
     }
 
     /// # Select all the channels of a user
-    pub async fn select_all_by_user_id(&self, u_id: i32) -> Result<Vec<channels::Model>, ApiError> {
-        Ok(Channel::find()
+    pub async fn select_all_by_user_id(&self, u_id: i32, page: usize, page_size: usize) -> Result<PagedResult<channels::Model>, ApiError> {
+        
+        let channel_paginator = Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(u_id))
-            .all(self.db.as_ref())
-            .await?)
+            .paginate(self.db.as_ref(), page_size);
+
+        let total_pages = channel_paginator.num_pages().await?;
+        let total_items = channel_paginator.num_items().await?;
+        let content = channel_paginator.fetch_page(page - 1).await?;
+        let elements_number = content.len();
+
+        Ok(PagedResult {
+            content,
+            page,
+            page_size,
+            total_pages,
+            elements_number,
+            total_items,
+        })
     }
 
     /// # Select all the channels

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection};
 use sea_orm::{entity::*, query::*};
 
 use entity::channel_users;
@@ -34,14 +34,38 @@ impl ItemService {
 
         Ok(item.insert(self.db.as_ref()).await?)
     }
+    
 
-    pub async fn get_items_of_channel(&self, chan_id: i32) -> Result<Vec<items::Model>, ApiError> {
+    pub async fn get_items_of_channel(&self, chan_id: i32, page: usize, page_size: usize) -> Result<PagedResult<items::Model>, ApiError> {
         log::debug!("Getting items of channel {}", chan_id);
 
-        Ok(Item::find()
+        let item_paginator = Item::find()
             .filter(items::Column::ChannelId.eq(chan_id))
-            .all(self.db.as_ref())
-            .await?)
+            .order_by_desc(items::Column::Id)
+            .paginate(self.db.as_ref(), page_size);
+
+        let total_pages = item_paginator.num_pages().await?;
+        let total_items = item_paginator.num_items().await?;
+        let content = item_paginator.fetch_page(page - 1).await?;
+        let elements_number = content.len();
+        
+        Ok(PagedResult {
+            content,
+            page,
+            page_size,
+            total_pages,
+            elements_number,
+            total_items,
+        })
+    }
+
+    pub async fn get_all_items_of_channel(&self, chan_id: i32) -> Result<Vec<entity::items::Model>, ApiError> {
+    log::debug!("Getting items paginator of channel {}", chan_id);
+
+       Ok(Item::find()
+            .filter(items::Column::ChannelId.eq(chan_id))
+            .order_by_desc(items::Column::Id)
+            .all(self.db.as_ref()).await?)
     }
 
     pub async fn get_items_of_user(
@@ -57,16 +81,16 @@ impl ItemService {
             page_size
         );
 
-        let items_paginator = Item::find()
+        let item_paginator = Item::find()
             .join(JoinType::RightJoin, items::Relation::Channels.def())
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(user_id))
             .order_by_desc(items::Column::Id)
             .paginate(self.db.as_ref(), page_size);
 
-        let total_pages = items_paginator.num_pages().await?;
-        let total_items = items_paginator.num_items().await?;
-        let content = items_paginator.fetch_page(page - 1).await?;
+        let total_pages = item_paginator.num_pages().await?;
+        let total_items = item_paginator.num_items().await?;
+        let content = item_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
         
         Ok(PagedResult {

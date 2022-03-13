@@ -131,3 +131,29 @@ where
     /// Total number of elements.
     pub total_items: usize,
 }
+
+
+
+impl<T> PagedResult<T>
+where
+    T: Serialize + Debug,
+{
+    pub fn map_content<I, F>(mut self, f: F) -> PagedResult<I>
+    where
+        F: FnMut(&T) -> I,
+        I: Serialize + Debug,
+    {
+        let mappedContent: Vec<HttpUser> = self.content.iter().map(f).collect();
+
+        let mapped_content: Vec<I> = vec![];
+
+        PagedResult {
+            content: mapped_content,
+            page: self.page,
+            page_size: self.page_size,
+            total_pages: self.total_pages,
+            elements_number: self.elements_number,
+            total_items: self.total_items,
+        }
+    }
+}

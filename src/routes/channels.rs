@@ -3,7 +3,7 @@ use actix_web::{get, post, web, HttpResponse};
 use serde_json::json;
 
 use crate::errors::ApiError;
-use crate::model::HttpNewChannel;
+use crate::model::{HttpNewChannel, PageParameters};
 use crate::services::auth::AuthenticatedUser;
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
@@ -29,9 +29,10 @@ pub async fn get_channel(
 #[get("/channels")]
 pub async fn get_channels(
     channel_service: web::Data<ChannelService>,
+    page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let channels = channel_service.select_all_by_user_id(user.id).await?;
+    let channels = channel_service.select_all_by_user_id(user.id, page.get_page(), page.get_size()).await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
@@ -54,6 +55,7 @@ async fn new_channel(
 #[get("/channel/{chan_id}/items")]
 async fn get_items(
     chan_id: web::Path<i32>,
+    page: web::Query<PageParameters>,
     items_service: web::Data<ItemService>,
     channel_service: web::Data<ChannelService>,
     auth: AuthenticatedUser,
@@ -68,7 +70,7 @@ async fn get_items(
         return Ok(HttpResponse::NotFound().finish());
     }
 
-    let items = items_service.get_items_of_channel(chan.unwrap().id).await?;
+    let items = items_service.get_items_of_channel(chan.unwrap().id, page.get_page(), page.get_size()).await?;
     Ok(HttpResponse::Ok().json(items))
 }
 
