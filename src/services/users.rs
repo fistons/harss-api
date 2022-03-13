@@ -1,54 +1,51 @@
 use std::sync::Arc;
 
-use diesel::prelude::*;
+use sea_orm::{entity::*, query::*};
+use sea_orm::DatabaseConnection;
 
-use crate::model::{NewUser, User, UserRole};
-use crate::schema::users::dsl::*;
-use crate::DbPool;
+use entity::sea_orm_active_enums::UserRole;
+use entity::users;
+use entity::users::Entity as User;
+
 use crate::errors::ApiError;
 
 #[derive(Clone)]
 pub struct UserService {
-    pool: Arc<DbPool>,
+    db: Arc<DatabaseConnection>,
 }
 
 impl UserService {
-    pub fn new(pool: DbPool) -> Self {
+    pub fn new(db: DatabaseConnection) -> Self {
         Self {
-            pool: Arc::new(pool),
+            db: Arc::new(db),
         }
     }
 
-    pub fn create_user(
+    pub async fn get_user(&self, wanted_username: &str) -> Result<Option<users::Model>, ApiError> {
+        Ok(User::find()
+            .filter(users::Column::Username.eq(wanted_username))
+            .one(self.db.as_ref()).await?)
+    }
+
+    pub async fn list_users(&self) -> Result<Vec<users::Model>, ApiError> {
+        Ok(User::find()
+            .all(self.db.as_ref()).await?)
+    }
+
+    pub async fn create_user(
         &self,
         login: &str,
         pwd: &str,
-        user_role: &UserRole,
-    ) -> Result<User, ApiError> {
-        let connection = self.pool.get().unwrap();
-
-        let new_user = NewUser {
-            username: String::from(login),
-            password: encode_password(pwd),
-            role: user_role.clone(),
+        user_role: UserRole,
+    ) -> Result<users::Model, ApiError> {
+        let new_user = users::ActiveModel {
+            id: NotSet,
+            username: Set(String::from(login)),
+            password: Set(encode_password(pwd)),
+            role: Set(user_role),
         };
 
-        let generated_id: i32 = diesel::insert_into(users)
-            .values(&new_user)
-            .returning(id)
-            .get_result(&connection)?;
-
-        Ok(users.filter(id.eq(generated_id)).first::<User>(&connection)?)
-    }
-
-    pub fn list_users(&self) -> Result<Vec<User>, ApiError> {
-        Ok(users.load::<User>(&self.pool.get().unwrap())?)
-    }
-
-    pub fn get_user(&self, wanted_username: &str) -> Result<User, ApiError> {
-        Ok(users
-            .filter(username.eq(wanted_username))
-            .first::<User>(&self.pool.get().unwrap())?)
+        Ok(new_user.insert(self.db.as_ref()).await?)
     }
 }
 
@@ -59,6 +56,6 @@ fn encode_password(pwd: &str) -> String {
     argon2::hash_encoded(pwd.as_bytes(), salt.as_bytes(), &config).unwrap()
 }
 
-pub fn match_password(user: &User, candidate: &str) -> bool {
+pub fn match_password(user: &users::Model, candidate: &str) -> bool {
     argon2::verify_encoded(&user.password, candidate.as_bytes()).unwrap()
 }

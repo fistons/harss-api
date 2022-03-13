@@ -29,8 +29,9 @@ pub async fn login(
         &login.login,
         &login.password,
         user_service,
-    )?;
-    let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4().to_string());
+    )
+    .await?;
+    let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
 
     let mut redis = refresh_token_store.store.lock().unwrap();
     let _: () = redis.set_ex(&refresh_token, 1, 60 * 60 * 24 * 5).unwrap();
@@ -51,10 +52,12 @@ pub async fn refresh_auth(
         let user_login =
             crate::services::auth::extract_login_from_refresh_token(&refresh_token.token);
 
-        let user = user_service.get_user(user_login)?;
-
+        let user = user_service
+            .get_user(user_login)
+            .await?
+            .ok_or_else(|| ApiError::not_found("User not found"))?;
         /* Create a new JWT */
-        let access_token = crate::services::auth::get_jwt(&user)?;
+        let access_token = crate::services::auth::get_jwt(&user).await?;
 
         Ok(HttpResponse::Ok().json(json!({ "access_token": access_token })))
     } else {

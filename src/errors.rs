@@ -3,19 +3,16 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use std::{error, fmt};
 
-use actix_web::error::BlockingError;
 use actix_web::http::{StatusCode, Uri};
 use actix_web::{HttpResponse, ResponseError};
-use diesel::result::Error as DieselError;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_json::json;
 
 /// # Contains the list of all problem types.
 mod problems_uri {
-    pub const GENERIC: &str = "/problem/generic";
     pub const AUTHENTICATION: &str = "/problem/authentication";
-    pub const DATABASE: &str = "/problem/authentication";
+    pub const DATABASE: &str = "/problem/database";
     pub const NOT_FOUND: &str = "/problem/not-found";
 }
 
@@ -29,18 +26,6 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    pub fn unexpected<T>(message: T) -> ApiError
-    where
-        T: Into<String>,
-    {
-        ApiError {
-            problem_type: problems_uri::GENERIC.into(),
-            title: "Unexpected error".into(),
-            detail: message.into(),
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            more: HashMap::with_capacity(0),
-        }
-    }
 
     pub fn unauthorized<T>(message: T) -> ApiError
     where
@@ -105,22 +90,9 @@ impl Serialize for ApiError {
     }
 }
 
-impl<E> From<BlockingError<E>> for ApiError
-where
-    E: fmt::Debug + Into<ApiError>,
-{
-    fn from(err: BlockingError<E>) -> ApiError {
-        log::error!("Blocking error: {:?}", err);
-        match err {
-            BlockingError::Error(x) => x.into(),
-            _ => ApiError::unexpected("Blocked!"),
-        }
-    }
-}
-
-impl From<r2d2::Error> for ApiError {
-    fn from(err: r2d2::Error) -> Self {
-        log::error!("r2d2 error: {}", err);
+impl From<sea_orm::DbErr> for ApiError {
+    fn from(err: sea_orm::DbErr) -> Self {
+        log::error!("sea_orm error: {}", err);
         ApiError::custom(
             Uri::from_str(problems_uri::DATABASE).unwrap(),
             "Database issue".into(),
@@ -131,27 +103,10 @@ impl From<r2d2::Error> for ApiError {
     }
 }
 
-impl From<DieselError> for ApiError {
-    fn from(err: DieselError) -> ApiError {
-        log::error!("diesel error: {}", err);
-
-        match err {
-            DieselError::NotFound => ApiError::not_found("Entity not found"), //FIXME: Ok that's nice and all, but I lose the context
-            _ => ApiError::custom(
-                Uri::from_str(problems_uri::DATABASE).unwrap(),
-                "Database issue".into(),
-                format!("Database issue: {:?}", err),
-                StatusCode::INTERNAL_SERVER_ERROR,
-                HashMap::with_capacity(0),
-            ),
-        }
-    }
-}
-
 impl From<jwt::Error> for ApiError {
     fn from(err: jwt::Error) -> Self {
         log::error!("jwt error: {}", err);
-        ApiError::unauthorized(format!("JWT error: {}", err.to_string()))
+        ApiError::unauthorized(format!("JWT error: {}", err))
     }
 }
 
