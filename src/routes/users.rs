@@ -50,7 +50,7 @@ async fn list_users(
             .collect();
         Ok(HttpResponse::Ok().json(users))
     } else {
-        Ok(HttpResponse::Unauthorized().finish())
+        Err(ApiError::unauthorized("You are not allowed to do that"))
     }
 }
 

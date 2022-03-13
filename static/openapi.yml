@@ -214,6 +214,35 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         default:
           $ref: '#/components/responses/Error'
+  /items:
+    get:
+      operationId: get_all_items
+      tags:
+        - Items
+      summary: Return the last RSS items of the user
+      description: Return the last RSS items of the user
+      parameters:
+        - name: size
+          in: query
+          required: false
+          schema: 
+            $ref: '#/components/schemas/PageSize'
+        - name: page
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PageNumber'
+      responses:
+        '200':
+          description: The last RSS items for the logged user
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/PagedItems'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        default:
+          $ref: '#/components/responses/Error'
 components:
   securitySchemes:
     basicAuth:
@@ -224,6 +253,47 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    PagedItems:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required: 
+           - content
+          properties: 
+            content:
+              type: array
+              items: 
+                $ref: '#/components/schemas/Item'
+    Page:
+      type: object
+      properties: 
+        page:
+          $ref: '#/components/schemas/PageNumber'
+        page_size:
+          $ref: '#/components/schemas/PageSize'
+        total_pages:
+          type: integer
+          description: Total number of pages.
+        elements_number:
+          type: integer
+          description: Number of elements in the content
+        total_items:
+          type: integer
+          description: Total number of elements
+    PageSize:
+      type: integer
+      description: Size of the page to retrieve
+      minimum: 1
+      maximum: 200
+      example: 15
+      default: 20
+    PageNumber:
+      type: integer
+      description: Number of the page to retrieve
+      minimum: 1
+      default: 1
+      example: 1
     Token:
       type: object
       required:
