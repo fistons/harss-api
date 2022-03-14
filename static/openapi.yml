@@ -16,6 +16,8 @@ servers:
           - http
           - https
         default: https
+  - url: 'http://localhost:8080'
+    description: Local RSS Api, for tests purpose
 security:
   - basicAuth: [ ]
   - jwt: [ ]
@@ -39,15 +41,24 @@ paths:
         __Available to administrators only.__
         
         List all registered users. 
+      parameters:
+        - name: size
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PageSize'
+        - name: page
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PageNumber'
       responses: 
         '200':
           description: A list of registred users
           content: 
             application/json:
               schema: 
-                type: array
-                items: 
-                  $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/PagedUsers'
         default:
           $ref: '#/components/responses/Error'
     post:
@@ -78,15 +89,24 @@ paths:
         - Channels
       summary: Returns a list of registred channels.
       description: List all the rss channels registred.
+      parameters:
+        - name: size
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PageSize'
+        - name: page
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PageNumber'
       responses:
         '200':
           description: A list of channels
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Channel'
+                $ref: '#/components/schemas/PagedChannels'
         default:
           $ref: '#/components/responses/Error'
     post:
@@ -147,15 +167,23 @@ paths:
           example: 1
           schema:
             $ref: '#/components/schemas/ChannelID'
+        - name: size
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PageSize'
+        - name: page
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PageNumber'
       responses:
         '200':
           description: A list of item
           content:
             application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Item'
+              schema: 
+                $ref: '#/components/schemas/PagedItems'
         default:
           $ref: '#/components/responses/Error'
   /auth/login:
@@ -253,6 +281,30 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    PagedChannels:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - content
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/Channel'
+    PagedUsers:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required:
+            - content
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
     PagedItems:
       type: object
       allOf:
