@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use log::debug;
-
 use entity::channels as channel;
 
 use crate::errors::ApiError;
@@ -34,31 +32,31 @@ impl GlobalService {
             Ok(channels) => {
                 for channel in channels.iter() {
                     if let Err(oops) = self.refresh_channel(channel).await {
-                        log::error!("Couldn't refresg channel {}: {:?}", channel.id, oops);
+                        log::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
                     }
                 }
-            },
+            }
             Err(oops) => {
                 log::error!("Couldn't get channels to refresh {:?}", oops);
             }
         }
-
-        
-        
     }
 
     pub async fn refresh_channel(&self, channel: &channel::Model) -> Result<(), ApiError> {
-        debug!("Fetching {}", &channel.name);
+        log::debug!("Fetching {}", channel.name);
         // Get the ids of the already fetched items
-        let items = self.item_service.get_items_of_channel(channel.id).await?;
+        let items = self
+            .item_service
+            .get_all_items_of_channel(channel.id)
+            .await?;
         let items: Vec<&String> = items
             .iter()
             .filter_map(|x| x.guid.as_ref().or(x.url.as_ref()))
             .collect();
 
-        let content = reqwest::blocking::get(&channel.url)
+        let content = reqwest::get(&channel.url).await
             .unwrap()
-            .bytes()
+            .bytes().await
             .unwrap();
         let rss_channel = rss::Channel::read_from(&content[..]).unwrap();
         for item in rss_channel.items.into_iter() {

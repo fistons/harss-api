@@ -47,7 +47,7 @@ async fn main() -> std::io::Result<()> {
         .connect_timeout(Duration::from_secs(8))
         .idle_timeout(Duration::from_secs(8))
         .max_lifetime(Duration::from_secs(8))
-        .sqlx_logging(true);
+        .sqlx_logging(false);
 
     let db = Database::connect(opt)
         .await
@@ -89,6 +89,7 @@ async fn main() -> std::io::Result<()> {
             .configure(routes::channels::configure)
             .configure(routes::users::configure)
             .configure(routes::auth::configure)
+            .configure(routes::items::configure)
             .service(fs::Files::new("/", "./static/").index_file("index.html"))
     })
     .bind(std::env::var("LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")))?
