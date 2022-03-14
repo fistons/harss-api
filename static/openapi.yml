@@ -319,6 +319,12 @@ components:
                 $ref: '#/components/schemas/Item'
     Page:
       type: object
+      required:
+        - page
+        - page_size
+        - total_items
+        - total_pages
+        - elements_number
       properties: 
         page:
           $ref: '#/components/schemas/PageNumber'
