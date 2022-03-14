@@ -1,9 +1,7 @@
 use actix_web::{get, HttpResponse, post, web};
-use log::info;
 use serde_json::json;
 
 use entity::sea_orm_active_enums::UserRole;
-use entity::users;
 
 use crate::errors::ApiError;
 use crate::model::{HttpNewUser, HttpUser, PagedResult, PageParameters};
@@ -22,7 +20,7 @@ async fn new_user(
     if configuration.allow_account_creation.unwrap_or(false)
         || admin
     {
-        info!("Recording new user {:?}", new_user);
+        log::debug!("Recording new user {:?}", new_user);
         let data = new_user.into_inner();
 
         if data.role == UserRole::Admin && admin {
@@ -46,12 +44,13 @@ async fn list_users(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     if user.is_admin() {
-        info!("Get all users");
-        
-        let truc = |x: users::Model| -> HttpUser { x.into()}; 
-        
-        let users: PagedResult<HttpUser> = user_service.list_users(page.get_page(), page.get_size()).await?
-            .map_content(truc);
+        log::debug!("Get all users");
+
+        //FIXME: This is ugly as fuck. Cf. https://git.pedr0.net/twitch/rss-aggregator/-/issues/15
+        let users_page = user_service.list_users(page.get_page(), page.get_size()).await?;
+        let mapped_users = users_page.content.into_iter().map(|x| x.into()).collect::<Vec<HttpUser>>();
+        let users = PagedResult { content: mapped_users, page: users_page.page, page_size: users_page.page_size, total_pages: users_page.total_pages, elements_number: users_page.elements_number, total_items: users_page.total_items };
+
         Ok(HttpResponse::Ok().json(users))
     } else {
         Err(ApiError::unauthorized("You are not allowed to do that"))
