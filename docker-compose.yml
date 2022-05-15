@@ -1,13 +1,6 @@
 services:
-  client:
-    image: git.pedr0.net:5005/rust/rss-agg-client:master-1
-    ports:
-      - "9090:80"
-    depends_on: 
-      api:
-        condition: service_started
   api:
-    build: .
+    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator
     ports:
       - "8080:8080"
     links:
