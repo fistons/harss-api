@@ -14,7 +14,7 @@ FROM debian:buster-slim as runtime
 LABEL maintainer=eric@pedr0.net
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install libssl-dev libpq-dev ca-certificates -y
+RUN apt-get update && apt-get install libssl-dev libpq-dev ca-certificates curl -y
 
 COPY --from=builder /app/target/release/rss-aggregator /usr/local/bin
 COPY static/ static/
