@@ -54,7 +54,7 @@ paths:
             $ref: '#/components/schemas/PageNumber'
       responses: 
         '200':
-          description: A list of registred users
+          description: A list of registered users
           content: 
             application/json:
               schema: 
@@ -67,9 +67,9 @@ paths:
         - Users
       summary: Create a new user
       description: |
-        __Available to administrators only or to everyone if specicied in the configuration file.__
+        __Available to administrators only or to everyone if specified in the configuration file.__
         
-        Register a new user. __Only an administrator can create a new administrator__
+        Register a new user.
       requestBody:
         required: true
         description: User creation request.
@@ -87,8 +87,8 @@ paths:
       operationId: get_channels
       tags:
         - Channels
-      summary: Returns a list of registred channels.
-      description: List all the rss channels registred.
+      summary: Returns a list of registered channels.
+      description: List all the rss channels registered.
       parameters:
         - name: size
           in: query
@@ -133,7 +133,7 @@ paths:
       tags:
         - Channels
       summary: Retrieve a single channel.
-      description: Retrieve a single RSS channel informations.
+      description: Retrieve a single RSS channel information.
       parameters:
         - name: id
           in: path
