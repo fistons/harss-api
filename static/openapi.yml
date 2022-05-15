@@ -8,8 +8,8 @@ info:
     email: eric@pedr0.net
     url: https://pedr0.net
 servers:
-  - url: '{protocol}://api.rss.pedr0.net'
-    description: RSS Api
+  - url: '{protocol}://rss-dev-api.pedr0.net'
+    description: Dev RSS Api
     variables:
       protocol:
         enum:
