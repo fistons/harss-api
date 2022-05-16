@@ -18,7 +18,15 @@ RUN adduser \
     "${USER}"
 
 WORKDIR app
-COPY ./ .
+COPY Cargo.toml Cargo.toml
+COPY Cargo.lock Cargo.lock
+COPY .env .env
+COPY configuration.yaml configuration.yaml
+COPY entity/ entity/
+COPY migrations/ migrations/
+COPY static/ static/
+COPY src/ src/
+
 RUN cargo build --target x86_64-unknown-linux-musl --release
 
 ### The actual build
@@ -27,8 +35,6 @@ LABEL maintainer=eric@pedr0.net
 
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
-
-RUN apk update && apk add curl
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/rss-aggregator /usr/local/bin
 COPY static/ static/
