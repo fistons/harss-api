@@ -28,8 +28,7 @@ LABEL maintainer=eric@pedr0.net
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 
-
-RUN apk update && apk add libressl-dev libpq-dev ca-certificates curl
+RUN apk update && apk add curl
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/rss-aggregator /usr/local/bin
 COPY static/ static/
