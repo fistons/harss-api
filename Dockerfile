@@ -24,7 +24,6 @@ COPY .env .env
 COPY configuration.yaml configuration.yaml
 COPY entity/ entity/
 COPY migrations/ migrations/
-COPY static/ static/
 COPY src/ src/
 
 RUN cargo build --target x86_64-unknown-linux-musl --release
