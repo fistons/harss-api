@@ -6,6 +6,7 @@ use entity::sea_orm_active_enums::UserRole;
 use entity::users::Model;
 
 pub mod configuration;
+pub mod opml;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HttpNewChannel {

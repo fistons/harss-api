@@ -39,7 +39,6 @@ impl ChannelService {
 
     /// # Select all the channels of a user
     pub async fn select_all_by_user_id(&self, u_id: i32, page: usize, page_size: usize) -> Result<PagedResult<channels::Model>, ApiError> {
-        
         let channel_paginator = Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(u_id))
@@ -80,7 +79,6 @@ impl ChannelService {
         Ok(channel.insert(self.db.as_ref()).await?)
     }
 
-
     pub async fn create_or_link_channel(
         &self,
         new_channel: HttpNewChannel,
@@ -99,6 +97,7 @@ impl ChannelService {
             user_id: Set(other_user_id),
         };
 
+        //FIXME: doesn't handle duplicate when attempting to insert an already registered channel
         channel_user.insert(self.db.as_ref()).await?;
 
         Ok(channel)

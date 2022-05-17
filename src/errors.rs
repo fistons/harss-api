@@ -90,6 +90,19 @@ impl Serialize for ApiError {
     }
 }
 
+impl From<rss::Error> for ApiError {
+    fn from(err: rss::Error) -> Self {
+        log::error!("rss error: {}", err);
+        ApiError::custom(
+            Uri::from_str(problems_uri::DATABASE).unwrap(),
+            "Rss Parsing error".into(),
+            format!("RSS Parsing error: {:?}", err),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            HashMap::with_capacity(0),
+        )
+    }
+}
+
 impl From<sea_orm::DbErr> for ApiError {
     fn from(err: sea_orm::DbErr) -> Self {
         log::error!("sea_orm error: {}", err);
