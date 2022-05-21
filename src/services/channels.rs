@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use sea_orm::{entity::*, query::*};
+use sea_orm::{DbErr, entity::*, query::*};
 use sea_orm::DatabaseConnection;
 
 use entity::{channel_users, channels};
@@ -97,9 +97,13 @@ impl ChannelService {
             user_id: Set(other_user_id),
         };
 
-        //FIXME: doesn't handle duplicate when attempting to insert an already registered channel
-        channel_user.insert(self.db.as_ref()).await?;
-
-        Ok(channel)
+        match channel_user.insert(self.db.as_ref()).await {
+            Ok(_) => Ok(channel),
+            Err(DbErr::Query(x)) => {
+                log::warn!("Channel {} for user {} already inserted: {x}", channel.name, other_user_id);
+                Ok(channel)
+            },
+            Err(x) => Err(x.into())
+        }
     }
 }
