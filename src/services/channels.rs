@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use sea_orm::{entity::*, query::*};
+use sea_orm::{DbErr, entity::*, query::*};
 use sea_orm::DatabaseConnection;
 
 use entity::{channel_users, channels};
@@ -39,7 +39,6 @@ impl ChannelService {
 
     /// # Select all the channels of a user
     pub async fn select_all_by_user_id(&self, u_id: i32, page: usize, page_size: usize) -> Result<PagedResult<channels::Model>, ApiError> {
-        
         let channel_paginator = Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(u_id))
@@ -80,7 +79,6 @@ impl ChannelService {
         Ok(channel.insert(self.db.as_ref()).await?)
     }
 
-
     pub async fn create_or_link_channel(
         &self,
         new_channel: HttpNewChannel,
@@ -99,8 +97,13 @@ impl ChannelService {
             user_id: Set(other_user_id),
         };
 
-        channel_user.insert(self.db.as_ref()).await?;
-
-        Ok(channel)
+        match channel_user.insert(self.db.as_ref()).await {
+            Ok(_) => Ok(channel),
+            Err(DbErr::Query(x)) => {
+                log::warn!("Channel {} for user {} already inserted: {x}", channel.name, other_user_id);
+                Ok(channel)
+            },
+            Err(x) => Err(x.into())
+        }
     }
 }

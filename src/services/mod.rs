@@ -58,7 +58,7 @@ impl GlobalService {
             .unwrap()
             .bytes().await
             .unwrap();
-        let rss_channel = rss::Channel::read_from(&content[..]).unwrap();
+        let rss_channel = rss::Channel::read_from(&content[..])?;
         for item in rss_channel.items.into_iter() {
             let i = HttpNewItem::from_rss_item(item, channel.id);
             log::debug!("{:?}", i);
