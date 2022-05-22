@@ -90,8 +90,8 @@ impl Serialize for ApiError {
     }
 }
 
-impl From<rss::Error> for ApiError {
-    fn from(err: rss::Error) -> Self {
+impl From<feed_rs::parser::ParseFeedError> for ApiError {
+    fn from(err: feed_rs::parser::ParseFeedError) -> Self {
         log::error!("rss error: {}", err);
         ApiError::custom(
             Uri::from_str(problems_uri::DATABASE).unwrap(),

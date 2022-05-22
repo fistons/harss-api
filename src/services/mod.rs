@@ -58,8 +58,9 @@ impl GlobalService {
             .unwrap()
             .bytes().await
             .unwrap();
-        let rss_channel = rss::Channel::read_from(&content[..])?;
-        for item in rss_channel.items.into_iter() {
+        
+        let rss_channel = feed_rs::parser::parse(&content[..])?;
+        for item in rss_channel.entries.into_iter() {
             let i = HttpNewItem::from_rss_item(item, channel.id);
             log::debug!("{:?}", i);
             match i.guid.as_ref().or(i.url.as_ref()) {
