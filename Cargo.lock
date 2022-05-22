@@ -260,7 +260,7 @@ dependencies = [
  "futures",
  "log",
  "mime",
- "quick-xml 0.22.0",
+ "quick-xml",
  "serde",
  "thiserror",
 ]
@@ -375,18 +375,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "616896e05fc0e2649463a93a15183c6a16bf03413a7af88ef1285ddedfa9cda5"
 dependencies = [
  "num-traits",
-]
-
-[[package]]
-name = "atom_syndication"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d5016bf52ff4f3ed28bf3ec1fed96b53daf4b137d5e6b9f97a8cfae7b57a3a2"
-dependencies = [
- "chrono",
- "derive_builder",
- "diligent-date-parser",
- "quick-xml 0.20.0",
 ]
 
 [[package]]
@@ -701,66 +689,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "darling"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d706e75d87e35569db781a9b5e2416cff1236a47ed380831f959382ccd5f858"
-dependencies = [
- "darling_core",
- "darling_macro",
-]
-
-[[package]]
-name = "darling_core"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0c960ae2da4de88a91b2d920c2a7233b400bc33cb28453a2987822d8392519b"
-dependencies = [
- "fnv",
- "ident_case",
- "proc-macro2",
- "quote",
- "strsim",
- "syn",
-]
-
-[[package]]
-name = "darling_macro"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9b5a2f4ac4969822c62224815d069952656cadc7084fdca9751e6d959189b72"
-dependencies = [
- "darling_core",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "derive_builder"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2658621297f2cf68762a6f7dc0bb7e1ff2cfd6583daef8ee0fed6f7ec468ec0"
-dependencies = [
- "darling",
- "derive_builder_core",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "derive_builder_core"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2791ea3e372c8495c0bc2033991d76b512cd799d07491fbd6890124db9458bef"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "derive_more"
 version = "0.99.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -790,15 +718,6 @@ checksum = "f2fb860ca6fafa5552fb6d0e816a69c8e49f0908bf524e30a90d97c85892d506"
 dependencies = [
  "block-buffer 0.10.2",
  "crypto-common",
-]
-
-[[package]]
-name = "diligent-date-parser"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e37ea528f01b8bfca1f71bcd06a8e6c898bf8fdfbf24dd9dbc7fb49338ed6d84"
-dependencies = [
- "chrono",
 ]
 
 [[package]]
@@ -863,6 +782,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3fcf0cee53519c866c09b5de1f6c56ff9d647101f81c1964fa632e148896cdf"
 dependencies = [
  "instant",
+]
+
+[[package]]
+name = "feed-rs"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc6f51721365322ea2b7920033d9625dfbb776dab5ced2585b5f66ff2220852d"
+dependencies = [
+ "chrono",
+ "lazy_static",
+ "mime",
+ "quick-xml",
+ "regex",
+ "serde",
+ "serde_json",
+ "siphasher",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -1212,12 +1149,6 @@ dependencies = [
  "tokio 1.16.1",
  "tokio-native-tls",
 ]
-
-[[package]]
-name = "ident_case"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "idna"
@@ -1832,20 +1763,11 @@ dependencies = [
 
 [[package]]
 name = "quick-xml"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26aab6b48e2590e4a64d1ed808749ba06257882b461d01ca71baeb747074a6dd"
-dependencies = [
- "encoding_rs",
- "memchr",
-]
-
-[[package]]
-name = "quick-xml"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8533f14c8382aaad0d592c812ac3b826162128b65662331e1127b45c3d18536b"
 dependencies = [
+ "encoding_rs",
  "memchr",
  "serde",
 ]
@@ -2011,20 +1933,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rss"
-version = "1.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02e70d6ae72f8a4333af8ce9dce58942020528430eb0d46ee2fcb5e8d4d16377"
-dependencies = [
- "atom_syndication",
- "chrono",
- "derive_builder",
- "mime",
- "quick-xml 0.20.0",
- "url",
-]
-
-[[package]]
 name = "rss-aggregator"
 version = "0.1.0"
 dependencies = [
@@ -2036,6 +1944,7 @@ dependencies = [
  "clokwerk",
  "dotenv",
  "entity",
+ "feed-rs",
  "futures-util",
  "hmac",
  "http-auth-basic",
@@ -2043,7 +1952,6 @@ dependencies = [
  "log",
  "redis",
  "reqwest",
- "rss",
  "rust-argon2",
  "sea-orm",
  "serde",
@@ -2385,6 +2293,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "siphasher"
+version = "0.3.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bd3e3206899af3f8b12af284fafc038cc1dc2b41d1b89dd17297221c5d225de"
+
+[[package]]
 name = "slab"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2535,12 +2449,6 @@ dependencies = [
  "unicode-bidi",
  "unicode-normalization",
 ]
-
-[[package]]
-name = "strsim"
-version = "0.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6446ced80d6c486436db5c078dde11a9f73d42b57fb273121e160b84f63d894c"
 
 [[package]]
 name = "subtle"

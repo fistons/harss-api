@@ -70,11 +70,11 @@ pub struct HttpItem {
 
 impl HttpNewItem {
     /// Create an item to be inserted in the database, from a rss item.
-    pub fn from_rss_item(item: rss::Item, channel_id: i32) -> HttpNewItem {
-        let title = item.title;
-        let guid = item.guid.map(|x| x.value);
-        let url = item.link;
-        let content = item.description;
+    pub fn from_rss_item(entry: feed_rs::model::Entry, channel_id: i32) -> HttpNewItem {
+        let title = entry.title.map(|x| x.content);
+        let guid = Some(entry.id);
+        let url = entry.links.get(0).map(|x| String::from(&x.href[..]));
+        let content = entry.summary.map(|x| x.content);
         let read = false;
 
         HttpNewItem {
