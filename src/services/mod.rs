@@ -40,6 +40,7 @@ impl GlobalService {
                 log::error!("Couldn't get channels to refresh {:?}", oops);
             }
         }
+        log::info!("Refreshing all channels done");
     }
 
     pub async fn refresh_channel(&self, channel: &channel::Model) -> Result<(), ApiError> {
@@ -62,10 +63,9 @@ impl GlobalService {
         let rss_channel = feed_rs::parser::parse(&content[..])?;
         for item in rss_channel.entries.into_iter() {
             let i = HttpNewItem::from_rss_item(item, channel.id);
-            log::debug!("{:?}", i);
             match i.guid.as_ref().or(i.url.as_ref()) {
                 Some(ref x) if !items.contains(x) => {
-                    self.item_service.insert(i).await.unwrap();
+                    self.item_service.insert(i, channel.id).await.unwrap();
                 }
                 _ => (),
             };
