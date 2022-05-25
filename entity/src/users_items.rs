@@ -4,12 +4,16 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "channel_users")]
+#[sea_orm(table_name = "users_items")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub channel_id: i32,
-    #[sea_orm(primary_key, auto_increment = false)]
     pub user_id: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub item_id: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub channel_id: i32,
+    pub read: bool,
+    pub starred: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -23,6 +27,14 @@ pub enum Relation {
     )]
     Channels,
     #[sea_orm(
+        belongs_to = "super::items::Entity",
+        from = "Column::ItemId",
+        to = "super::items::Column::Id",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
+    Items,
+    #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::UserId",
         to = "super::users::Column::Id",
@@ -35,6 +47,12 @@ pub enum Relation {
 impl Related<super::channels::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Channels.def()
+    }
+}
+
+impl Related<super::items::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Items.def()
     }
 }
 

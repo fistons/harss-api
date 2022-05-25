@@ -40,6 +40,19 @@ CREATE TABLE items
 );
 
 
+CREATE TABLE users_items
+(
+    user_id integer not null,
+    item_id integer not null,
+    channel_id integer not null,
+    read bool not null default false,
+    starred bool not null default false,
+    PRIMARY KEY (user_id, item_id, channel_id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (channel_id) REFERENCES channels (id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 INSERT INTO users (id, username, password, role)
 VALUES (1, 'root',
         '$argon2i$v=19$m=4096,t=2,p=1$bGVwZXRpdGNlcmVib3M$MCSscpJ5MlsPvEpK7J5203kQ2tmdXKF5s2Oo47aQOyg',
