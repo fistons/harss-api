@@ -9,7 +9,7 @@ members = [".", "entity"]
 
 [dependencies]
 reqwest = { version = "0.11", features = ["json", "native-tls-vendored"] } # Request stuff over the web
-actix-web = { version = "4"} # Serve stuff over the web
+actix-web = { version = "4" } # Serve stuff over the web
 actix-files = "0.6.0"
 actix-xml = "0.2.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -30,7 +30,7 @@ chrono = "0.4"
 uuid = { version = "0.8.2", features = ["v4"] }
 redis = { version = "0.20" }
 clokwerk = "0.4.0-rc1"
-sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"], default-features = false }
+sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "debug-print"]}
 entity = { path = "entity" }
 
 [dev-dependencies]

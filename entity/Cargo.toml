@@ -10,13 +10,4 @@ path = "src/mod.rs"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-
-[dependencies.sea-orm]
-version = "^0.6.0"
-features = [
-    "macros",
-    "debug-print",
-    "runtime-tokio-rustls",
-    "sqlx-postgres",
-]
-default-features = false
+sea-orm = "^0"
