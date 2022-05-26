@@ -19,6 +19,6 @@ pub async fn get_all_items(
     Ok(HttpResponse::Ok().json(items))
 }
 
-pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
+pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_all_items);
 }

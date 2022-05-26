@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use sea_orm::{entity::*, query::*};
 use sea_orm::DatabaseConnection;
+use sea_orm::{entity::*, query::*};
 
 use entity::channel_users;
 use entity::channel_users::Entity as ChannelUsers;
@@ -22,7 +22,11 @@ impl ItemService {
         Self { db: Arc::new(db) }
     }
 
-    pub async fn insert(&self, new_item: HttpNewItem, channel_id: i32) -> Result<items::Model, ApiError> {
+    pub async fn insert(
+        &self,
+        new_item: HttpNewItem,
+        channel_id: i32,
+    ) -> Result<items::Model, ApiError> {
         log::trace!("Inserting item {:?}", new_item);
 
         let item = items::ActiveModel {
@@ -31,7 +35,8 @@ impl ItemService {
             title: Set(new_item.title),
             url: Set(new_item.url),
             content: Set(new_item.content),
-            read: Set(false),
+            fetch_timestamp: Set(chrono::Utc::now().into()),
+            publish_timestamp: Set(new_item.published_timestamp.map(|x| x.into())),
             channel_id: Set(new_item.channel_id),
         };
 
@@ -51,7 +56,12 @@ impl ItemService {
         Ok(item)
     }
 
-    pub async fn get_items_of_channel(&self, chan_id: i32, page: usize, page_size: usize) -> Result<PagedResult<items::Model>, ApiError> {
+    pub async fn get_items_of_channel(
+        &self,
+        chan_id: i32,
+        page: usize,
+        page_size: usize,
+    ) -> Result<PagedResult<items::Model>, ApiError> {
         log::debug!("Getting items of channel {}", chan_id);
 
         let item_paginator = Item::find()
@@ -74,13 +84,17 @@ impl ItemService {
         })
     }
 
-    pub async fn get_all_items_of_channel(&self, chan_id: i32) -> Result<Vec<entity::items::Model>, ApiError> {
+    pub async fn get_all_items_of_channel(
+        &self,
+        chan_id: i32,
+    ) -> Result<Vec<entity::items::Model>, ApiError> {
         log::debug!("Getting items paginator of channel {}", chan_id);
 
         Ok(Item::find()
             .filter(items::Column::ChannelId.eq(chan_id))
             .order_by_desc(items::Column::Id)
-            .all(self.db.as_ref()).await?)
+            .all(self.db.as_ref())
+            .await?)
     }
 
     pub async fn get_items_of_user(
@@ -119,7 +133,10 @@ impl ItemService {
 
     /// # Select all the users linked to a channel
     /// TODO: I only need the user_id here
-    async fn get_users_of_channel(&self, channel_id: i32) -> Result<Vec<channel_users::Model>, ApiError> {
+    async fn get_users_of_channel(
+        &self,
+        channel_id: i32,
+    ) -> Result<Vec<channel_users::Model>, ApiError> {
         Ok(ChannelUsers::find()
             .filter(channel_users::Column::ChannelId.eq(channel_id))
             .all(self.db.as_ref())

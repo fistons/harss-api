@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use chrono::{DateTime, Utc};
 
 use serde::{Deserialize, Serialize};
 
@@ -52,7 +53,7 @@ pub struct HttpNewItem {
     pub title: Option<String>,
     pub url: Option<String>,
     pub content: Option<String>,
-    pub read: bool,
+    pub published_timestamp: Option<DateTime<Utc>>,
     pub channel_id: i32,
 }
 
@@ -75,14 +76,13 @@ impl HttpNewItem {
         let guid = Some(entry.id);
         let url = entry.links.get(0).map(|x| String::from(&x.href[..]));
         let content = entry.summary.map(|x| x.content);
-        let read = false;
 
         HttpNewItem {
             guid,
             title,
             url,
             content,
-            read,
+            published_timestamp: entry.published,
             channel_id,
         }
     }
