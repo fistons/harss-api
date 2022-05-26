@@ -11,7 +11,7 @@ use entity::items::Entity as Item;
 use entity::users_items;
 
 use crate::errors::ApiError;
-use crate::model::{item_from_rss_entry, PagedResult};
+use crate::model::{item_from_rss_entry, HttpUserItem, PagedResult};
 
 #[derive(Clone)]
 pub struct ItemService {
@@ -26,19 +26,20 @@ impl ItemService {
     pub async fn insert(&self, entry: Entry, channel_id: i32) -> Result<items::Model, ApiError> {
         log::trace!("Inserting item {:?}", entry);
 
-        let item = item_from_rss_entry(entry, channel_id);
-
-        let item = item.insert(self.db.as_ref()).await?;
+        let item = item_from_rss_entry(entry, channel_id)
+            .insert(self.db.as_ref())
+            .await?;
 
         for channel_user in self.get_users_of_channel(channel_id).await? {
-            let link = entity::users_items::ActiveModel {
+            entity::users_items::ActiveModel {
                 user_id: Set(channel_user.user_id),
                 channel_id: Set(channel_id),
                 item_id: Set(item.id),
                 read: Set(false),
                 starred: Set(false),
-            };
-            link.insert(self.db.as_ref()).await?;
+            }
+            .insert(self.db.as_ref())
+            .await?;
         }
 
         Ok(item)
@@ -92,7 +93,7 @@ impl ItemService {
         user_id: i32,
         page: usize,
         page_size: usize,
-    ) -> Result<PagedResult<items::Model>, ApiError> {
+    ) -> Result<PagedResult<HttpUserItem>, ApiError> {
         log::debug!(
             "Getting items of user {} Page {}, Size {}",
             user_id,
@@ -102,8 +103,11 @@ impl ItemService {
 
         let item_paginator = Item::find()
             .join(JoinType::RightJoin, items::Relation::UsersItems.def())
+            .column(users_items::Column::Read)
+            .column(users_items::Column::Starred)
             .filter(users_items::Column::UserId.eq(user_id))
             .order_by_desc(items::Column::Id)
+            .into_model::<HttpUserItem>()
             .paginate(self.db.as_ref(), page_size);
 
         let total_items = item_paginator.num_items().await?;

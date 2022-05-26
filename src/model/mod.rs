@@ -1,13 +1,12 @@
-use chrono::{DateTime, Utc};
 use std::fmt::Debug;
 
+use chrono::{DateTime, Utc};
 use feed_rs::model::Entry;
-use sea_orm::{NotSet, Set};
+use sea_orm::{FromQueryResult, NotSet, Set};
 use serde::{Deserialize, Serialize};
 
 use entity::items;
 use entity::sea_orm_active_enums::UserRole;
-use entity::users::Model;
 
 pub mod configuration;
 pub mod opml;
@@ -33,33 +32,25 @@ pub struct HttpNewUser {
     pub role: UserRole,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromQueryResult)]
 pub struct HttpUser {
     pub id: i32,
     pub username: String,
     pub role: UserRole,
 }
 
-impl From<Model> for HttpUser {
-    fn from(u: Model) -> Self {
-        HttpUser {
-            id: u.id,
-            username: u.username,
-            role: u.role,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct HttpItem {
+/// RSS Item representation, with user related data
+#[derive(Debug, Serialize, Deserialize, Clone, FromQueryResult)]
+pub struct HttpUserItem {
     pub id: i32,
     pub guid: Option<String>,
     pub title: Option<String>,
     pub url: Option<String>,
     pub content: Option<String>,
+    pub fetch_timestamp: DateTime<Utc>,
+    pub publish_timestamp: Option<DateTime<Utc>>,
     pub read: bool,
-    #[serde(skip_serializing)]
-    pub channel_id: i32,
+    pub starred: bool,
 }
 
 pub fn item_from_rss_entry(entry: Entry, channel_id: i32) -> items::ActiveModel {
@@ -74,7 +65,7 @@ pub fn item_from_rss_entry(entry: Entry, channel_id: i32) -> items::ActiveModel 
         title: Set(title),
         url: Set(url),
         content: Set(content),
-        fetch_timestamp: Set(chrono::Utc::now().into()),
+        fetch_timestamp: Set(Utc::now().into()),
         publish_timestamp: Set(entry.published.map(|x| x.into())),
         channel_id: Set(channel_id),
     }

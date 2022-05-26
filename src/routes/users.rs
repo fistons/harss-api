@@ -5,7 +5,7 @@ use entity::sea_orm_active_enums::UserRole;
 
 use crate::errors::ApiError;
 use crate::model::configuration::ApplicationConfiguration;
-use crate::model::{HttpNewUser, HttpUser, PageParameters, PagedResult};
+use crate::model::{HttpNewUser, PageParameters, PagedResult};
 use crate::services::auth::AuthenticatedUser;
 use crate::services::users::UserService;
 
@@ -46,17 +46,11 @@ async fn list_users(
     if user.is_admin() {
         log::debug!("Get all users");
 
-        //FIXME: This is ugly as fuck. Cf. https://git.pedr0.net/twitch/rss-aggregator/-/issues/15
         let users_page = user_service
             .list_users(page.get_page(), page.get_size())
             .await?;
-        let mapped_users = users_page
-            .content
-            .into_iter()
-            .map(|x| x.into())
-            .collect::<Vec<HttpUser>>();
         let users = PagedResult {
-            content: mapped_users,
+            content: users_page.content,
             page: users_page.page,
             page_size: users_page.page_size,
             total_pages: users_page.total_pages,
