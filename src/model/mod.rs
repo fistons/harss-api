@@ -1,8 +1,11 @@
 use chrono::{DateTime, Utc};
 use std::fmt::Debug;
 
+use feed_rs::model::Entry;
+use sea_orm::{NotSet, Set};
 use serde::{Deserialize, Serialize};
 
+use entity::items;
 use entity::sea_orm_active_enums::UserRole;
 use entity::users::Model;
 
@@ -48,16 +51,6 @@ impl From<Model> for HttpUser {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct HttpNewItem {
-    pub guid: Option<String>,
-    pub title: Option<String>,
-    pub url: Option<String>,
-    pub content: Option<String>,
-    pub published_timestamp: Option<DateTime<Utc>>,
-    pub channel_id: i32,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HttpItem {
     pub id: i32,
     pub guid: Option<String>,
@@ -69,22 +62,21 @@ pub struct HttpItem {
     pub channel_id: i32,
 }
 
-impl HttpNewItem {
-    /// Create an item to be inserted in the database, from a rss item.
-    pub fn from_rss_item(entry: feed_rs::model::Entry, channel_id: i32) -> HttpNewItem {
-        let title = entry.title.map(|x| x.content);
-        let guid = Some(entry.id);
-        let url = entry.links.get(0).map(|x| String::from(&x.href[..]));
-        let content = entry.summary.map(|x| x.content);
+pub fn item_from_rss_entry(entry: Entry, channel_id: i32) -> items::ActiveModel {
+    let title = entry.title.map(|x| x.content);
+    let guid = Some(entry.id);
+    let url = entry.links.get(0).map(|x| String::from(&x.href[..]));
+    let content = entry.summary.map(|x| x.content);
 
-        HttpNewItem {
-            guid,
-            title,
-            url,
-            content,
-            published_timestamp: entry.published,
-            channel_id,
-        }
+    items::ActiveModel {
+        id: NotSet,
+        guid: Set(guid),
+        title: Set(title),
+        url: Set(url),
+        content: Set(content),
+        fetch_timestamp: Set(chrono::Utc::now().into()),
+        publish_timestamp: Set(entry.published.map(|x| x.into())),
+        channel_id: Set(channel_id),
     }
 }
 

@@ -1,3 +1,4 @@
+use feed_rs::model::Entry;
 use std::sync::Arc;
 
 use sea_orm::DatabaseConnection;
@@ -10,7 +11,7 @@ use entity::items::Entity as Item;
 use entity::users_items;
 
 use crate::errors::ApiError;
-use crate::model::{HttpNewItem, PagedResult};
+use crate::model::{item_from_rss_entry, PagedResult};
 
 #[derive(Clone)]
 pub struct ItemService {
@@ -22,23 +23,10 @@ impl ItemService {
         Self { db: Arc::new(db) }
     }
 
-    pub async fn insert(
-        &self,
-        new_item: HttpNewItem,
-        channel_id: i32,
-    ) -> Result<items::Model, ApiError> {
-        log::trace!("Inserting item {:?}", new_item);
+    pub async fn insert(&self, entry: Entry, channel_id: i32) -> Result<items::Model, ApiError> {
+        log::trace!("Inserting item {:?}", entry);
 
-        let item = items::ActiveModel {
-            id: NotSet,
-            guid: Set(new_item.guid),
-            title: Set(new_item.title),
-            url: Set(new_item.url),
-            content: Set(new_item.content),
-            fetch_timestamp: Set(chrono::Utc::now().into()),
-            publish_timestamp: Set(new_item.published_timestamp.map(|x| x.into())),
-            channel_id: Set(new_item.channel_id),
-        };
+        let item = item_from_rss_entry(entry, channel_id);
 
         let item = item.insert(self.db.as_ref()).await?;
 
