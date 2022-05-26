@@ -55,11 +55,13 @@ impl GlobalService {
             .filter_map(|x| x.guid.as_ref().or(x.url.as_ref()))
             .collect();
 
-        let content = reqwest::get(&channel.url).await
+        let content = reqwest::get(&channel.url)
+            .await
             .unwrap()
-            .bytes().await
+            .bytes()
+            .await
             .unwrap();
-        
+
         let rss_channel = feed_rs::parser::parse(&content[..])?;
         for item in rss_channel.entries.into_iter() {
             let i = HttpNewItem::from_rss_item(item, channel.id);

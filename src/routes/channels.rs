@@ -1,10 +1,10 @@
-use actix_web::{get, HttpResponse, post, web};
 use actix_web::http::StatusCode;
+use actix_web::{get, post, web, HttpResponse};
 use actix_xml::Xml;
 use serde_json::json;
 
-use crate::model::opml::Opml;
 use crate::errors::ApiError;
+use crate::model::opml::Opml;
 use crate::model::{HttpNewChannel, PageParameters};
 use crate::services::auth::AuthenticatedUser;
 use crate::services::channels::ChannelService;
@@ -34,7 +34,9 @@ pub async fn get_channels(
     page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let channels = channel_service.select_all_by_user_id(user.id, page.get_page(), page.get_size()).await?;
+    let channels = channel_service
+        .select_all_by_user_id(user.id, page.get_page(), page.get_size())
+        .await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
@@ -72,22 +74,27 @@ async fn get_items(
         return Ok(HttpResponse::NotFound().finish());
     }
 
-    let items = items_service.get_items_of_channel(chan.unwrap().id, page.get_page(), page.get_size()).await?;
+    let items = items_service
+        .get_items_of_channel(chan.unwrap().id, page.get_page(), page.get_size())
+        .await?;
     Ok(HttpResponse::Ok().json(items))
 }
 
 #[post("/channels/import")]
-async fn import_opml(channel_service: web::Data<ChannelService>,
-                     auth: AuthenticatedUser, opml: Xml<Opml>) -> Result<HttpResponse, ApiError> {
-    
+async fn import_opml(
+    channel_service: web::Data<ChannelService>,
+    auth: AuthenticatedUser,
+    opml: Xml<Opml>,
+) -> Result<HttpResponse, ApiError> {
     let opml = opml.into_inner();
     for channel in opml.body.flatten_outlines() {
-        channel_service.create_or_link_channel(channel, auth.id).await?;
+        channel_service
+            .create_or_link_channel(channel, auth.id)
+            .await?;
     }
-    
+
     Ok(HttpResponse::Created().finish())
 }
-
 
 pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(get_channel)

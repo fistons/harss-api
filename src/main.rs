@@ -7,7 +7,7 @@ use std::time::Duration;
 use actix_files as fs;
 use actix_web::web::Data;
 use actix_web::{App, HttpServer};
-use clokwerk::{AsyncScheduler,  TimeUnits};
+use clokwerk::{AsyncScheduler, TimeUnits};
 use sea_orm::{ConnectOptions, Database};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 
@@ -69,8 +69,10 @@ async fn main() -> std::io::Result<()> {
         .unwrap()
         .seconds();
     log::info!("Poll every {:?}", polling);
-    
-    scheduler.every(polling).run(move || refresh(global.clone()));
+
+    scheduler
+        .every(polling)
+        .run(move || refresh(global.clone()));
     tokio::spawn(async move {
         loop {
             scheduler.run_pending().await;

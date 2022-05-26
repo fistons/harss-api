@@ -1,5 +1,5 @@
-use std::fmt::Debug;
 use chrono::{DateTime, Utc};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 

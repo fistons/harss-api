@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use sea_orm::{DbErr, entity::*, query::*};
 use sea_orm::DatabaseConnection;
+use sea_orm::{entity::*, query::*, DbErr};
 
-use entity::{channel_users, channels};
 use entity::channels::Entity as Channel;
+use entity::{channel_users, channels};
 
 use crate::errors::ApiError;
 use crate::model::{HttpNewChannel, PagedResult};
@@ -16,9 +16,7 @@ pub struct ChannelService {
 
 impl ChannelService {
     pub fn new(db: DatabaseConnection) -> Self {
-        ChannelService {
-            db: Arc::new(db)
-        }
+        ChannelService { db: Arc::new(db) }
     }
 
     /// # Select a channel by id and user id
@@ -38,14 +36,21 @@ impl ChannelService {
     }
 
     /// # Select all the channels of a user
-    pub async fn select_all_by_user_id(&self, u_id: i32, page: usize, page_size: usize) -> Result<PagedResult<channels::Model>, ApiError> {
+    pub async fn select_all_by_user_id(
+        &self,
+        u_id: i32,
+        page: usize,
+        page_size: usize,
+    ) -> Result<PagedResult<channels::Model>, ApiError> {
         let channel_paginator = Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(u_id))
             .paginate(self.db.as_ref(), page_size);
 
-        let total_pages = channel_paginator.num_pages().await?;
         let total_items = channel_paginator.num_items().await?;
+        // Calling .num_pages() on the paginator re-query the database for the number of items
+        // so we better do it ourself by reusing the .num_items() result
+        let total_pages = (total_items / page_size) + (total_items % page_size > 0) as usize;
         let content = channel_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
@@ -63,7 +68,6 @@ impl ChannelService {
     pub async fn select_all(&self) -> Result<Vec<channels::Model>, ApiError> {
         Ok(Channel::find().all(self.db.as_ref()).await?)
     }
-
 
     /// # Create a new channel in the database
     async fn create_new_channel(
@@ -86,7 +90,8 @@ impl ChannelService {
     ) -> Result<channels::Model, ApiError> {
         let channel = match Channel::find()
             .filter(channels::Column::Url.eq(&*new_channel.url))
-            .one(self.db.as_ref()).await?
+            .one(self.db.as_ref())
+            .await?
         {
             Some(found) => found,
             None => self.create_new_channel(&new_channel).await?,
@@ -100,10 +105,14 @@ impl ChannelService {
         match channel_user.insert(self.db.as_ref()).await {
             Ok(_) => Ok(channel),
             Err(DbErr::Query(x)) => {
-                log::warn!("Channel {} for user {} already inserted: {x}", channel.name, other_user_id);
+                log::warn!(
+                    "Channel {} for user {} already inserted: {x}",
+                    channel.name,
+                    other_user_id
+                );
                 Ok(channel)
-            },
-            Err(x) => Err(x.into())
+            }
+            Err(x) => Err(x.into()),
         }
     }
 }

@@ -69,8 +69,10 @@ impl ItemService {
             .order_by_desc(items::Column::Id)
             .paginate(self.db.as_ref(), page_size);
 
-        let total_pages = item_paginator.num_pages().await?;
         let total_items = item_paginator.num_items().await?;
+        // Calling .num_pages() on the paginator re-query the database for the number of items
+        // so we better do it ourself by reusing the .num_items() result
+        let total_pages = (total_items / page_size) + (total_items % page_size > 0) as usize;
         let content = item_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
@@ -116,8 +118,10 @@ impl ItemService {
             .order_by_desc(items::Column::Id)
             .paginate(self.db.as_ref(), page_size);
 
-        let total_pages = item_paginator.num_pages().await?;
         let total_items = item_paginator.num_items().await?;
+        // Calling .num_pages() on the paginator re-query the database for the number of items
+        // so we better do it ourself by reusing the .num_items() result
+        let total_pages = (total_items / page_size) + (total_items % page_size > 0) as usize;
         let content = item_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
