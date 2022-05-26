@@ -34,7 +34,8 @@ CREATE TABLE items
     title      text    null,
     url        text    null,
     content    text    null,
-    read       boolean not null,
+    fetch_timestamp timestamptz not null,
+    publish_timestamp timestamptz,
     channel_id integer not null,
     FOREIGN KEY (channel_id) REFERENCES channels (id) on delete cascade on update cascade
 );
