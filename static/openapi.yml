@@ -485,7 +485,9 @@ components:
         - title
         - guid
         - content
+        - fetch_timestamp
         - read
+        - starred
       properties:
         id:
           $ref: '#/components/schemas/ItemID'
@@ -497,9 +499,21 @@ components:
           $ref: '#/components/schemas/ItemContent'
         url:
           $ref: '#/components/schemas/ItemURL'
+        fetch_timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the item was fetched
+        publish_timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the item was publish
         read:
           type: boolean
-          description: Is the item has already been read?
+          description: The item has been read
+          example: false
+        starred:
+          type: boolean
+          description: The item has been starred
           example: false
     ItemID:
       type: integer
