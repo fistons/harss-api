@@ -65,7 +65,7 @@ pub async fn refresh_auth(
     }
 }
 
-pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
+pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(login);
     cfg.service(refresh_auth);
 }

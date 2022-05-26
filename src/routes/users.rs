@@ -70,6 +70,6 @@ async fn list_users(
     }
 }
 
-pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
+pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(new_user).service(list_users);
 }

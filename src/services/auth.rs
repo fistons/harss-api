@@ -1,6 +1,6 @@
 use actix_web::http::header::HeaderMap;
 use actix_web::web::Data;
-use actix_web::{dev, web, FromRequest, HttpRequest};
+use actix_web::{dev, FromRequest, HttpRequest};
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use futures_util::future::LocalBoxFuture;
 use hmac::{Hmac, NewMac};
@@ -81,7 +81,7 @@ async fn extract_authenticated_user(req: &HttpRequest) -> Result<AuthenticatedUs
                 Err(e) => return Err(e),
             };
 
-            let user_service = req.app_data::<web::Data<UserService>>().unwrap();
+            let user_service = req.app_data::<Data<UserService>>().unwrap();
             check_and_get_authed_user(&user, &password, user_service).await
         }
 

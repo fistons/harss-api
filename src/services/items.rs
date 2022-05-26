@@ -89,7 +89,7 @@ impl ItemService {
     pub async fn get_all_items_of_channel(
         &self,
         chan_id: i32,
-    ) -> Result<Vec<entity::items::Model>, ApiError> {
+    ) -> Result<Vec<items::Model>, ApiError> {
         log::debug!("Getting items paginator of channel {}", chan_id);
 
         Ok(Item::find()

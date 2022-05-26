@@ -37,7 +37,7 @@ pub struct HttpUser {
     pub role: UserRole,
 }
 
-impl From<entity::users::Model> for HttpUser {
+impl From<Model> for HttpUser {
     fn from(u: Model) -> Self {
         HttpUser {
             id: u.id,

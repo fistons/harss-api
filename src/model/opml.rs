@@ -37,8 +37,8 @@ impl Body {
 //FIXME Ugliest method ever
 fn flatten_outlines(outline: &Outline, channels: &mut Vec<HttpNewChannel>) {
     if outline.outlines.is_some() {
-        for o in outline.outlines.as_ref().unwrap().into_iter() {
-            flatten_outlines(&o, channels);
+        for o in outline.outlines.as_ref().unwrap().iter() {
+            flatten_outlines(o, channels);
         }
     }
     if outline.xml_url.is_some() {

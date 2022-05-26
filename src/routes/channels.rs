@@ -96,7 +96,7 @@ async fn import_opml(
     Ok(HttpResponse::Created().finish())
 }
 
-pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
+pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_channel)
         .service(get_channels)
         .service(new_channel)
