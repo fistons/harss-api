@@ -461,6 +461,9 @@ components:
           $ref: '#/components/schemas/ChannelName'
         url:
           $ref: '#/components/schemas/ChannelURL'
+        last_update:
+          format: date-time
+          description: Timestamp of the channel last update
     ChannelID:
       type: integer
       description: ID of a channel.

@@ -1,5 +1,7 @@
+use chrono::{DateTime, Utc};
 use std::sync::Arc;
 
+use sea_orm::sea_query::Expr;
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DbErr};
 
@@ -7,7 +9,7 @@ use entity::channels::Entity as Channel;
 use entity::{channel_users, channels};
 
 use crate::errors::ApiError;
-use crate::model::{HttpNewChannel, PagedResult};
+use crate::model::{HttpChannel, HttpNewChannel, PagedResult};
 
 #[derive(Clone)]
 pub struct ChannelService {
@@ -26,11 +28,12 @@ impl ChannelService {
         &self,
         u_id: i32,
         chan_id: i32,
-    ) -> Result<Option<channels::Model>, ApiError> {
+    ) -> Result<Option<HttpChannel>, ApiError> {
         Ok(Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::ChannelId.eq(chan_id))
             .filter(channel_users::Column::UserId.eq(u_id))
+            .into_model::<HttpChannel>()
             .one(self.db.as_ref())
             .await?)
     }
@@ -41,10 +44,11 @@ impl ChannelService {
         u_id: i32,
         page: usize,
         page_size: usize,
-    ) -> Result<PagedResult<channels::Model>, ApiError> {
+    ) -> Result<PagedResult<HttpChannel>, ApiError> {
         let channel_paginator = Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(u_id))
+            .into_model::<HttpChannel>()
             .paginate(self.db.as_ref(), page_size);
 
         let total_items = channel_paginator.num_items().await?;
@@ -65,8 +69,11 @@ impl ChannelService {
     }
 
     /// # Select all the channels
-    pub async fn select_all(&self) -> Result<Vec<channels::Model>, ApiError> {
-        Ok(Channel::find().all(self.db.as_ref()).await?)
+    pub async fn select_all(&self) -> Result<Vec<HttpChannel>, ApiError> {
+        Ok(Channel::find()
+            .into_model::<HttpChannel>()
+            .all(self.db.as_ref())
+            .await?)
     }
 
     /// # Create a new channel in the database
@@ -78,11 +85,13 @@ impl ChannelService {
             id: NotSet,
             name: Set(new_channel.name.to_owned()),
             url: Set(new_channel.url.to_owned()),
+            last_update: NotSet,
         };
 
         Ok(channel.insert(self.db.as_ref()).await?)
     }
 
+    /// Create or linked an existing channel to a user
     pub async fn create_or_link_channel(
         &self,
         new_channel: HttpNewChannel,
@@ -114,5 +123,20 @@ impl ChannelService {
             }
             Err(x) => Err(x.into()),
         }
+    }
+
+    /// Update the last fetched timestamp of a channel
+    pub async fn update_last_fetched(
+        &self,
+        channel_id: i32,
+        date: DateTime<Utc>,
+    ) -> Result<(), ApiError> {
+        Channel::update_many()
+            .col_expr(channels::Column::LastUpdate, Expr::value(date))
+            .filter(channels::Column::Id.eq(channel_id))
+            .exec(self.db.as_ref())
+            .await?;
+
+        Ok(())
     }
 }

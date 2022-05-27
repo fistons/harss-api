@@ -1,8 +1,8 @@
+use chrono::Utc;
 use std::sync::Arc;
 
-use entity::channels as channel;
-
 use crate::errors::ApiError;
+use crate::model::HttpChannel;
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
 
@@ -42,7 +42,7 @@ impl GlobalService {
         log::info!("Refreshing all channels done");
     }
 
-    pub async fn refresh_channel(&self, channel: &channel::Model) -> Result<(), ApiError> {
+    pub async fn refresh_channel(&self, channel: &HttpChannel) -> Result<(), ApiError> {
         log::debug!("Fetching {}", channel.name);
         // Get the ids of the already fetched items
         let items = self
@@ -62,10 +62,19 @@ impl GlobalService {
             .unwrap();
 
         let rss_channel = feed_rs::parser::parse(&content[..])?;
+        let mut channel_updated = false;
         for item in rss_channel.entries.into_iter() {
             if !items.contains(&&item.id) {
                 self.item_service.insert(item, channel.id).await.unwrap();
+                channel_updated = true;
             }
+        }
+
+        if channel_updated {
+            let last_update = rss_channel.updated.unwrap_or_else(Utc::now);
+            self.channel_service
+                .update_last_fetched(channel.id, last_update)
+                .await?;
         }
 
         Ok(())

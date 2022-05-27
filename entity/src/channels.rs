@@ -17,6 +17,7 @@ pub struct Model {
     pub id: i32,
     pub name: String,
     pub url: String,
+    pub last_update: Option<DateTimeWithTimeZone>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
@@ -24,6 +25,7 @@ pub enum Column {
     Id,
     Name,
     Url,
+    LastUpdate,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DerivePrimaryKey)]
@@ -40,8 +42,8 @@ impl PrimaryKeyTrait for PrimaryKey {
 
 #[derive(Copy, Clone, Debug, EnumIter)]
 pub enum Relation {
-    Items,
     ChannelUsers,
+    Items,
     UsersItems,
 }
 
@@ -52,6 +54,7 @@ impl ColumnTrait for Column {
             Self::Id => ColumnType::Integer.def(),
             Self::Name => ColumnType::String(Some(512u32)).def(),
             Self::Url => ColumnType::String(Some(512u32)).def(),
+            Self::LastUpdate => ColumnType::TimestampWithTimeZone.def().null(),
         }
     }
 }
@@ -59,22 +62,22 @@ impl ColumnTrait for Column {
 impl RelationTrait for Relation {
     fn def(&self) -> RelationDef {
         match self {
-            Self::Items => Entity::has_many(super::items::Entity).into(),
             Self::ChannelUsers => Entity::has_many(super::channel_users::Entity).into(),
+            Self::Items => Entity::has_many(super::items::Entity).into(),
             Self::UsersItems => Entity::has_many(super::users_items::Entity).into(),
         }
-    }
-}
-
-impl Related<super::items::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Items.def()
     }
 }
 
 impl Related<super::channel_users::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::ChannelUsers.def()
+    }
+}
+
+impl Related<super::items::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Items.def()
     }
 }
 

@@ -18,11 +18,12 @@ pub struct HttpNewChannel {
 }
 
 /// Source of articles, over da web
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, FromQueryResult)]
 pub struct HttpChannel {
     pub id: i32,
     pub name: String,
     pub url: String,
+    pub last_update: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
