@@ -30,7 +30,7 @@ chrono = "0.4"
 uuid = { version = "0.8.2", features = ["v4"] }
 redis = { version = "0.20" }
 clokwerk = "0.4.0-rc1"
-sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "debug-print"]}
+sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-actix-native-tls", "macros", "debug-print"]}
 entity = { path = "entity" }
 
 [dev-dependencies]
