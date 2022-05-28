@@ -24,6 +24,7 @@ pub struct HttpChannel {
     pub name: String,
     pub url: String,
     pub last_update: Option<DateTime<Utc>>,
+    pub items_count: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

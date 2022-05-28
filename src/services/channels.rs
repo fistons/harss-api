@@ -6,7 +6,7 @@ use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DbErr};
 
 use entity::channels::Entity as Channel;
-use entity::{channel_users, channels};
+use entity::{channel_users, channels, users_items};
 
 use crate::errors::ApiError;
 use crate::model::{HttpChannel, HttpNewChannel, PagedResult};
@@ -38,7 +38,7 @@ impl ChannelService {
             .await?)
     }
 
-    /// # Select all the channels of a user
+    ///  Select all the channels of a user, along side the total number of items
     pub async fn select_all_by_user_id(
         &self,
         u_id: i32,
@@ -47,7 +47,10 @@ impl ChannelService {
     ) -> Result<PagedResult<HttpChannel>, ApiError> {
         let channel_paginator = Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
+            .join(JoinType::LeftJoin, channels::Relation::UsersItems.def())
+            .column_as(users_items::Column::ItemId.count(), "items_count")
             .filter(channel_users::Column::UserId.eq(u_id))
+            .group_by(channels::Column::Id)
             .into_model::<HttpChannel>()
             .paginate(self.db.as_ref(), page_size);
 
