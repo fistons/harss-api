@@ -9,7 +9,7 @@ use entity::channels::Entity as Channel;
 use entity::{channel_users, channels, users_items};
 
 use crate::errors::ApiError;
-use crate::model::{HttpChannel, HttpNewChannel, PagedResult};
+use crate::model::{HttpChannel, HttpNewChannel, HttpUserChannel, PagedResult};
 
 #[derive(Clone)]
 pub struct ChannelService {
@@ -44,14 +44,14 @@ impl ChannelService {
         u_id: i32,
         page: usize,
         page_size: usize,
-    ) -> Result<PagedResult<HttpChannel>, ApiError> {
+    ) -> Result<PagedResult<HttpUserChannel>, ApiError> {
         let channel_paginator = Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .join(JoinType::LeftJoin, channels::Relation::UsersItems.def())
             .column_as(users_items::Column::ItemId.count(), "items_count")
             .filter(channel_users::Column::UserId.eq(u_id))
             .group_by(channels::Column::Id)
-            .into_model::<HttpChannel>()
+            .into_model::<HttpUserChannel>()
             .paginate(self.db.as_ref(), page_size);
 
         let total_items = channel_paginator.num_items().await?;
