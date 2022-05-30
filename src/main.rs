@@ -41,8 +41,7 @@ async fn main() -> std::io::Result<()> {
     // set up database connection pool
     let connection_spec = std::env::var("DATABASE_URL").unwrap_or_else(|_| String::from("rss.db"));
     let mut opt = ConnectOptions::new(connection_spec.to_owned());
-    opt.max_connections(100)
-        .min_connections(5)
+    opt.min_connections(5)
         .max_connections(10)
         .connect_timeout(Duration::from_secs(8))
         .idle_timeout(Duration::from_secs(8))
