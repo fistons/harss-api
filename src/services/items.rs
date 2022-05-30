@@ -1,8 +1,8 @@
-use feed_rs::model::Entry;
 use std::sync::Arc;
 
+use feed_rs::model::Entry;
 use sea_orm::DatabaseConnection;
-use sea_orm::{entity::*, query::*};
+use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
 
 use entity::channel_users;
 use entity::channel_users::Entity as ChannelUsers;
@@ -30,9 +30,9 @@ impl ItemService {
             .insert(self.db.as_ref())
             .await?;
 
-        for channel_user in self.get_users_of_channel(channel_id).await? {
+        for user_id in self.get_users_of_channel(channel_id).await? {
             entity::users_items::ActiveModel {
-                user_id: Set(channel_user.user_id),
+                user_id: Set(user_id),
                 channel_id: Set(channel_id),
                 item_id: Set(item.id),
                 read: Set(false),
@@ -127,15 +127,19 @@ impl ItemService {
         })
     }
 
-    /// # Select all the users linked to a channel
-    /// TODO: I only need the user_id here
-    async fn get_users_of_channel(
-        &self,
-        channel_id: i32,
-    ) -> Result<Vec<channel_users::Model>, ApiError> {
+    /// Select all the users ids linked to a channel
+    async fn get_users_of_channel(&self, channel_id: i32) -> Result<Vec<i32>, ApiError> {
         Ok(ChannelUsers::find()
+            .select_only()
+            .column(channel_users::Column::UserId)
             .filter(channel_users::Column::ChannelId.eq(channel_id))
+            .into_values::<_, QueryAs>()
             .all(self.db.as_ref())
             .await?)
     }
+}
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
+enum QueryAs {
+    UserId,
 }

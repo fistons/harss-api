@@ -462,8 +462,12 @@ components:
         url:
           $ref: '#/components/schemas/ChannelURL'
         last_update:
+          type: string
           format: date-time
           description: Timestamp of the channel last update
+        total_items:
+          type: integer
+          description: Total number of items for this channel
     ChannelID:
       type: integer
       description: ID of a channel.
