@@ -35,7 +35,7 @@ pub async fn get_channels(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let channels = channel_service
-        .select_all_by_user_id(user.id, page.get_page(), page.get_size())
+        .select_page_by_user_id(user.id, page.get_page(), page.get_size())
         .await?;
     Ok(HttpResponse::Ok().json(channels))
 }

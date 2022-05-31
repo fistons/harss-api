@@ -42,6 +42,23 @@ impl GlobalService {
         log::info!("Refreshing all channels done");
     }
 
+    pub async fn refresh_channel_of_user(&self, user_id: i32) {
+        log::info!("Refresh channels of user {user_id}");
+        match self.channel_service.select_all_by_user_id(user_id).await {
+            Ok(channels) => {
+                for channel in channels.iter() {
+                    if let Err(oops) = self.refresh_channel(channel).await {
+                        log::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
+                    }
+                }
+            }
+            Err(oops) => {
+                log::error!("Couldn't get channels to refresh {:?}", oops);
+            }
+        }
+        log::info!("Refresh channels of user {user_id} done");
+    }
+
     pub async fn refresh_channel(&self, channel: &HttpChannel) -> Result<(), ApiError> {
         log::debug!("Fetching {}", channel.name);
         // Get the ids of the already fetched items

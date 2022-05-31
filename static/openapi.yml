@@ -31,6 +31,15 @@ tags:
   - name: Users
     description: User management
 paths:
+  /refresh:
+    post:
+      operationId: refresh_items
+      summary: Refresh all the RSS channels
+      tags:
+        - Items
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'  
   /users:
     get:
       operationId: list_users
@@ -586,6 +595,8 @@ components:
             $ref: '#/components/schemas/GenericProblem'
     NoContent:
       description: The request succeeded, but the response does not contain any information.
+    Accepted:
+      description: The request has been accepted for processing, but the processing has not been completed
     ObjectCreatedResponse:
       description: The requested object has been created
       content: 

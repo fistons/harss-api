@@ -39,7 +39,7 @@ impl ChannelService {
     }
 
     ///  Select all the channels of a user, along side the total number of items
-    pub async fn select_all_by_user_id(
+    pub async fn select_page_by_user_id(
         &self,
         u_id: i32,
         page: usize,
@@ -74,6 +74,15 @@ impl ChannelService {
     /// # Select all the channels
     pub async fn select_all(&self) -> Result<Vec<HttpChannel>, ApiError> {
         Ok(Channel::find()
+            .into_model::<HttpChannel>()
+            .all(self.db.as_ref())
+            .await?)
+    }
+
+    pub async fn select_all_by_user_id(&self, user_id: i32) -> Result<Vec<HttpChannel>, ApiError> {
+        Ok(Channel::find()
+            .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
+            .filter(channel_users::Column::UserId.eq(user_id))
             .into_model::<HttpChannel>()
             .all(self.db.as_ref())
             .await?)

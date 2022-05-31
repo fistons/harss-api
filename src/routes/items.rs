@@ -1,9 +1,10 @@
-use actix_web::{get, web, HttpResponse};
+use actix_rt::spawn;
+use actix_web::{get, post, web, HttpResponse};
 
 use crate::errors::ApiError;
 use crate::model::PageParameters;
 use crate::services::auth::AuthenticatedUser;
-use crate::ItemService;
+use crate::{GlobalService, ItemService};
 
 #[get("/items")]
 pub async fn get_all_items(
@@ -19,6 +20,15 @@ pub async fn get_all_items(
     Ok(HttpResponse::Ok().json(items))
 }
 
+#[post("/refresh")]
+pub async fn refresh_items(
+    global_service: web::Data<GlobalService>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    spawn(async move { global_service.refresh_channel_of_user(user.id).await });
+    Ok(HttpResponse::Accepted().finish())
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_all_items);
+    cfg.service(get_all_items).service(refresh_items);
 }
