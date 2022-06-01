@@ -31,6 +31,15 @@ tags:
   - name: Users
     description: User management
 paths:
+  /refresh:
+    post:
+      operationId: refresh_items
+      summary: Refresh all the RSS channels
+      tags:
+        - Items
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'  
   /users:
     get:
       operationId: list_users
@@ -461,6 +470,13 @@ components:
           $ref: '#/components/schemas/ChannelName'
         url:
           $ref: '#/components/schemas/ChannelURL'
+        last_update:
+          type: string
+          format: date-time
+          description: Timestamp of the channel last update
+        total_items:
+          type: integer
+          description: Total number of items for this channel
     ChannelID:
       type: integer
       description: ID of a channel.
@@ -485,7 +501,9 @@ components:
         - title
         - guid
         - content
+        - fetch_timestamp
         - read
+        - starred
       properties:
         id:
           $ref: '#/components/schemas/ItemID'
@@ -497,9 +515,21 @@ components:
           $ref: '#/components/schemas/ItemContent'
         url:
           $ref: '#/components/schemas/ItemURL'
+        fetch_timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the item was fetched
+        publish_timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the item was publish
         read:
           type: boolean
-          description: Is the item has already been read?
+          description: The item has been read
+          example: false
+        starred:
+          type: boolean
+          description: The item has been starred
           example: false
     ItemID:
       type: integer
@@ -565,6 +595,8 @@ components:
             $ref: '#/components/schemas/GenericProblem'
     NoContent:
       description: The request succeeded, but the response does not contain any information.
+    Accepted:
+      description: The request has been accepted for processing, but the processing has not been completed
     ObjectCreatedResponse:
       description: The requested object has been created
       content: 

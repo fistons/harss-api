@@ -14,7 +14,8 @@ CREATE TABLE channels
 (
     id      serial primary key,
     name    varchar(512) not null,
-    url     varchar(512) not null
+    url     varchar(512) not null,
+    last_update timestamptz
 );
 
 CREATE UNIQUE INDEX ON channels (url);
@@ -34,11 +35,25 @@ CREATE TABLE items
     title      text    null,
     url        text    null,
     content    text    null,
-    read       boolean not null,
+    fetch_timestamp timestamptz not null default now(),
+    publish_timestamp timestamptz,
     channel_id integer not null,
     FOREIGN KEY (channel_id) REFERENCES channels (id) on delete cascade on update cascade
 );
 
+
+CREATE TABLE users_items
+(
+    user_id integer not null,
+    item_id integer not null,
+    channel_id integer not null,
+    read bool not null default false,
+    starred bool not null default false,
+    PRIMARY KEY (user_id, item_id, channel_id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (channel_id) REFERENCES channels (id) ON DELETE CASCADE ON UPDATE CASCADE
+);
 
 INSERT INTO users (id, username, password, role)
 VALUES (1, 'root',

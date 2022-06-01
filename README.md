@@ -13,7 +13,7 @@ RSS, but in rust
 ## Using docker-compose
 
 ```shell
-docker-compose up
+docker compose up
 ```
 
 This will create the databases (postgres + redis) and do the necessary migrations
@@ -46,7 +46,7 @@ Database migrate must be already done.
 
 ```shell
 cargo install sea-orm-cli # if needed
-DATABASE_URL="postgres://rss-aggregator:rss-aggregator@localhost/rss-aggregator" sea-orm-cli generate entity -o src/entity
+DATABASE_URL="postgres://rss-aggregator:rss-aggregator@localhost/rss-aggregator" sea-orm-cli generate entity -o entity/src --with-serde both --expanded-format
 ```
 
 Cf. SeaORM [documentation](https://www.sea-ql.org/SeaORM/docs/generate-entity/sea-orm-cli)

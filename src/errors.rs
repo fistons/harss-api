@@ -26,7 +26,6 @@ pub struct ApiError {
 }
 
 impl ApiError {
-
     pub fn unauthorized<T>(message: T) -> ApiError
     where
         T: Into<String>,

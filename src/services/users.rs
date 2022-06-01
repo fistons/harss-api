@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*};
 
@@ -8,22 +6,22 @@ use entity::users;
 use entity::users::Entity as User;
 
 use crate::errors::ApiError;
-use crate::model::PagedResult;
+use crate::model::{HttpUser, PagedResult};
 
 #[derive(Clone)]
 pub struct UserService {
-    db: Arc<DatabaseConnection>,
+    db: DatabaseConnection,
 }
 
 impl UserService {
     pub fn new(db: DatabaseConnection) -> Self {
-        Self { db: Arc::new(db) }
+        Self { db }
     }
 
     pub async fn get_user(&self, wanted_username: &str) -> Result<Option<users::Model>, ApiError> {
         Ok(User::find()
             .filter(users::Column::Username.eq(wanted_username))
-            .one(self.db.as_ref())
+            .one(&self.db)
             .await?)
     }
 
@@ -31,8 +29,10 @@ impl UserService {
         &self,
         page: usize,
         page_size: usize,
-    ) -> Result<PagedResult<users::Model>, ApiError> {
-        let user_paginator = User::find().paginate(self.db.as_ref(), page_size);
+    ) -> Result<PagedResult<HttpUser>, ApiError> {
+        let user_paginator = User::find()
+            .into_model::<HttpUser>()
+            .paginate(&self.db, page_size);
 
         let total_pages = user_paginator.num_pages().await?;
         let total_items = user_paginator.num_items().await?;
@@ -62,7 +62,7 @@ impl UserService {
             role: Set(user_role),
         };
 
-        Ok(new_user.insert(self.db.as_ref()).await?)
+        Ok(new_user.insert(&self.db).await?)
     }
 }
 

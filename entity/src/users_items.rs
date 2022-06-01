@@ -8,64 +8,58 @@ pub struct Entity;
 
 impl EntityName for Entity {
     fn table_name(&self) -> &str {
-        "items"
+        "users_items"
     }
 }
 
 #[derive(Clone, Debug, PartialEq, DeriveModel, DeriveActiveModel, Serialize, Deserialize)]
 pub struct Model {
-    pub id: i32,
-    pub guid: Option<String>,
-    pub title: Option<String>,
-    pub url: Option<String>,
-    pub content: Option<String>,
-    pub fetch_timestamp: DateTimeWithTimeZone,
-    pub publish_timestamp: Option<DateTimeWithTimeZone>,
+    pub user_id: i32,
+    pub item_id: i32,
     pub channel_id: i32,
+    pub read: bool,
+    pub starred: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
 pub enum Column {
-    Id,
-    Guid,
-    Title,
-    Url,
-    Content,
-    FetchTimestamp,
-    PublishTimestamp,
+    UserId,
+    ItemId,
     ChannelId,
+    Read,
+    Starred,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DerivePrimaryKey)]
 pub enum PrimaryKey {
-    Id,
+    UserId,
+    ItemId,
+    ChannelId,
 }
 
 impl PrimaryKeyTrait for PrimaryKey {
-    type ValueType = i32;
+    type ValueType = (i32, i32, i32);
     fn auto_increment() -> bool {
-        true
+        false
     }
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]
 pub enum Relation {
     Channels,
-    UsersItems,
+    Items,
+    Users,
 }
 
 impl ColumnTrait for Column {
     type EntityName = Entity;
     fn def(&self) -> ColumnDef {
         match self {
-            Self::Id => ColumnType::Integer.def(),
-            Self::Guid => ColumnType::Text.def().null(),
-            Self::Title => ColumnType::Text.def().null(),
-            Self::Url => ColumnType::Text.def().null(),
-            Self::Content => ColumnType::Text.def().null(),
-            Self::FetchTimestamp => ColumnType::TimestampWithTimeZone.def(),
-            Self::PublishTimestamp => ColumnType::TimestampWithTimeZone.def().null(),
+            Self::UserId => ColumnType::Integer.def(),
+            Self::ItemId => ColumnType::Integer.def(),
             Self::ChannelId => ColumnType::Integer.def(),
+            Self::Read => ColumnType::Boolean.def(),
+            Self::Starred => ColumnType::Boolean.def(),
         }
     }
 }
@@ -77,7 +71,14 @@ impl RelationTrait for Relation {
                 .from(Column::ChannelId)
                 .to(super::channels::Column::Id)
                 .into(),
-            Self::UsersItems => Entity::has_many(super::users_items::Entity).into(),
+            Self::Items => Entity::belongs_to(super::items::Entity)
+                .from(Column::ItemId)
+                .to(super::items::Column::Id)
+                .into(),
+            Self::Users => Entity::belongs_to(super::users::Entity)
+                .from(Column::UserId)
+                .to(super::users::Column::Id)
+                .into(),
         }
     }
 }
@@ -88,9 +89,15 @@ impl Related<super::channels::Entity> for Entity {
     }
 }
 
-impl Related<super::users_items::Entity> for Entity {
+impl Related<super::items::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::UsersItems.def()
+        Relation::Items.def()
+    }
+}
+
+impl Related<super::users::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Users.def()
     }
 }
 

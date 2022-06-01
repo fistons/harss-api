@@ -7,7 +7,7 @@ use std::time::Duration;
 use actix_files as fs;
 use actix_web::web::Data;
 use actix_web::{App, HttpServer};
-use clokwerk::{AsyncScheduler,  TimeUnits};
+use clokwerk::{AsyncScheduler, TimeUnits};
 use sea_orm::{ConnectOptions, Database};
 use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
 
@@ -41,8 +41,7 @@ async fn main() -> std::io::Result<()> {
     // set up database connection pool
     let connection_spec = std::env::var("DATABASE_URL").unwrap_or_else(|_| String::from("rss.db"));
     let mut opt = ConnectOptions::new(connection_spec.to_owned());
-    opt.max_connections(100)
-        .min_connections(5)
+    opt.min_connections(5)
         .max_connections(10)
         .connect_timeout(Duration::from_secs(8))
         .idle_timeout(Duration::from_secs(8))
@@ -69,12 +68,14 @@ async fn main() -> std::io::Result<()> {
         .unwrap()
         .seconds();
     log::info!("Poll every {:?}", polling);
-    
-    scheduler.every(polling).run(move || refresh(global.clone()));
-    tokio::spawn(async move {
+
+    scheduler
+        .every(polling)
+        .run(move || refresh(global.clone()));
+    actix_rt::spawn(async move {
         loop {
             scheduler.run_pending().await;
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            actix_rt::time::sleep(Duration::from_millis(100)).await;
         }
     });
 
