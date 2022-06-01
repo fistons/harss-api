@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use feed_rs::model::Entry;
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
@@ -15,19 +13,19 @@ use crate::model::{item_from_rss_entry, HttpUserItem, PagedResult};
 
 #[derive(Clone)]
 pub struct ItemService {
-    db: Arc<DatabaseConnection>,
+    db: DatabaseConnection,
 }
 
 impl ItemService {
     pub fn new(db: DatabaseConnection) -> Self {
-        Self { db: Arc::new(db) }
+        Self { db }
     }
 
     pub async fn insert(&self, entry: Entry, channel_id: i32) -> Result<items::Model, ApiError> {
         log::trace!("Inserting item {:?}", entry);
 
         let item = item_from_rss_entry(entry, channel_id)
-            .insert(self.db.as_ref())
+            .insert(&self.db)
             .await?;
 
         for user_id in self.get_users_of_channel(channel_id).await? {
@@ -38,7 +36,7 @@ impl ItemService {
                 read: Set(false),
                 starred: Set(false),
             }
-            .insert(self.db.as_ref())
+            .insert(&self.db)
             .await?;
         }
 
@@ -56,7 +54,7 @@ impl ItemService {
         let item_paginator = Item::find()
             .filter(items::Column::ChannelId.eq(chan_id))
             .order_by_desc(items::Column::Id)
-            .paginate(self.db.as_ref(), page_size);
+            .paginate(&self.db, page_size);
 
         let total_items = item_paginator.num_items().await?;
         // Calling .num_pages() on the paginator re-query the database for the number of items
@@ -84,7 +82,7 @@ impl ItemService {
         Ok(Item::find()
             .filter(items::Column::ChannelId.eq(chan_id))
             .order_by_desc(items::Column::Id)
-            .all(self.db.as_ref())
+            .all(&self.db)
             .await?)
     }
 
@@ -108,7 +106,7 @@ impl ItemService {
             .filter(users_items::Column::UserId.eq(user_id))
             .order_by_desc(items::Column::Id)
             .into_model::<HttpUserItem>()
-            .paginate(self.db.as_ref(), page_size);
+            .paginate(&self.db, page_size);
 
         let total_items = item_paginator.num_items().await?;
         // Calling .num_pages() on the paginator re-query the database for the number of items
@@ -134,7 +132,7 @@ impl ItemService {
             .column(channel_users::Column::UserId)
             .filter(channel_users::Column::ChannelId.eq(channel_id))
             .into_values::<_, QueryAs>()
-            .all(self.db.as_ref())
+            .all(&self.db)
             .await?)
     }
 }

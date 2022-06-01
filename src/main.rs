@@ -72,10 +72,10 @@ async fn main() -> std::io::Result<()> {
     scheduler
         .every(polling)
         .run(move || refresh(global.clone()));
-    tokio::spawn(async move {
+    actix_rt::spawn(async move {
         loop {
             scheduler.run_pending().await;
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            actix_rt::time::sleep(Duration::from_millis(100)).await;
         }
     });
 

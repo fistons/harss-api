@@ -1,6 +1,4 @@
 use chrono::{DateTime, Utc};
-use std::sync::Arc;
-
 use sea_orm::sea_query::Expr;
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DbErr};
@@ -13,12 +11,12 @@ use crate::model::{HttpChannel, HttpNewChannel, HttpUserChannel, PagedResult};
 
 #[derive(Clone)]
 pub struct ChannelService {
-    db: Arc<DatabaseConnection>,
+    db: DatabaseConnection,
 }
 
 impl ChannelService {
     pub fn new(db: DatabaseConnection) -> Self {
-        ChannelService { db: Arc::new(db) }
+        ChannelService { db }
     }
 
     /// # Select a channel by id and user id
@@ -34,7 +32,7 @@ impl ChannelService {
             .filter(channel_users::Column::ChannelId.eq(chan_id))
             .filter(channel_users::Column::UserId.eq(u_id))
             .into_model::<HttpChannel>()
-            .one(self.db.as_ref())
+            .one(&self.db)
             .await?)
     }
 
@@ -49,10 +47,11 @@ impl ChannelService {
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .join(JoinType::LeftJoin, channels::Relation::UsersItems.def())
             .column_as(users_items::Column::ItemId.count(), "items_count")
+            //TODO Find a way to count the total read elements
             .filter(channel_users::Column::UserId.eq(u_id))
             .group_by(channels::Column::Id)
             .into_model::<HttpUserChannel>()
-            .paginate(self.db.as_ref(), page_size);
+            .paginate(&self.db, page_size);
 
         let total_items = channel_paginator.num_items().await?;
         // Calling .num_pages() on the paginator re-query the database for the number of items
@@ -75,7 +74,7 @@ impl ChannelService {
     pub async fn select_all(&self) -> Result<Vec<HttpChannel>, ApiError> {
         Ok(Channel::find()
             .into_model::<HttpChannel>()
-            .all(self.db.as_ref())
+            .all(&self.db)
             .await?)
     }
 
@@ -84,7 +83,7 @@ impl ChannelService {
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(user_id))
             .into_model::<HttpChannel>()
-            .all(self.db.as_ref())
+            .all(&self.db)
             .await?)
     }
 
@@ -100,7 +99,7 @@ impl ChannelService {
             last_update: NotSet,
         };
 
-        Ok(channel.insert(self.db.as_ref()).await?)
+        Ok(channel.insert(&self.db).await?)
     }
 
     /// Create or linked an existing channel to a user
@@ -111,7 +110,7 @@ impl ChannelService {
     ) -> Result<channels::Model, ApiError> {
         let channel = match Channel::find()
             .filter(channels::Column::Url.eq(&*new_channel.url))
-            .one(self.db.as_ref())
+            .one(&self.db)
             .await?
         {
             Some(found) => found,
@@ -123,7 +122,7 @@ impl ChannelService {
             user_id: Set(other_user_id),
         };
 
-        match channel_user.insert(self.db.as_ref()).await {
+        match channel_user.insert(&self.db).await {
             Ok(_) => Ok(channel),
             Err(DbErr::Query(x)) => {
                 log::warn!(
@@ -146,7 +145,7 @@ impl ChannelService {
         Channel::update_many()
             .col_expr(channels::Column::LastUpdate, Expr::value(date))
             .filter(channels::Column::Id.eq(channel_id))
-            .exec(self.db.as_ref())
+            .exec(&self.db)
             .await?;
 
         Ok(())
