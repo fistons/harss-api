@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use chrono::{DateTime, Utc};
 use feed_rs::model::Entry;
 use sea_orm::{FromQueryResult, NotSet, Set};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 use entity::items;
 use entity::sea_orm_active_enums::UserRole;
@@ -34,7 +34,13 @@ pub struct HttpUserChannel {
     pub last_update: Option<DateTime<Utc>>,
     pub registration_timestamp: DateTime<Utc>,
     pub items_count: i64,
+    #[serde(serialize_with = "ser_with")]
     pub items_read: Option<i64>,
+}
+
+/// Serialize an optional i64, defaulting to 0 if its None
+fn ser_with<S: Serializer>(id: &Option<i64>, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_i64(id.unwrap_or(0i64))
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
