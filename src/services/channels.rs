@@ -19,19 +19,28 @@ impl ChannelService {
         ChannelService { db }
     }
 
-    /// # Select a channel by id and user id
-    /// We set the user_id by security, to prevent users trying to get channels the shouldn't have
-    /// access
     pub async fn select_by_id_and_user_id(
         &self,
-        u_id: i32,
         chan_id: i32,
-    ) -> Result<Option<HttpChannel>, ApiError> {
+        user_id: i32,
+    ) -> Result<Option<HttpUserChannel>, ApiError> {
         Ok(Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
+            .join(JoinType::LeftJoin, channels::Relation::UsersItems.def())
+            .column_as(users_items::Column::ItemId.count(), "items_count")
+            .column_as(
+                Expr::expr(
+                    Expr::col(users_items::Column::Read)
+                        .into_simple_expr()
+                        .cast_as(Alias::new("integer")),
+                )
+                .sum(),
+                "items_read",
+            )
+            .filter(channel_users::Column::UserId.eq(user_id))
             .filter(channel_users::Column::ChannelId.eq(chan_id))
-            .filter(channel_users::Column::UserId.eq(u_id))
-            .into_model::<HttpChannel>()
+            .group_by(channels::Column::Id)
+            .into_model::<HttpUserChannel>()
             .one(&self.db)
             .await?)
     }
@@ -58,6 +67,8 @@ impl ChannelService {
             )
             .filter(channel_users::Column::UserId.eq(u_id))
             .group_by(channels::Column::Id)
+            .group_by(channel_users::Column::RegistrationTimestamp)
+            .order_by_desc(channel_users::Column::RegistrationTimestamp)
             .into_model::<HttpUserChannel>()
             .paginate(&self.db, page_size);
 
@@ -105,6 +116,7 @@ impl ChannelService {
             name: Set(new_channel.name.to_owned()),
             url: Set(new_channel.url.to_owned()),
             last_update: NotSet,
+            registration_timestamp: Set(Utc::now().into()),
         };
 
         Ok(channel.insert(&self.db).await?)
@@ -128,6 +140,7 @@ impl ChannelService {
         let channel_user = channel_users::ActiveModel {
             channel_id: Set(channel.id),
             user_id: Set(other_user_id),
+            registration_timestamp: Set(Utc::now().into()),
         };
 
         match channel_user.insert(&self.db).await {

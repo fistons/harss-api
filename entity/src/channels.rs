@@ -17,6 +17,7 @@ pub struct Model {
     pub id: i32,
     pub name: String,
     pub url: String,
+    pub registration_timestamp: DateTimeWithTimeZone,
     pub last_update: Option<DateTimeWithTimeZone>,
 }
 
@@ -25,6 +26,7 @@ pub enum Column {
     Id,
     Name,
     Url,
+    RegistrationTimestamp,
     LastUpdate,
 }
 
@@ -54,6 +56,7 @@ impl ColumnTrait for Column {
             Self::Id => ColumnType::Integer.def(),
             Self::Name => ColumnType::String(Some(512u32)).def(),
             Self::Url => ColumnType::String(Some(512u32)).def(),
+            Self::RegistrationTimestamp => ColumnType::TimestampWithTimeZone.def(),
             Self::LastUpdate => ColumnType::TimestampWithTimeZone.def().null(),
         }
     }

@@ -17,7 +17,7 @@ pub async fn get_channel(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let res = channel_service
-        .select_by_id_and_user_id(user.id, id.into_inner())
+        .select_by_id_and_user_id(id.into_inner(), user.id)
         .await?;
 
     log::debug!("{:?}", res);

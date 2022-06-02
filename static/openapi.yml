@@ -463,6 +463,7 @@ components:
         - id
         - name
         - url
+        - registration_timestamp
       properties:
         id:
           $ref: '#/components/schemas/ChannelID'
@@ -470,13 +471,20 @@ components:
           $ref: '#/components/schemas/ChannelName'
         url:
           $ref: '#/components/schemas/ChannelURL'
+        registration_timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the channel registration
         last_update:
           type: string
           format: date-time
           description: Timestamp of the channel last update
-        total_items:
+        items_count:
           type: integer
           description: Total number of items for this channel
+        items_read:
+          type: integer
+          description: Number of read items for this channel
     ChannelID:
       type: integer
       description: ID of a channel.

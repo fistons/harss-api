@@ -15,6 +15,7 @@ CREATE TABLE channels
     id      serial primary key,
     name    varchar(512) not null,
     url     varchar(512) not null,
+    registration_timestamp timestamptz not null default now(),
     last_update timestamptz
 );
 
@@ -23,6 +24,7 @@ CREATE UNIQUE INDEX ON channels (url);
 CREATE TABLE channel_users (
     channel_id integer not null,
     user_id integer not null,
+    registration_timestamp timestamptz not null default now(),
     PRIMARY KEY (channel_id, user_id),
     FOREIGN KEY (channel_id) REFERENCES channels (id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE

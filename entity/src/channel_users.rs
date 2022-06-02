@@ -16,12 +16,14 @@ impl EntityName for Entity {
 pub struct Model {
     pub channel_id: i32,
     pub user_id: i32,
+    pub registration_timestamp: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
 pub enum Column {
     ChannelId,
     UserId,
+    RegistrationTimestamp,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DerivePrimaryKey)]
@@ -49,6 +51,7 @@ impl ColumnTrait for Column {
         match self {
             Self::ChannelId => ColumnType::Integer.def(),
             Self::UserId => ColumnType::Integer.def(),
+            Self::RegistrationTimestamp => ColumnType::TimestampWithTimeZone.def(),
         }
     }
 }

@@ -32,6 +32,7 @@ pub struct HttpUserChannel {
     pub name: String,
     pub url: String,
     pub last_update: Option<DateTime<Utc>>,
+    pub registration_timestamp: DateTime<Utc>,
     pub items_count: i64,
     pub items_read: Option<i64>,
 }
