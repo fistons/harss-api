@@ -33,6 +33,7 @@ pub struct HttpUserChannel {
     pub url: String,
     pub last_update: Option<DateTime<Utc>>,
     pub items_count: i64,
+    pub items_read: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

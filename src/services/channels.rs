@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sea_orm::sea_query::Expr;
+use sea_orm::sea_query::{Alias, Expr};
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DbErr};
 
@@ -47,7 +47,15 @@ impl ChannelService {
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .join(JoinType::LeftJoin, channels::Relation::UsersItems.def())
             .column_as(users_items::Column::ItemId.count(), "items_count")
-            //TODO Find a way to count the total read elements
+            .column_as(
+                Expr::expr(
+                    Expr::col(users_items::Column::Read)
+                        .into_simple_expr()
+                        .cast_as(Alias::new("integer")),
+                )
+                .sum(),
+                "items_read",
+            )
             .filter(channel_users::Column::UserId.eq(u_id))
             .group_by(channels::Column::Id)
             .into_model::<HttpUserChannel>()
