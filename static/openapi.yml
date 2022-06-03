@@ -162,7 +162,7 @@ paths:
           $ref: '#/components/responses/Error'
   /channel/{id}/items:
     get:
-      operationId: get_items
+      operationId: get_items_of_channel
       tags:
         - Channels
         - Items

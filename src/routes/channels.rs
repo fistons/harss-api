@@ -57,26 +57,21 @@ async fn new_channel(
 }
 
 #[get("/channel/{chan_id}/items")]
-async fn get_items(
+async fn get_items_of_channel(
     chan_id: web::Path<i32>,
     page: web::Query<PageParameters>,
     items_service: web::Data<ItemService>,
-    channel_service: web::Data<ChannelService>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    log::info!("{:?} {}", chan_id, auth.id);
-
-    let chan = channel_service
-        .select_by_id_and_user_id(auth.id, chan_id.into_inner())
-        .await?;
-
-    if chan == None {
-        return Ok(HttpResponse::NotFound().finish());
-    }
-
     let items = items_service
-        .get_items_of_channel(chan.unwrap().id, page.get_page(), page.get_size())
+        .get_items_of_channel(
+            chan_id.into_inner(),
+            auth.id,
+            page.get_page(),
+            page.get_size(),
+        )
         .await?;
+
     Ok(HttpResponse::Ok().json(items))
 }
 
@@ -100,6 +95,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_channel)
         .service(get_channels)
         .service(new_channel)
-        .service(get_items)
+        .service(get_items_of_channel)
         .service(import_opml);
 }
