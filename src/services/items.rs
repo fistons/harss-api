@@ -48,14 +48,20 @@ impl ItemService {
     pub async fn get_items_of_channel(
         &self,
         chan_id: i32,
+        user_id: i32,
         page: usize,
         page_size: usize,
-    ) -> Result<PagedResult<items::Model>, ApiError> {
+    ) -> Result<PagedResult<HttpUserItem>, ApiError> {
         log::debug!("Getting items of channel {}", chan_id);
 
         let item_paginator = Item::find()
-            .filter(items::Column::ChannelId.eq(chan_id))
+            .join(JoinType::RightJoin, items::Relation::UsersItems.def())
+            .column_as(users_items::Column::Read, "read")
+            .column_as(users_items::Column::Starred, "starred")
+            .filter(users_items::Column::ChannelId.eq(chan_id))
+            .filter(users_items::Column::UserId.eq(user_id))
             .order_by_desc(items::Column::Id)
+            .into_model::<HttpUserItem>()
             .paginate(&self.db, page_size);
 
         let total_items = item_paginator.num_items().await?;

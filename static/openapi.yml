@@ -290,6 +290,58 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         default:
           $ref: '#/components/responses/Error'
+  /item/{id}/read:
+    post:
+      operationId: read_item
+      summary: Set an item as read
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: 
+            $ref: '#/components/schemas/ItemID'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+  /item/{id}/unread:
+    post:
+      operationId: unread_item
+      summary: Set an item as unread
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ItemID'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+  /item/{id}/star:
+    post:
+      operationId: star_item
+      summary: Set an item as starred
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ItemID'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+  /item/{id}/unstar:
+    post:
+      operationId: unstar_item
+      summary: Set an item as un-starred
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ItemID'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
 components:
   securitySchemes:
     basicAuth:

@@ -33,6 +33,58 @@ pub async fn get_all_items(
     Ok(HttpResponse::Ok().json(items))
 }
 
+#[post("/item/{item_id}/star")]
+pub async fn star_item(
+    item_id: web::Path<i32>,
+    item_service: web::Data<ItemService>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    item_service
+        .set_item_starred(user.id, item_id.into_inner(), true)
+        .await?;
+
+    Ok(HttpResponse::Accepted().finish())
+}
+
+#[post("/item/{item_id}/unstar")]
+pub async fn unstar_item(
+    item_id: web::Path<i32>,
+    item_service: web::Data<ItemService>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    item_service
+        .set_item_starred(user.id, item_id.into_inner(), false)
+        .await?;
+
+    Ok(HttpResponse::Accepted().finish())
+}
+
+#[post("/item/{item_id}/read")]
+pub async fn read_item(
+    item_id: web::Path<i32>,
+    item_service: web::Data<ItemService>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    item_service
+        .set_item_read(user.id, item_id.into_inner(), true)
+        .await?;
+
+    Ok(HttpResponse::Accepted().finish())
+}
+
+#[post("/item/{item_id}/unread")]
+pub async fn unread_item(
+    item_id: web::Path<i32>,
+    item_service: web::Data<ItemService>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    item_service
+        .set_item_read(user.id, item_id.into_inner(), false)
+        .await?;
+
+    Ok(HttpResponse::Accepted().finish())
+}
+
 #[post("/refresh")]
 pub async fn refresh_items(
     global_service: web::Data<GlobalService>,
@@ -43,5 +95,10 @@ pub async fn refresh_items(
 }
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_all_items).service(refresh_items);
+    cfg.service(get_all_items)
+        .service(refresh_items)
+        .service(star_item)
+        .service(unstar_item)
+        .service(read_item)
+        .service(unread_item);
 }
