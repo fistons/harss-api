@@ -39,7 +39,7 @@ paths:
         - Items
       responses:
         '202':
-          $ref: '#/components/responses/Accepted'  
+          $ref: '#/components/responses/Accepted'
   /users:
     get:
       operationId: list_users
@@ -61,12 +61,12 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/PageNumber'
-      responses: 
+      responses:
         '200':
           description: A list of registered users
-          content: 
+          content:
             application/json:
-              schema: 
+              schema:
                 $ref: '#/components/schemas/PagedUsers'
         default:
           $ref: '#/components/responses/Error'
@@ -191,7 +191,7 @@ paths:
           description: A list of item
           content:
             application/json:
-              schema: 
+              schema:
                 $ref: '#/components/schemas/PagedItems'
         default:
           $ref: '#/components/responses/Error'
@@ -262,19 +262,29 @@ paths:
         - name: size
           in: query
           required: false
-          schema: 
+          schema:
             $ref: '#/components/schemas/PageSize'
         - name: page
           in: query
           required: false
           schema:
             $ref: '#/components/schemas/PageNumber'
+        - name: read
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ItemRead'
+        - name: starred
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ItemStarred'
       responses:
         '200':
           description: The last RSS items for the logged user
           content:
             application/json:
-              schema: 
+              schema:
                 $ref: '#/components/schemas/PagedItems'
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -319,12 +329,12 @@ components:
       allOf:
         - $ref: '#/components/schemas/Page'
         - type: object
-          required: 
-           - content
-          properties: 
+          required:
+            - content
+          properties:
             content:
               type: array
-              items: 
+              items:
                 $ref: '#/components/schemas/Item'
     Page:
       type: object
@@ -334,7 +344,7 @@ components:
         - total_items
         - total_pages
         - elements_number
-      properties: 
+      properties:
         page:
           $ref: '#/components/schemas/PageNumber'
         page_size:
@@ -380,10 +390,10 @@ components:
       description: The refresh token.
       minLength: 1
     RefreshRequest:
-      type : object
-      required: 
+      type: object
+      required:
         - token
-      properties: 
+      properties:
         token:
           $ref: '#/components/schemas/RefreshToken'
     LoginRequest:
@@ -400,11 +410,11 @@ components:
     CreateUserRequest:
       type: object
       description: User Creation request
-      required: 
+      required:
         - username
         - password
         - role
-      properties: 
+      properties:
         username:
           $ref: '#/components/schemas/UserName'
         password:
@@ -413,7 +423,7 @@ components:
           $ref: '#/components/schemas/UserRole'
     User:
       type: object
-      properties: 
+      properties:
         id:
           $ref: '#/components/schemas/UserID'
         username:
@@ -532,13 +542,17 @@ components:
           format: date-time
           description: Timestamp when the item was publish
         read:
-          type: boolean
-          description: The item has been read
-          example: false
+          $ref: '#/components/schemas/ItemRead'
         starred:
-          type: boolean
-          description: The item has been starred
-          example: false
+          $ref: '#/components/schemas/ItemStarred'
+    ItemStarred:
+      type: boolean
+      description: The item has been read
+      example: false
+    ItemRead:
+      type: boolean
+      description: The item has been read
+      example: false
     ItemID:
       type: integer
       description: Internal ID of an item.
@@ -591,8 +605,8 @@ components:
     ObjectCreatedId:
       type: object
       description: ID of the created object.
-      properties: 
-        id: 
+      properties:
+        id:
           type: integer
   responses:
     default:
@@ -607,9 +621,9 @@ components:
       description: The request has been accepted for processing, but the processing has not been completed
     ObjectCreatedResponse:
       description: The requested object has been created
-      content: 
+      content:
         application/json:
-          schema: 
+          schema:
             $ref: '#/components/schemas/ObjectCreatedId'
     Error:
       description: Something horrible and unexpected went wrong.

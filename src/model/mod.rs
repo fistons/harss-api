@@ -88,6 +88,11 @@ pub fn item_from_rss_entry(entry: Entry, channel_id: i32) -> items::ActiveModel 
         channel_id: Set(channel_id),
     }
 }
+#[derive(Debug, Deserialize)]
+pub struct ReadStarredParameters {
+    pub read: Option<bool>,
+    pub starred: Option<bool>,
+}
 
 /// # Paging parameters
 #[derive(Debug, Deserialize)]

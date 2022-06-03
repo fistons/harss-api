@@ -93,6 +93,8 @@ impl ItemService {
         user_id: i32,
         page: usize,
         page_size: usize,
+        read: Option<bool>,
+        starred: Option<bool>,
     ) -> Result<PagedResult<HttpUserItem>, ApiError> {
         log::debug!(
             "Getting items of user {} Page {}, Size {}",
@@ -101,11 +103,21 @@ impl ItemService {
             page_size
         );
 
-        let item_paginator = Item::find()
+        let mut query = Item::find()
             .join(JoinType::RightJoin, items::Relation::UsersItems.def())
             .column(users_items::Column::Read)
             .column(users_items::Column::Starred)
-            .filter(users_items::Column::UserId.eq(user_id))
+            .filter(users_items::Column::UserId.eq(user_id));
+
+        if read.is_some() {
+            query = query.filter(users_items::Column::Read.eq(read.unwrap()))
+        }
+
+        if starred.is_some() {
+            query = query.filter(users_items::Column::Starred.eq(starred.unwrap()))
+        }
+
+        let item_paginator = query
             .order_by_desc(items::Column::Id)
             .into_model::<HttpUserItem>()
             .paginate(&self.db, page_size);
