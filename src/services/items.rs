@@ -1,4 +1,5 @@
 use feed_rs::model::Entry;
+use sea_orm::sea_query::Expr;
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
 
@@ -6,6 +7,7 @@ use entity::channel_users;
 use entity::channel_users::Entity as ChannelUsers;
 use entity::items;
 use entity::items::Entity as Item;
+use entity::prelude::UsersItems;
 use entity::users_items;
 
 use crate::errors::ApiError;
@@ -134,6 +136,40 @@ impl ItemService {
             .into_values::<_, QueryAs>()
             .all(&self.db)
             .await?)
+    }
+
+    /// Update the read status of an item for a given user
+    pub async fn set_item_read(
+        &self,
+        user_id: i32,
+        item_id: i32,
+        read: bool,
+    ) -> Result<(), ApiError> {
+        UsersItems::update_many()
+            .col_expr(users_items::Column::Read, Expr::value(read))
+            .filter(users_items::Column::UserId.eq(user_id))
+            .filter(users_items::Column::ItemId.eq(item_id))
+            .exec(&self.db)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Update the read status of an item for a given user
+    pub async fn set_item_starred(
+        &self,
+        user_id: i32,
+        item_id: i32,
+        starred: bool,
+    ) -> Result<(), ApiError> {
+        UsersItems::update_many()
+            .col_expr(users_items::Column::Starred, Expr::value(starred))
+            .filter(users_items::Column::UserId.eq(user_id))
+            .filter(users_items::Column::ItemId.eq(item_id))
+            .exec(&self.db)
+            .await?;
+
+        Ok(())
     }
 }
 
