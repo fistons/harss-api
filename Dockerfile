@@ -32,6 +32,8 @@ RUN cargo build --target x86_64-unknown-linux-musl --release
 FROM alpine
 LABEL maintainer=eric@pedr0.net
 
+RUN apk --no-cache add curl
+
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 
