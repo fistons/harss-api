@@ -2,7 +2,7 @@ use actix_rt::spawn;
 use actix_web::{get, post, web, HttpResponse};
 
 use crate::errors::ApiError;
-use crate::model::{PageParameters, ReadStarredParameters};
+use crate::model::{IdListParameter, PageParameters, ReadStarredParameters};
 use crate::services::auth::AuthenticatedUser;
 use crate::{GlobalService, ItemService};
 
@@ -33,27 +33,27 @@ pub async fn get_all_items(
     Ok(HttpResponse::Ok().json(items))
 }
 
-#[post("/item/{item_id}/star")]
-pub async fn star_item(
-    item_id: web::Path<i32>,
+#[post("/items/star")]
+pub async fn star_items(
+    ids: web::Json<IdListParameter>,
     item_service: web::Data<ItemService>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     item_service
-        .set_item_starred(user.id, item_id.into_inner(), true)
+        .set_item_starred(user.id, ids.into_inner().ids, true)
         .await?;
 
     Ok(HttpResponse::Accepted().finish())
 }
 
-#[post("/item/{item_id}/unstar")]
-pub async fn unstar_item(
-    item_id: web::Path<i32>,
+#[post("/items/unstar")]
+pub async fn unstar_items(
+    ids: web::Json<IdListParameter>,
     item_service: web::Data<ItemService>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     item_service
-        .set_item_starred(user.id, item_id.into_inner(), false)
+        .set_item_starred(user.id, ids.into_inner().ids, false)
         .await?;
 
     Ok(HttpResponse::Accepted().finish())
@@ -61,12 +61,12 @@ pub async fn unstar_item(
 
 #[post("/item/{item_id}/read")]
 pub async fn read_item(
-    item_id: web::Path<i32>,
+    ids: web::Json<IdListParameter>,
     item_service: web::Data<ItemService>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     item_service
-        .set_item_read(user.id, item_id.into_inner(), true)
+        .set_item_read(user.id, ids.into_inner().ids, true)
         .await?;
 
     Ok(HttpResponse::Accepted().finish())
@@ -74,12 +74,12 @@ pub async fn read_item(
 
 #[post("/item/{item_id}/unread")]
 pub async fn unread_item(
-    item_id: web::Path<i32>,
+    ids: web::Json<IdListParameter>,
     item_service: web::Data<ItemService>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     item_service
-        .set_item_read(user.id, item_id.into_inner(), false)
+        .set_item_read(user.id, ids.into_inner().ids, false)
         .await?;
 
     Ok(HttpResponse::Accepted().finish())
@@ -97,8 +97,8 @@ pub async fn refresh_items(
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_all_items)
         .service(refresh_items)
-        .service(star_item)
-        .service(unstar_item)
+        .service(star_items)
+        .service(unstar_items)
         .service(read_item)
         .service(unread_item);
 }

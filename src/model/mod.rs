@@ -88,10 +88,18 @@ pub fn item_from_rss_entry(entry: Entry, channel_id: i32) -> items::ActiveModel 
         channel_id: Set(channel_id),
     }
 }
+
+/// Filter parameters on read/starred items' status
 #[derive(Debug, Deserialize)]
 pub struct ReadStarredParameters {
     pub read: Option<bool>,
     pub starred: Option<bool>,
+}
+
+/// Represent a list of IDs (could be item, channel, etc)
+#[derive(Debug, Deserialize)]
+pub struct IdListParameter {
+    pub ids: Vec<i32>,
 }
 
 /// # Paging parameters

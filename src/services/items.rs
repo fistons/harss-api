@@ -160,13 +160,13 @@ impl ItemService {
     pub async fn set_item_read(
         &self,
         user_id: i32,
-        item_id: i32,
+        ids: Vec<i32>,
         read: bool,
     ) -> Result<(), ApiError> {
         UsersItems::update_many()
             .col_expr(users_items::Column::Read, Expr::value(read))
             .filter(users_items::Column::UserId.eq(user_id))
-            .filter(users_items::Column::ItemId.eq(item_id))
+            .filter(users_items::Column::ItemId.is_in(ids))
             .exec(&self.db)
             .await?;
 
@@ -177,13 +177,13 @@ impl ItemService {
     pub async fn set_item_starred(
         &self,
         user_id: i32,
-        item_id: i32,
+        ids: Vec<i32>,
         starred: bool,
     ) -> Result<(), ApiError> {
         UsersItems::update_many()
             .col_expr(users_items::Column::Starred, Expr::value(starred))
             .filter(users_items::Column::UserId.eq(user_id))
-            .filter(users_items::Column::ItemId.eq(item_id))
+            .filter(users_items::Column::ItemId.is_in(ids))
             .exec(&self.db)
             .await?;
 
