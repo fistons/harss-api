@@ -7,7 +7,7 @@ RSS, but in rust
 ## What does it use
 
 * `diesel` for the database migration since I have difficulties with SeaORM migration
-* `SeaORM` for async database stuff
+* `SeaORM` for async database stuff :)
 * `ActixWeb`
 
 ## Using docker-compose
