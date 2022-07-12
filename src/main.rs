@@ -9,7 +9,9 @@ use actix_web::web::Data;
 use actix_web::{App, HttpServer};
 use clokwerk::{AsyncScheduler, TimeUnits};
 use sea_orm::{ConnectOptions, Database};
-use simplelog::{ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode};
+use tracing::subscriber::set_global_default;
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 use crate::model::configuration::ApplicationConfiguration;
 use crate::services::channels::ChannelService;
@@ -29,14 +31,13 @@ async fn main() -> std::io::Result<()> {
     // Init dotenv
     dotenv::dotenv().ok();
 
-    // Init Logger
-    CombinedLogger::init(vec![TermLogger::new(
-        LevelFilter::Debug,
-        Config::default(),
-        TerminalMode::Mixed,
-        ColorChoice::Always,
-    )])
-    .unwrap();
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let formatting_layer = BunyanFormattingLayer::new("rss-aggregator".into(), std::io::stdout);
+    let subscriber = Registry::default()
+        .with(env_filter)
+        .with(JsonStorageLayer)
+        .with(formatting_layer);
+    set_global_default(subscriber).expect("Failed to set subscriber");
 
     // set up database connection pool
     let connection_spec = std::env::var("DATABASE_URL").unwrap_or_else(|_| String::from("rss.db"));
@@ -67,7 +68,7 @@ async fn main() -> std::io::Result<()> {
         .parse::<u32>()
         .unwrap()
         .seconds();
-    log::info!("Poll every {:?}", polling);
+    tracing::info!("Poll every {:?}", polling);
 
     scheduler
         .every(polling)
@@ -81,6 +82,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(tracing_actix_web::TracingLogger::default())
             .app_data(Data::new(global_service.clone()))
             .app_data(Data::new(item_service.clone()))
             .app_data(Data::new(channel_service.clone()))

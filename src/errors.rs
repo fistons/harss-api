@@ -91,7 +91,7 @@ impl Serialize for ApiError {
 
 impl From<feed_rs::parser::ParseFeedError> for ApiError {
     fn from(err: feed_rs::parser::ParseFeedError) -> Self {
-        log::error!("rss error: {}", err);
+        tracing::error!("rss error: {}", err);
         ApiError::custom(
             Uri::from_str(problems_uri::DATABASE).unwrap(),
             "Rss Parsing error".into(),
@@ -104,7 +104,7 @@ impl From<feed_rs::parser::ParseFeedError> for ApiError {
 
 impl From<sea_orm::DbErr> for ApiError {
     fn from(err: sea_orm::DbErr) -> Self {
-        log::error!("sea_orm error: {}", err);
+        tracing::error!("sea_orm error: {}", err);
         ApiError::custom(
             Uri::from_str(problems_uri::DATABASE).unwrap(),
             "Database issue".into(),
@@ -117,7 +117,7 @@ impl From<sea_orm::DbErr> for ApiError {
 
 impl From<jwt::Error> for ApiError {
     fn from(err: jwt::Error) -> Self {
-        log::error!("jwt error: {}", err);
+        tracing::error!("jwt error: {}", err);
         ApiError::unauthorized(format!("JWT error: {}", err))
     }
 }

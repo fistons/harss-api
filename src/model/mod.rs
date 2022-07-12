@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use chrono::{DateTime, Utc};
 use feed_rs::model::Entry;
 use sea_orm::{FromQueryResult, NotSet, Set};
+use secrecy::Secret;
 use serde::{Deserialize, Serialize, Serializer};
 
 use entity::items;
@@ -43,10 +44,10 @@ fn ser_with<S: Serializer>(id: &Option<i64>, s: S) -> Result<S::Ok, S::Error> {
     s.serialize_i64(id.unwrap_or(0i64))
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct HttpNewUser {
     pub username: String,
-    pub password: String,
+    pub password: Secret<String>,
     pub role: UserRole,
 }
 

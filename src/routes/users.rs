@@ -1,4 +1,5 @@
 use actix_web::{get, post, web, HttpResponse};
+use secrecy::ExposeSecret;
 use serde_json::json;
 
 use entity::sea_orm_active_enums::UserRole;
@@ -10,6 +11,7 @@ use crate::services::auth::AuthenticatedUser;
 use crate::services::users::UserService;
 
 #[post("/users")]
+#[tracing::instrument(skip(user_service), level = "debug")]
 async fn new_user(
     new_user: web::Json<HttpNewUser>,
     user_service: web::Data<UserService>,
@@ -18,34 +20,33 @@ async fn new_user(
 ) -> Result<HttpResponse, ApiError> {
     let admin = user.map(|x| x.is_admin()).unwrap_or(false);
     if configuration.allow_account_creation.unwrap_or(false) || admin {
-        log::debug!("Recording new user {:?}", new_user);
+        tracing::debug!("Recording new user {:?}", new_user);
         let data = new_user.into_inner();
 
         if data.role == UserRole::Admin && admin {
-            log::debug!("Tried to create a new admin with a non admin user");
+            tracing::debug!("Tried to create a new admin with a non admin user");
             return Ok(HttpResponse::Unauthorized().finish());
         }
 
         let user = user_service
-            .create_user(&data.username, &data.password, data.role)
+            .create_user(&data.username, data.password.expose_secret(), data.role)
             .await?;
 
         Ok(HttpResponse::Created().json(json!({"id": user.id})))
     } else {
-        log::debug!("User creation attempt while it's disabled or creator is not admin");
+        tracing::debug!("User creation attempt while it's disabled or creator is not admin");
         Ok(HttpResponse::Unauthorized().finish())
     }
 }
 
 #[get("/users")]
+#[tracing::instrument(skip(user_service), level = "debug")]
 async fn list_users(
     user_service: web::Data<UserService>,
     page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     if user.is_admin() {
-        log::debug!("Get all users");
-
         let users_page = user_service
             .list_users(page.get_page(), page.get_size())
             .await?;

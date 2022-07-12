@@ -11,6 +11,7 @@ use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
 
 #[get("/channel/{id}")]
+#[tracing::instrument(skip(channel_service), level = "debug")]
 pub async fn get_channel(
     id: web::Path<i32>,
     channel_service: web::Data<ChannelService>,
@@ -20,8 +21,6 @@ pub async fn get_channel(
         .select_by_id_and_user_id(id.into_inner(), user.id)
         .await?;
 
-    log::debug!("{:?}", res);
-
     match res {
         Some(data) => Ok(HttpResponse::Ok().json(data)),
         None => Ok(HttpResponse::new(StatusCode::NOT_FOUND)),
@@ -29,6 +28,7 @@ pub async fn get_channel(
 }
 
 #[get("/channels")]
+#[tracing::instrument(skip(channel_service), level = "debug")]
 pub async fn get_channels(
     channel_service: web::Data<ChannelService>,
     page: web::Query<PageParameters>,
@@ -41,13 +41,12 @@ pub async fn get_channels(
 }
 
 #[post("/channels")]
+#[tracing::instrument(skip(channel_service), level = "debug")]
 async fn new_channel(
     new_channel: web::Json<HttpNewChannel>,
     channel_service: web::Data<ChannelService>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    log::info!("Recording new channel {:?}", new_channel);
-
     let data = new_channel.into_inner();
     let channel = channel_service
         .create_or_link_channel(data, user.id)
@@ -57,6 +56,7 @@ async fn new_channel(
 }
 
 #[get("/channel/{chan_id}/items")]
+#[tracing::instrument(skip(items_service), level = "debug")]
 async fn get_items_of_channel(
     chan_id: web::Path<i32>,
     page: web::Query<PageParameters>,
@@ -76,6 +76,7 @@ async fn get_items_of_channel(
 }
 
 #[post("/channels/import")]
+#[tracing::instrument(skip(channel_service, opml), level = "debug")]
 async fn import_opml(
     channel_service: web::Data<ChannelService>,
     auth: AuthenticatedUser,

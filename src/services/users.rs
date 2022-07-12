@@ -18,6 +18,7 @@ impl UserService {
         Self { db }
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn get_user(&self, wanted_username: &str) -> Result<Option<users::Model>, ApiError> {
         Ok(User::find()
             .filter(users::Column::Username.eq(wanted_username))
@@ -25,6 +26,7 @@ impl UserService {
             .await?)
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn list_users(
         &self,
         page: usize,
@@ -49,6 +51,7 @@ impl UserService {
         })
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn create_user(
         &self,
         login: &str,
@@ -66,6 +69,7 @@ impl UserService {
     }
 }
 
+#[tracing::instrument(skip(pwd), level = "trace")]
 fn encode_password(pwd: &str) -> String {
     let salt = std::env::var("PASSWORD_SALT").unwrap_or_else(|_| String::from("lepetitcerebos"));
     let config = argon2::Config::default();
@@ -73,6 +77,7 @@ fn encode_password(pwd: &str) -> String {
     argon2::hash_encoded(pwd.as_bytes(), salt.as_bytes(), &config).unwrap()
 }
 
+#[tracing::instrument(skip_all, level = "trace")]
 pub fn match_password(user: &users::Model, candidate: &str) -> bool {
     argon2::verify_encoded(&user.password, candidate.as_bytes()).unwrap()
 }
