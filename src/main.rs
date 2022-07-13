@@ -31,12 +31,20 @@ async fn main() -> std::io::Result<()> {
     // Init dotenv
     dotenv::dotenv().ok();
 
+    let tracer = opentelemetry_jaeger::new_pipeline()
+        .with_service_name("rss-aggregator")
+        .install_simple()
+        .unwrap();
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let formatting_layer = BunyanFormattingLayer::new("rss-aggregator".into(), std::io::stdout);
+
     let subscriber = Registry::default()
         .with(env_filter)
         .with(JsonStorageLayer)
-        .with(formatting_layer);
+        .with(formatting_layer)
+        .with(telemetry);
     set_global_default(subscriber).expect("Failed to set subscriber");
 
     // set up database connection pool
@@ -46,8 +54,7 @@ async fn main() -> std::io::Result<()> {
         .max_connections(10)
         .connect_timeout(Duration::from_secs(8))
         .idle_timeout(Duration::from_secs(8))
-        .max_lifetime(Duration::from_secs(8))
-        .sqlx_logging(false);
+        .max_lifetime(Duration::from_secs(8));
 
     let db = Database::connect(opt)
         .await

@@ -31,11 +31,15 @@ clokwerk = "0.4.0-rc1"
 sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-actix-native-tls", "macros", "debug-print"] }
 entity = { path = "entity" }
 
+# Tracing stuff
 tracing-actix-web = "0.6.0"
 tracing = { version = "0.1", features = ["log"] }
 tracing-log = "0.1"
 tracing-bunyan-formatter = "0.3"
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"]}
+tracing-opentelemetry = "0.17"
+opentelemetry = "0.17"
+opentelemetry-jaeger = "0.16"
 
 secrecy = { version = "0.8", features = ["serde"] }
 
