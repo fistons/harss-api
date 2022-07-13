@@ -74,10 +74,8 @@ impl ChannelService {
             .into_model::<HttpUserChannel>()
             .paginate(&self.db, page_size);
 
-        let total_items = channel_paginator.num_items().await?;
-        // Calling .num_pages() on the paginator re-query the database for the number of items
-        // so we better do it ourself by reusing the .num_items() result
-        let total_pages = (total_items / page_size) + (total_items % page_size > 0) as usize;
+        let total_items_and_pages = channel_paginator.num_items_and_pages().await?;
+        let total_pages = total_items_and_pages.number_of_pages;
         let content = channel_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
@@ -87,7 +85,7 @@ impl ChannelService {
             page_size,
             total_pages,
             elements_number,
-            total_items,
+            total_items: total_items_and_pages.number_of_items,
         })
     }
 

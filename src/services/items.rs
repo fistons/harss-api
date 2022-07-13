@@ -62,10 +62,8 @@ impl ItemService {
             .into_model::<HttpUserItem>()
             .paginate(&self.db, page_size);
 
-        let total_items = item_paginator.num_items().await?;
-        // Calling .num_pages() on the paginator re-query the database for the number of items
-        // so we better do it ourself by reusing the .num_items() result
-        let total_pages = (total_items / page_size) + (total_items % page_size > 0) as usize;
+        let total_items_and_pages = item_paginator.num_items_and_pages().await?;
+        let total_pages = total_items_and_pages.number_of_pages;
         let content = item_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
@@ -75,7 +73,7 @@ impl ItemService {
             page_size,
             total_pages,
             elements_number,
-            total_items,
+            total_items: total_items_and_pages.number_of_items,
         })
     }
 
@@ -119,10 +117,8 @@ impl ItemService {
             .into_model::<HttpUserItem>()
             .paginate(&self.db, page_size);
 
-        let total_items = item_paginator.num_items().await?;
-        // Calling .num_pages() on the paginator re-query the database for the number of items
-        // so we better do it ourself by reusing the .num_items() result
-        let total_pages = (total_items / page_size) + (total_items % page_size > 0) as usize;
+        let total_items_and_pages = item_paginator.num_items_and_pages().await?;
+        let total_pages = total_items_and_pages.number_of_pages;
         let content = item_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
@@ -132,7 +128,7 @@ impl ItemService {
             page_size,
             total_pages,
             elements_number,
-            total_items,
+            total_items: total_items_and_pages.number_of_items,
         })
     }
 
