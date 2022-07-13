@@ -6,7 +6,8 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::errors::ApiError;
-use crate::{services::users::UserService, RefreshTokenStore};
+use crate::services::users::UserService;
+use crate::store::RefreshTokenStore;
 
 #[derive(Deserialize, Debug)]
 pub struct LoginRequest {

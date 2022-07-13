@@ -5,11 +5,12 @@ use actix_web::{App, HttpServer};
 use sea_orm::DatabaseConnection;
 
 use crate::model::configuration::ApplicationConfiguration;
+use crate::routes::{auth, channels, items, users};
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
 use crate::services::users::UserService;
 use crate::services::GlobalService;
-use crate::{routes, RefreshTokenStore};
+use crate::store::RefreshTokenStore;
 
 #[derive(Clone)]
 struct ApplicationServices {
@@ -49,10 +50,10 @@ pub async fn startup(
             .app_data(Data::new(application_service.user_service.clone()))
             .app_data(Data::new(configuration.clone()))
             .app_data(Data::new(RefreshTokenStore::default()))
-            .configure(routes::channels::configure)
-            .configure(routes::users::configure)
-            .configure(routes::auth::configure)
-            .configure(routes::items::configure)
+            .configure(channels::configure)
+            .configure(users::configure)
+            .configure(auth::configure)
+            .configure(items::configure)
             .service(actix_files::Files::new("/", "./static/").index_file("index.html"))
     })
     .listen(listener)?

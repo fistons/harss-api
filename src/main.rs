@@ -11,15 +11,9 @@ use rss_aggregator::database::init_database;
 use rss_aggregator::model::configuration::ApplicationConfiguration;
 use rss_aggregator::observability::{get_subscriber, init_subscriber};
 use rss_aggregator::startup;
-
-use crate::services::channels::ChannelService;
-use crate::services::items::ItemService;
-use crate::services::GlobalService;
-
-mod errors;
-mod model;
-mod routes;
-mod services;
+use rss_aggregator::services::channels::ChannelService;
+use rss_aggregator::services::items::ItemService;
+use rss_aggregator::services::GlobalService;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -48,7 +42,7 @@ async fn main() -> std::io::Result<()> {
     tracing::info!("Poll every {:?}", polling);
 
     let listener = TcpListener::bind(
-        env::var("RSS_AGGREGATOR_LISTEN_ON").unwrap_or(String::from("0.0.0.0:8080")),
+        env::var("RSS_AGGREGATOR_LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")),
     )?;
 
     scheduler
