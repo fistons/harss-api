@@ -1,5 +1,6 @@
-use chrono::Utc;
 use std::sync::Arc;
+
+use chrono::Utc;
 
 use crate::errors::ApiError;
 use crate::model::HttpChannel;
@@ -25,42 +26,40 @@ impl GlobalService {
         }
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn refresh_all_channels(&self) {
-        log::info!("Refreshing all channels");
         match self.channel_service.select_all().await {
             Ok(channels) => {
                 for channel in channels.iter() {
                     if let Err(oops) = self.refresh_channel(channel).await {
-                        log::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
+                        tracing::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
                     }
                 }
             }
             Err(oops) => {
-                log::error!("Couldn't get channels to refresh {:?}", oops);
+                tracing::error!("Couldn't get channels to refresh {:?}", oops);
             }
         }
-        log::info!("Refreshing all channels done");
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn refresh_channel_of_user(&self, user_id: i32) {
-        log::info!("Refresh channels of user {user_id}");
         match self.channel_service.select_all_by_user_id(user_id).await {
             Ok(channels) => {
                 for channel in channels.iter() {
                     if let Err(oops) = self.refresh_channel(channel).await {
-                        log::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
+                        tracing::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
                     }
                 }
             }
             Err(oops) => {
-                log::error!("Couldn't get channels to refresh {:?}", oops);
+                tracing::error!("Couldn't get channels to refresh {:?}", oops);
             }
         }
-        log::info!("Refresh channels of user {user_id} done");
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn refresh_channel(&self, channel: &HttpChannel) -> Result<(), ApiError> {
-        log::debug!("Fetching {}", channel.name);
         // Get the ids of the already fetched items
         let items = self
             .item_service

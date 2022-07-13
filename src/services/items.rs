@@ -23,9 +23,8 @@ impl ItemService {
         Self { db }
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn insert(&self, entry: Entry, channel_id: i32) -> Result<items::Model, ApiError> {
-        log::trace!("Inserting item {:?}", entry);
-
         let item = item_from_rss_entry(entry, channel_id)
             .insert(&self.db)
             .await?;
@@ -45,6 +44,7 @@ impl ItemService {
         Ok(item)
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn get_items_of_channel(
         &self,
         chan_id: i32,
@@ -52,8 +52,6 @@ impl ItemService {
         page: usize,
         page_size: usize,
     ) -> Result<PagedResult<HttpUserItem>, ApiError> {
-        log::debug!("Getting items of channel {}", chan_id);
-
         let item_paginator = Item::find()
             .join(JoinType::RightJoin, items::Relation::UsersItems.def())
             .column_as(users_items::Column::Read, "read")
@@ -64,10 +62,8 @@ impl ItemService {
             .into_model::<HttpUserItem>()
             .paginate(&self.db, page_size);
 
-        let total_items = item_paginator.num_items().await?;
-        // Calling .num_pages() on the paginator re-query the database for the number of items
-        // so we better do it ourself by reusing the .num_items() result
-        let total_pages = (total_items / page_size) + (total_items % page_size > 0) as usize;
+        let total_items_and_pages = item_paginator.num_items_and_pages().await?;
+        let total_pages = total_items_and_pages.number_of_pages;
         let content = item_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
@@ -77,16 +73,15 @@ impl ItemService {
             page_size,
             total_pages,
             elements_number,
-            total_items,
+            total_items: total_items_and_pages.number_of_items,
         })
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn get_all_items_of_channel(
         &self,
         chan_id: i32,
     ) -> Result<Vec<items::Model>, ApiError> {
-        log::debug!("Getting items paginator of channel {}", chan_id);
-
         Ok(Item::find()
             .filter(items::Column::ChannelId.eq(chan_id))
             .order_by_desc(items::Column::Id)
@@ -94,6 +89,7 @@ impl ItemService {
             .await?)
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn get_items_of_user(
         &self,
         user_id: i32,
@@ -102,25 +98,18 @@ impl ItemService {
         read: Option<bool>,
         starred: Option<bool>,
     ) -> Result<PagedResult<HttpUserItem>, ApiError> {
-        log::debug!(
-            "Getting items of user {} Page {}, Size {}",
-            user_id,
-            page,
-            page_size
-        );
-
         let mut query = Item::find()
             .join(JoinType::RightJoin, items::Relation::UsersItems.def())
             .column(users_items::Column::Read)
             .column(users_items::Column::Starred)
             .filter(users_items::Column::UserId.eq(user_id));
 
-        if read.is_some() {
-            query = query.filter(users_items::Column::Read.eq(read.unwrap()))
+        if let Some(r) = read {
+            query = query.filter(users_items::Column::Read.eq(r))
         }
 
-        if starred.is_some() {
-            query = query.filter(users_items::Column::Starred.eq(starred.unwrap()))
+        if let Some(s) = starred {
+            query = query.filter(users_items::Column::Starred.eq(s))
         }
 
         let item_paginator = query
@@ -128,10 +117,8 @@ impl ItemService {
             .into_model::<HttpUserItem>()
             .paginate(&self.db, page_size);
 
-        let total_items = item_paginator.num_items().await?;
-        // Calling .num_pages() on the paginator re-query the database for the number of items
-        // so we better do it ourself by reusing the .num_items() result
-        let total_pages = (total_items / page_size) + (total_items % page_size > 0) as usize;
+        let total_items_and_pages = item_paginator.num_items_and_pages().await?;
+        let total_pages = total_items_and_pages.number_of_pages;
         let content = item_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
@@ -141,11 +128,12 @@ impl ItemService {
             page_size,
             total_pages,
             elements_number,
-            total_items,
+            total_items: total_items_and_pages.number_of_items,
         })
     }
 
     /// Select all the users ids linked to a channel
+    #[tracing::instrument(skip(self), level = "debug")]
     async fn get_users_of_channel(&self, channel_id: i32) -> Result<Vec<i32>, ApiError> {
         Ok(ChannelUsers::find()
             .select_only()
@@ -157,6 +145,7 @@ impl ItemService {
     }
 
     /// Update the read status of an item for a given user
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn set_item_read(
         &self,
         user_id: i32,
@@ -174,6 +163,7 @@ impl ItemService {
     }
 
     /// Update the read status of an item for a given user
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn set_item_starred(
         &self,
         user_id: i32,

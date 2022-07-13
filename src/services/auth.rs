@@ -49,6 +49,7 @@ impl FromRequest for AuthenticatedUser {
     type Error = ApiError;
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
 
+    #[tracing::instrument(skip_all, level = "trace")]
     fn from_request(req: &HttpRequest, _: &mut dev::Payload) -> Self::Future {
         let req = req.clone();
         Box::pin(async move { extract_authenticated_user(&req).await })

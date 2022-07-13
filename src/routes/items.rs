@@ -7,20 +7,13 @@ use crate::services::auth::AuthenticatedUser;
 use crate::{GlobalService, ItemService};
 
 #[get("/items")]
+#[tracing::instrument(skip(item_service), level = "debug")]
 pub async fn get_all_items(
     page: web::Query<PageParameters>,
     read_starred: web::Query<ReadStarredParameters>,
     item_service: web::Data<ItemService>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    log::debug!(
-        "Get all items for {} and {:?} read {:?} starred {:?}",
-        user.login,
-        page,
-        read_starred.read,
-        read_starred.starred
-    );
-
     let items = item_service
         .get_items_of_user(
             user.id,
@@ -34,6 +27,7 @@ pub async fn get_all_items(
 }
 
 #[post("/items/star")]
+#[tracing::instrument(skip(item_service), level = "debug")]
 pub async fn star_items(
     ids: web::Json<IdListParameter>,
     item_service: web::Data<ItemService>,
@@ -47,6 +41,7 @@ pub async fn star_items(
 }
 
 #[post("/items/unstar")]
+#[tracing::instrument(skip(item_service), level = "debug")]
 pub async fn unstar_items(
     ids: web::Json<IdListParameter>,
     item_service: web::Data<ItemService>,
@@ -60,6 +55,7 @@ pub async fn unstar_items(
 }
 
 #[post("/item/{item_id}/read")]
+#[tracing::instrument(skip(item_service), level = "debug")]
 pub async fn read_item(
     ids: web::Json<IdListParameter>,
     item_service: web::Data<ItemService>,
@@ -73,6 +69,7 @@ pub async fn read_item(
 }
 
 #[post("/item/{item_id}/unread")]
+#[tracing::instrument(skip(item_service), level = "debug")]
 pub async fn unread_item(
     ids: web::Json<IdListParameter>,
     item_service: web::Data<ItemService>,
@@ -86,6 +83,7 @@ pub async fn unread_item(
 }
 
 #[post("/refresh")]
+#[tracing::instrument(skip(global_service), level = "debug")]
 pub async fn refresh_items(
     global_service: web::Data<GlobalService>,
     user: AuthenticatedUser,

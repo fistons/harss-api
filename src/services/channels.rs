@@ -19,6 +19,7 @@ impl ChannelService {
         ChannelService { db }
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn select_by_id_and_user_id(
         &self,
         chan_id: i32,
@@ -46,6 +47,7 @@ impl ChannelService {
     }
 
     ///  Select all the channels of a user, along side the total number of items
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn select_page_by_user_id(
         &self,
         u_id: i32,
@@ -72,10 +74,8 @@ impl ChannelService {
             .into_model::<HttpUserChannel>()
             .paginate(&self.db, page_size);
 
-        let total_items = channel_paginator.num_items().await?;
-        // Calling .num_pages() on the paginator re-query the database for the number of items
-        // so we better do it ourself by reusing the .num_items() result
-        let total_pages = (total_items / page_size) + (total_items % page_size > 0) as usize;
+        let total_items_and_pages = channel_paginator.num_items_and_pages().await?;
+        let total_pages = total_items_and_pages.number_of_pages;
         let content = channel_paginator.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
@@ -85,11 +85,12 @@ impl ChannelService {
             page_size,
             total_pages,
             elements_number,
-            total_items,
+            total_items: total_items_and_pages.number_of_items,
         })
     }
 
     /// # Select all the channels
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn select_all(&self) -> Result<Vec<HttpChannel>, ApiError> {
         Ok(Channel::find()
             .into_model::<HttpChannel>()
@@ -97,6 +98,7 @@ impl ChannelService {
             .await?)
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn select_all_by_user_id(&self, user_id: i32) -> Result<Vec<HttpChannel>, ApiError> {
         Ok(Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
@@ -107,6 +109,7 @@ impl ChannelService {
     }
 
     /// # Create a new channel in the database
+    #[tracing::instrument(skip(self), level = "debug")]
     async fn create_new_channel(
         &self,
         new_channel: &HttpNewChannel,
@@ -123,6 +126,7 @@ impl ChannelService {
     }
 
     /// Create or linked an existing channel to a user
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn create_or_link_channel(
         &self,
         new_channel: HttpNewChannel,
@@ -146,7 +150,7 @@ impl ChannelService {
         match channel_user.insert(&self.db).await {
             Ok(_) => Ok(channel),
             Err(DbErr::Query(x)) => {
-                log::warn!(
+                tracing::error!(
                     "Channel {} for user {} already inserted: {x}",
                     channel.name,
                     other_user_id
@@ -158,6 +162,7 @@ impl ChannelService {
     }
 
     /// Update the last fetched timestamp of a channel
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn update_last_fetched(
         &self,
         channel_id: i32,
