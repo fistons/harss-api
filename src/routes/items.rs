@@ -4,7 +4,8 @@ use actix_web::{get, post, web, HttpResponse};
 use crate::errors::ApiError;
 use crate::model::{IdListParameter, PageParameters, ReadStarredParameters};
 use crate::services::auth::AuthenticatedUser;
-use crate::{GlobalService, ItemService};
+use crate::services::items::ItemService;
+use crate::services::GlobalService;
 
 #[get("/items")]
 #[tracing::instrument(skip(item_service), level = "debug")]
