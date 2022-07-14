@@ -6,7 +6,7 @@ use actix_web::{App, HttpServer};
 use sea_orm::DatabaseConnection;
 
 use crate::model::configuration::ApplicationConfiguration;
-use crate::routes::{auth, channels, items, users};
+use crate::routes;
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
 use crate::services::users::UserService;
@@ -51,10 +51,7 @@ pub async fn startup(
             .app_data(Data::new(application_service.user_service.clone()))
             .app_data(Data::new(configuration.clone()))
             .app_data(Data::new(redis.clone()))
-            .configure(channels::configure)
-            .configure(users::configure)
-            .configure(auth::configure)
-            .configure(items::configure)
+            .configure(routes::configure)
             .service(actix_files::Files::new("/", "./static/").index_file("index.html"))
     })
     .listen(listener)?
