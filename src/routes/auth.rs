@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::errors::ApiError;
 use crate::services::users::UserService;
-use crate::RefreshTokenStore;
+use crate::store::RefreshTokenStore;
 
 #[derive(Deserialize, Debug)]
 pub struct LoginRequest {
@@ -35,7 +35,7 @@ pub async fn login(
     .await?;
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
 
-    let mut redis = refresh_token_store.store.lock().unwrap();
+    let mut redis = refresh_token_store.0.lock().unwrap();
     redis
         .set_ex::<_, _, ()>(&refresh_token, 1, 60 * 60 * 24 * 5)
         .unwrap();
@@ -51,7 +51,7 @@ pub async fn refresh_auth(
     user_service: web::Data<UserService>,
     refresh_token_store: web::Data<RefreshTokenStore>,
 ) -> Result<HttpResponse, ApiError> {
-    let mut redis = refresh_token_store.store.lock().unwrap();
+    let mut redis = refresh_token_store.0.lock().unwrap();
 
     let token = refresh_token.token.expose_secret();
     if redis.exists(token).unwrap_or(false) {
