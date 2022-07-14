@@ -5,9 +5,9 @@ use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
+use crate::database::RedisPool;
 use crate::errors::ApiError;
 use crate::services::users::UserService;
-use crate::store::RefreshTokenStore;
 
 #[derive(Deserialize, Debug)]
 pub struct LoginRequest {
@@ -21,11 +21,11 @@ pub struct RefreshRequest {
 }
 
 #[post("/auth/login")]
-#[tracing::instrument(skip(user_service, refresh_token_store), level = "debug")]
+#[tracing::instrument(skip(user_service, redis_pool), level = "debug")]
 pub async fn login(
     login: web::Json<LoginRequest>,
     user_service: web::Data<UserService>,
-    refresh_token_store: web::Data<RefreshTokenStore>,
+    redis_pool: web::Data<RedisPool>,
 ) -> Result<HttpResponse, ApiError> {
     let access_token = crate::services::auth::get_jwt_from_login_request(
         &login.login,
@@ -35,7 +35,7 @@ pub async fn login(
     .await?;
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
 
-    let mut redis = refresh_token_store.0.lock().unwrap();
+    let mut redis = redis_pool.get()?;
     redis
         .set_ex::<_, _, ()>(&refresh_token, 1, 60 * 60 * 24 * 5)
         .unwrap();
@@ -45,13 +45,13 @@ pub async fn login(
 }
 
 #[post("/auth/refresh")]
-#[tracing::instrument(skip(refresh_token_store, user_service), level = "debug")]
+#[tracing::instrument(skip(redis_pool, user_service), level = "debug")]
 pub async fn refresh_auth(
     refresh_token: web::Json<RefreshRequest>,
     user_service: web::Data<UserService>,
-    refresh_token_store: web::Data<RefreshTokenStore>,
+    redis_pool: web::Data<RedisPool>,
 ) -> Result<HttpResponse, ApiError> {
-    let mut redis = refresh_token_store.0.lock().unwrap();
+    let mut redis = redis_pool.get()?;
 
     let token = refresh_token.token.expose_secret();
     if redis.exists(token).unwrap_or(false) {

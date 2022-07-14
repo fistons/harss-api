@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::net::TcpListener;
 
-use rss_aggregator::database::init_database;
+use rss_aggregator::database::{init_postgres_connection, init_redis_connection};
 use rss_aggregator::model::configuration::ApplicationConfiguration;
 use rss_aggregator::observability::{get_subscriber, init_subscriber};
 use rss_aggregator::poller::start_poller;
@@ -18,16 +18,17 @@ async fn main() -> std::io::Result<()> {
     let subscriber = get_subscriber("rss_aggregator".into(), "info".into());
     init_subscriber(subscriber);
 
-    let db = init_database().await;
+    let postgres_connection = init_postgres_connection().await;
+    let redis_pool = init_redis_connection();
 
     let configuration = load_configuration().unwrap();
     let listener = TcpListener::bind(
         env::var("RSS_AGGREGATOR_LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")),
     )?;
 
-    start_poller(db.clone()).await;
+    start_poller(postgres_connection.clone()).await;
 
-    startup::startup(db, configuration, listener).await
+    startup::startup(postgres_connection, redis_pool, configuration, listener).await
 }
 
 fn load_configuration() -> Result<ApplicationConfiguration, Box<dyn Error>> {

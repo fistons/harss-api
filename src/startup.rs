@@ -1,5 +1,6 @@
 use std::net::TcpListener;
 
+use crate::database::RedisPool;
 use actix_web::web::Data;
 use actix_web::{App, HttpServer};
 use sea_orm::DatabaseConnection;
@@ -10,7 +11,6 @@ use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
 use crate::services::users::UserService;
 use crate::services::GlobalService;
-use crate::store::RefreshTokenStore;
 
 #[derive(Clone)]
 struct ApplicationServices {
@@ -36,6 +36,7 @@ fn build_services(database: &DatabaseConnection) -> ApplicationServices {
 
 pub async fn startup(
     database: DatabaseConnection,
+    redis: RedisPool,
     configuration: ApplicationConfiguration,
     listener: TcpListener,
 ) -> std::io::Result<()> {
@@ -49,7 +50,7 @@ pub async fn startup(
             .app_data(Data::new(application_service.channel_service.clone()))
             .app_data(Data::new(application_service.user_service.clone()))
             .app_data(Data::new(configuration.clone()))
-            .app_data(Data::new(RefreshTokenStore::default()))
+            .app_data(Data::new(redis.clone()))
             .configure(channels::configure)
             .configure(users::configure)
             .configure(auth::configure)

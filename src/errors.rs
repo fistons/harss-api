@@ -115,6 +115,19 @@ impl From<sea_orm::DbErr> for ApiError {
     }
 }
 
+impl From<r2d2::Error> for ApiError {
+    fn from(err: r2d2::Error) -> Self {
+        tracing::error!("r2d2 error: {}", err);
+        ApiError::custom(
+            Uri::from_str(problems_uri::DATABASE).unwrap(),
+            "Database issue".into(),
+            format!("Database issue: {:?}", err),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            HashMap::with_capacity(0),
+        )
+    }
+}
+
 impl From<jwt::Error> for ApiError {
     fn from(err: jwt::Error) -> Self {
         tracing::error!("jwt error: {}", err);
