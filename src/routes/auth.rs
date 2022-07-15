@@ -1,11 +1,10 @@
 use actix_web::{post, web, HttpResponse};
-use redis::Commands;
+use deadpool_redis::{redis::cmd, Pool};
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::database::RedisPool;
 use crate::errors::ApiError;
 use crate::services::users::UserService;
 
@@ -25,7 +24,7 @@ pub struct RefreshRequest {
 pub async fn login(
     login: web::Json<LoginRequest>,
     user_service: web::Data<UserService>,
-    redis_pool: web::Data<RedisPool>,
+    redis_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ApiError> {
     let access_token = crate::services::auth::get_jwt_from_login_request(
         &login.login,
@@ -35,9 +34,14 @@ pub async fn login(
     .await?;
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
 
-    let mut redis = redis_pool.get()?;
-    redis
-        .set_ex::<_, _, ()>(&refresh_token, 1, 60 * 60 * 24 * 5)
+    let mut redis = redis_pool.get().await?;
+
+    cmd("SETEX")
+        .arg(&refresh_token)
+        .arg(60 * 60 * 24 * 5) // 5 days
+        .arg(1)
+        .query_async::<_, ()>(&mut redis)
+        .await
         .unwrap();
 
     Ok(HttpResponse::Ok()
@@ -49,14 +53,19 @@ pub async fn login(
 pub async fn refresh_auth(
     refresh_token: web::Json<RefreshRequest>,
     user_service: web::Data<UserService>,
-    redis_pool: web::Data<RedisPool>,
+    redis_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ApiError> {
-    let mut redis = redis_pool.get()?;
+    let mut redis = redis_pool.get().await?;
 
     let token = refresh_token.token.expose_secret();
-    if redis.exists(token).unwrap_or(false) {
-        let user_login = crate::services::auth::extract_login_from_refresh_token(token);
+    let token_exists = cmd("EXISTS")
+        .arg(token)
+        .query_async::<_, bool>(&mut redis)
+        .await
+        .unwrap();
 
+    if token_exists {
+        let user_login = crate::services::auth::extract_login_from_refresh_token(token);
         let user = user_service
             .get_user(user_login)
             .await?

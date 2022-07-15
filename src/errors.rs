@@ -5,6 +5,7 @@ use std::{error, fmt};
 
 use actix_web::http::{StatusCode, Uri};
 use actix_web::{HttpResponse, ResponseError};
+use deadpool_redis::PoolError;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_json::json;
@@ -115,9 +116,9 @@ impl From<sea_orm::DbErr> for ApiError {
     }
 }
 
-impl From<r2d2::Error> for ApiError {
-    fn from(err: r2d2::Error) -> Self {
-        tracing::error!("r2d2 error: {}", err);
+impl From<PoolError> for ApiError {
+    fn from(err: PoolError) -> Self {
+        tracing::error!("deadpool error: {}", err);
         ApiError::custom(
             Uri::from_str(problems_uri::DATABASE).unwrap(),
             "Database issue".into(),

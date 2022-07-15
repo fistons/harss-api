@@ -1,10 +1,7 @@
 use std::time::Duration;
 
-use r2d2::Pool;
-use redis::Client;
+use deadpool_redis::{Config, Pool, Runtime};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
-
-pub type RedisPool = Pool<Client>;
 
 pub async fn init_postgres_connection() -> DatabaseConnection {
     let connection_spec =
@@ -22,12 +19,9 @@ pub async fn init_postgres_connection() -> DatabaseConnection {
         .expect("Could not connect to postgres")
 }
 
-pub fn init_redis_connection() -> RedisPool {
+pub fn init_redis_connection() -> Pool {
     let url = std::env::var("REDIS_URL").unwrap_or_else(|_| String::from("redis://127.0.0.1"));
-    let client = Client::open(url).expect("Could not connect to redis");
-
-    Pool::builder()
-        .max_size(15)
-        .build(client)
-        .unwrap_or_else(|e| panic!("Error building redis pool: {}", e))
+    let cfg = Config::from_url(url);
+    cfg.create_pool(Some(Runtime::Tokio1))
+        .expect("Could not connect to redis")
 }

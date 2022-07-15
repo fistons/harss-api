@@ -1,8 +1,8 @@
 use std::net::TcpListener;
 
-use crate::database::RedisPool;
 use actix_web::web::Data;
 use actix_web::{App, HttpServer};
+use deadpool_redis::Pool;
 use sea_orm::DatabaseConnection;
 
 use crate::model::configuration::ApplicationConfiguration;
@@ -36,7 +36,7 @@ fn build_services(database: &DatabaseConnection) -> ApplicationServices {
 
 pub async fn startup(
     database: DatabaseConnection,
-    redis: RedisPool,
+    redis: Pool,
     configuration: ApplicationConfiguration,
     listener: TcpListener,
 ) -> std::io::Result<()> {
