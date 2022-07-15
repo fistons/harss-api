@@ -4,18 +4,18 @@ use actix_web::{get, post, web, HttpResponse};
 use crate::errors::ApiError;
 use crate::model::{IdListParameter, PageParameters, ReadStarredParameters};
 use crate::services::auth::AuthenticatedUser;
-use crate::services::items::ItemService;
-use crate::services::GlobalService;
+use crate::startup::ApplicationServices;
 
 #[get("/items")]
-#[tracing::instrument(skip(item_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 pub async fn get_all_items(
     page: web::Query<PageParameters>,
     read_starred: web::Query<ReadStarredParameters>,
-    item_service: web::Data<ItemService>,
+    services: web::Data<ApplicationServices>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let items = item_service
+    let items = services
+        .item_service
         .get_items_of_user(
             user.id,
             page.get_page(),
@@ -28,13 +28,14 @@ pub async fn get_all_items(
 }
 
 #[post("/items/star")]
-#[tracing::instrument(skip(item_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 pub async fn star_items(
     ids: web::Json<IdListParameter>,
-    item_service: web::Data<ItemService>,
+    services: web::Data<ApplicationServices>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    item_service
+    services
+        .item_service
         .set_item_starred(user.id, ids.into_inner().ids, true)
         .await?;
 
@@ -42,13 +43,14 @@ pub async fn star_items(
 }
 
 #[post("/items/unstar")]
-#[tracing::instrument(skip(item_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 pub async fn unstar_items(
     ids: web::Json<IdListParameter>,
-    item_service: web::Data<ItemService>,
+    services: web::Data<ApplicationServices>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    item_service
+    services
+        .item_service
         .set_item_starred(user.id, ids.into_inner().ids, false)
         .await?;
 
@@ -56,13 +58,14 @@ pub async fn unstar_items(
 }
 
 #[post("/item/{item_id}/read")]
-#[tracing::instrument(skip(item_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 pub async fn read_item(
     ids: web::Json<IdListParameter>,
-    item_service: web::Data<ItemService>,
+    services: web::Data<ApplicationServices>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    item_service
+    services
+        .item_service
         .set_item_read(user.id, ids.into_inner().ids, true)
         .await?;
 
@@ -70,13 +73,14 @@ pub async fn read_item(
 }
 
 #[post("/item/{item_id}/unread")]
-#[tracing::instrument(skip(item_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 pub async fn unread_item(
     ids: web::Json<IdListParameter>,
-    item_service: web::Data<ItemService>,
+    services: web::Data<ApplicationServices>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    item_service
+    services
+        .item_service
         .set_item_read(user.id, ids.into_inner().ids, false)
         .await?;
 
@@ -84,12 +88,17 @@ pub async fn unread_item(
 }
 
 #[post("/refresh")]
-#[tracing::instrument(skip(global_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 pub async fn refresh_items(
-    global_service: web::Data<GlobalService>,
+    services: web::Data<ApplicationServices>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    spawn(async move { global_service.refresh_channel_of_user(user.id).await });
+    spawn(async move {
+        services
+            .global_service
+            .refresh_channel_of_user(user.id)
+            .await
+    });
     Ok(HttpResponse::Accepted().finish())
 }
 

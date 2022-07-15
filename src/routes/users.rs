@@ -8,13 +8,13 @@ use crate::errors::ApiError;
 use crate::model::configuration::ApplicationConfiguration;
 use crate::model::{HttpNewUser, PageParameters, PagedResult};
 use crate::services::auth::AuthenticatedUser;
-use crate::services::users::UserService;
+use crate::startup::ApplicationServices;
 
 #[post("/users")]
-#[tracing::instrument(skip(user_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 async fn new_user(
     new_user: web::Json<HttpNewUser>,
-    user_service: web::Data<UserService>,
+    services: web::Data<ApplicationServices>,
     user: Option<AuthenticatedUser>,
     configuration: web::Data<ApplicationConfiguration>,
 ) -> Result<HttpResponse, ApiError> {
@@ -28,7 +28,8 @@ async fn new_user(
             return Ok(HttpResponse::Unauthorized().finish());
         }
 
-        let user = user_service
+        let user = services
+            .user_service
             .create_user(&data.username, data.password.expose_secret(), data.role)
             .await?;
 
@@ -40,14 +41,15 @@ async fn new_user(
 }
 
 #[get("/users")]
-#[tracing::instrument(skip(user_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 async fn list_users(
-    user_service: web::Data<UserService>,
+    services: web::Data<ApplicationServices>,
     page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     if user.is_admin() {
-        let users_page = user_service
+        let users_page = services
+            .user_service
             .list_users(page.get_page(), page.get_size())
             .await?;
         let users = PagedResult {

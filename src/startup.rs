@@ -13,7 +13,7 @@ use crate::services::users::UserService;
 use crate::services::GlobalService;
 
 #[derive(Clone)]
-struct ApplicationServices {
+pub struct ApplicationServices {
     pub global_service: GlobalService,
     pub item_service: ItemService,
     pub channel_service: ChannelService,
@@ -45,10 +45,7 @@ pub async fn startup(
     HttpServer::new(move || {
         App::new()
             .wrap(tracing_actix_web::TracingLogger::default())
-            .app_data(Data::new(application_service.global_service.clone()))
-            .app_data(Data::new(application_service.item_service.clone()))
-            .app_data(Data::new(application_service.channel_service.clone()))
-            .app_data(Data::new(application_service.user_service.clone()))
+            .app_data(Data::new(application_service.clone()))
             .app_data(Data::new(configuration.clone()))
             .app_data(Data::new(redis.clone()))
             .configure(routes::configure)

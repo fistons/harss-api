@@ -14,6 +14,7 @@ use entity::users;
 
 use crate::errors::ApiError;
 use crate::services::users::UserService;
+use crate::startup::ApplicationServices;
 
 /// # Represent an authenticated user, from JWT or HTTP Basic Auth
 #[derive(Debug, Deserialize, Serialize)]
@@ -82,8 +83,8 @@ async fn extract_authenticated_user(req: &HttpRequest) -> Result<AuthenticatedUs
                 Err(e) => return Err(e),
             };
 
-            let user_service = req.app_data::<Data<UserService>>().unwrap();
-            check_and_get_authed_user(&user, &password, user_service).await
+            let services = req.app_data::<Data<ApplicationServices>>().unwrap();
+            check_and_get_authed_user(&user, &password, &services.user_service).await
         }
 
         (error, _) => Err(ApiError::unauthorized(format!(
@@ -143,9 +144,9 @@ fn extract_credentials_from_http_basic(token: &str) -> Result<(String, String), 
 pub async fn get_jwt_from_login_request(
     user: &str,
     password: &str,
-    user_service: Data<UserService>,
+    user_service: &UserService,
 ) -> Result<String, ApiError> {
-    let user = check_and_get_user(user, password, &user_service).await?;
+    let user = check_and_get_user(user, password, user_service).await?;
 
     get_jwt(&user).await
 }

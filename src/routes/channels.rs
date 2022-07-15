@@ -7,17 +7,17 @@ use crate::errors::ApiError;
 use crate::model::opml::Opml;
 use crate::model::{HttpNewChannel, PageParameters};
 use crate::services::auth::AuthenticatedUser;
-use crate::services::channels::ChannelService;
-use crate::services::items::ItemService;
+use crate::startup::ApplicationServices;
 
 #[get("/channel/{id}")]
-#[tracing::instrument(skip(channel_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 pub async fn get_channel(
     id: web::Path<i32>,
-    channel_service: web::Data<ChannelService>,
+    services: web::Data<ApplicationServices>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let res = channel_service
+    let res = services
+        .channel_service
         .select_by_id_and_user_id(id.into_inner(), user.id)
         .await?;
 
@@ -28,27 +28,29 @@ pub async fn get_channel(
 }
 
 #[get("/channels")]
-#[tracing::instrument(skip(channel_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 pub async fn get_channels(
-    channel_service: web::Data<ChannelService>,
+    services: web::Data<ApplicationServices>,
     page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let channels = channel_service
+    let channels = services
+        .channel_service
         .select_page_by_user_id(user.id, page.get_page(), page.get_size())
         .await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
 #[post("/channels")]
-#[tracing::instrument(skip(channel_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 async fn new_channel(
     new_channel: web::Json<HttpNewChannel>,
-    channel_service: web::Data<ChannelService>,
+    services: web::Data<ApplicationServices>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let data = new_channel.into_inner();
-    let channel = channel_service
+    let channel = services
+        .channel_service
         .create_or_link_channel(data, user.id)
         .await?;
 
@@ -56,14 +58,15 @@ async fn new_channel(
 }
 
 #[get("/channel/{chan_id}/items")]
-#[tracing::instrument(skip(items_service), level = "debug")]
+#[tracing::instrument(skip(services), level = "debug")]
 async fn get_items_of_channel(
     chan_id: web::Path<i32>,
     page: web::Query<PageParameters>,
-    items_service: web::Data<ItemService>,
+    services: web::Data<ApplicationServices>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let items = items_service
+    let items = services
+        .item_service
         .get_items_of_channel(
             chan_id.into_inner(),
             auth.id,
@@ -76,15 +79,16 @@ async fn get_items_of_channel(
 }
 
 #[post("/channels/import")]
-#[tracing::instrument(skip(channel_service, opml), level = "debug")]
+#[tracing::instrument(skip(services, opml), level = "debug")]
 async fn import_opml(
-    channel_service: web::Data<ChannelService>,
+    services: web::Data<ApplicationServices>,
     auth: AuthenticatedUser,
     opml: Xml<Opml>,
 ) -> Result<HttpResponse, ApiError> {
     let opml = opml.into_inner();
     for channel in opml.body.flatten_outlines() {
-        channel_service
+        services
+            .channel_service
             .create_or_link_channel(channel, auth.id)
             .await?;
     }

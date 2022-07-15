@@ -6,7 +6,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::errors::ApiError;
-use crate::services::users::UserService;
+use crate::startup::ApplicationServices;
 
 #[derive(Deserialize, Debug)]
 pub struct LoginRequest {
@@ -20,16 +20,16 @@ pub struct RefreshRequest {
 }
 
 #[post("/auth/login")]
-#[tracing::instrument(skip(user_service, redis_pool), level = "debug")]
+#[tracing::instrument(skip(services, redis_pool), level = "debug")]
 pub async fn login(
     login: web::Json<LoginRequest>,
-    user_service: web::Data<UserService>,
+    services: web::Data<ApplicationServices>,
     redis_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ApiError> {
     let access_token = crate::services::auth::get_jwt_from_login_request(
         &login.login,
         login.password.expose_secret(),
-        user_service,
+        &services.user_service,
     )
     .await?;
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
@@ -49,10 +49,10 @@ pub async fn login(
 }
 
 #[post("/auth/refresh")]
-#[tracing::instrument(skip(redis_pool, user_service), level = "debug")]
+#[tracing::instrument(skip(redis_pool, services), level = "debug")]
 pub async fn refresh_auth(
     refresh_token: web::Json<RefreshRequest>,
-    user_service: web::Data<UserService>,
+    services: web::Data<ApplicationServices>,
     redis_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ApiError> {
     let mut redis = redis_pool.get().await?;
@@ -66,7 +66,8 @@ pub async fn refresh_auth(
 
     if token_exists {
         let user_login = crate::services::auth::extract_login_from_refresh_token(token);
-        let user = user_service
+        let user = services
+            .user_service
             .get_user(user_login)
             .await?
             .ok_or_else(|| ApiError::not_found("User not found"))?;
