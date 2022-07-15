@@ -9,7 +9,8 @@ RUN update-ca-certificates
 WORKDIR app
 
 FROM chef AS planner
-COPY . .
+COPY entity/Cargo.toml ./entity/Cargo.toml
+COPY Cargo.* ./
 RUN cargo chef prepare --recipe-path recipe.json
 
 
@@ -18,12 +19,13 @@ COPY --from=planner /app/recipe.json recipe.json
 # Build dependencies - this is the caching Docker layer!
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 # Build application
-COPY . .
+COPY entity/src entity/src
+COPY src/ src/
 RUN cargo build --release --target x86_64-unknown-linux-musl --bin rss-aggregator
 
 FROM alpine
 LABEL maintainer=eric@pedr0.net
-RUN addgroup -S rss-aggragator && adduser -S rss-aggragator -G rss-aggragator
+RUN addgroup -S rss-aggregator && adduser -S rss-aggregator -G rss-aggregator
 
 RUN apk --no-cache add curl # Needed for the docker health check
 
@@ -31,5 +33,5 @@ COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/rss-aggregator
 COPY static/ static/
 
 EXPOSE 8080
-USER rss-aggragator
+USER rss-aggregator
 ENTRYPOINT ["rss-aggregator"]
