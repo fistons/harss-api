@@ -8,18 +8,24 @@ services:
     links:
       - redis
       - postgres
+      - jaeger
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
       JWT_SECRETS: 6ce319be-880a-419f-a39e-0058bceec28a
       CONFIG_PATH: /data/configuration.yaml
       REDIS_URL: redis://redis
       POLLING_INTERVAL: 300
+      OTEL_EXPORTER_JAEGER_AGENT_HOST: jaeger
+      OTEL_EXPORTER_JAEGER_AGENT_PORT: 6831
+      RUST_LOG: info
     volumes:
       - ${PWD}/configuration.yaml:/data/configuration.yaml
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_started
+      jaeger:
         condition: service_started
     healthcheck: 
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
@@ -52,5 +58,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  jaeger:
+    image: jaegertracing/all-in-one
+    ports:
+      - 16686:16686 # Expose Web UI
 volumes:
   database: {}

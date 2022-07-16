@@ -1,13 +1,13 @@
 .git/
 .github/
 .idea/
+migrations/
 target/
 .env
 .gitlab-ci.yml
 .gitignore
 .gitconfig
 .spectral.yml
-migrations/
 Dockerfile
 docker-compose.yml
 README.md
