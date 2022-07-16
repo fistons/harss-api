@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use deadpool_redis::{Config, Pool, Runtime};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use tracing::log::LevelFilter::Trace;
 
 pub async fn init_postgres_connection() -> DatabaseConnection {
     let connection_spec =
@@ -12,7 +13,8 @@ pub async fn init_postgres_connection() -> DatabaseConnection {
         .max_connections(10)
         .connect_timeout(Duration::from_secs(8))
         .idle_timeout(Duration::from_secs(8))
-        .max_lifetime(Duration::from_secs(8));
+        .max_lifetime(Duration::from_secs(8))
+        .sqlx_logging_level(Trace);
 
     Database::connect(opt)
         .await

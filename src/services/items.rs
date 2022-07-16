@@ -44,7 +44,7 @@ impl ItemService {
         Ok(item)
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn get_items_of_channel(
         &self,
         chan_id: i32,
@@ -77,7 +77,7 @@ impl ItemService {
         })
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn get_all_items_of_channel(
         &self,
         chan_id: i32,
@@ -89,7 +89,7 @@ impl ItemService {
             .await?)
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), level = "debug")]
     pub async fn get_items_of_user(
         &self,
         user_id: i32,

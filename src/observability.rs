@@ -6,7 +6,7 @@ use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 pub fn get_subscriber(name: String, env_filter: String) -> impl Subscriber + Sync + Send {
     let tracer = opentelemetry_jaeger::new_pipeline()
         .with_service_name(&name)
-        .install_simple()
+        .install_batch(opentelemetry::runtime::Tokio)
         .unwrap();
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
