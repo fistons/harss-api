@@ -1,3 +1,5 @@
+use std::env;
+
 use actix_web::{get, post, web, HttpResponse};
 use secrecy::ExposeSecret;
 use serde_json::json;
@@ -5,7 +7,6 @@ use serde_json::json;
 use entity::sea_orm_active_enums::UserRole;
 
 use crate::errors::ApiError;
-use crate::model::configuration::ApplicationConfiguration;
 use crate::model::{HttpNewUser, PageParameters, PagedResult};
 use crate::services::auth::AuthenticatedUser;
 use crate::startup::ApplicationServices;
@@ -16,10 +17,13 @@ async fn new_user(
     new_user: web::Json<HttpNewUser>,
     services: web::Data<ApplicationServices>,
     user: Option<AuthenticatedUser>,
-    configuration: web::Data<ApplicationConfiguration>,
 ) -> Result<HttpResponse, ApiError> {
     let admin = user.map(|x| x.is_admin()).unwrap_or(false);
-    if configuration.allow_account_creation.unwrap_or(false) || admin {
+    let allow_account_creation = env::var("RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION")
+        .map(|x| x.parse().unwrap_or_default())
+        .unwrap_or_default();
+
+    if allow_account_creation || admin {
         tracing::debug!("Recording new user {:?}", new_user);
         let data = new_user.into_inner();
 

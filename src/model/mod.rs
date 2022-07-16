@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize, Serializer};
 use entity::items;
 use entity::sea_orm_active_enums::UserRole;
 
-pub mod configuration;
 pub mod opml;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

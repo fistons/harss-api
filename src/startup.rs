@@ -5,7 +5,6 @@ use actix_web::{App, HttpServer};
 use deadpool_redis::Pool;
 use sea_orm::DatabaseConnection;
 
-use crate::model::configuration::ApplicationConfiguration;
 use crate::routes;
 use crate::services::channels::ChannelService;
 use crate::services::items::ItemService;
@@ -37,7 +36,6 @@ fn build_services(database: &DatabaseConnection) -> ApplicationServices {
 pub async fn startup(
     database: DatabaseConnection,
     redis: Pool,
-    configuration: ApplicationConfiguration,
     listener: TcpListener,
 ) -> std::io::Result<()> {
     let application_service = build_services(&database);
@@ -46,7 +44,6 @@ pub async fn startup(
         App::new()
             .wrap(tracing_actix_web::TracingLogger::default())
             .app_data(Data::new(application_service.clone()))
-            .app_data(Data::new(configuration.clone()))
             .app_data(Data::new(redis.clone()))
             .configure(routes::configure)
             .service(actix_files::Files::new("/", "./static/").index_file("index.html"))

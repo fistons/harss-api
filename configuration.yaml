@@ -1,4 +1,0 @@
----
-# Allow user creation without authentication
-allow_account_creation: false
-
