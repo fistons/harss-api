@@ -1,4 +1,3 @@
-use actix_rt::spawn;
 use actix_web::{get, post, web, HttpResponse};
 
 use crate::errors::ApiError;
@@ -93,12 +92,11 @@ pub async fn refresh_items(
     services: web::Data<ApplicationServices>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    spawn(async move {
-        services
-            .global_service
-            .refresh_channel_of_user(user.id)
-            .await
-    });
+    services
+        .global_service
+        .refresh_channel_of_user(user.id)
+        .await;
+
     Ok(HttpResponse::Accepted().finish())
 }
 
