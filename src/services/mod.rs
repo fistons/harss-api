@@ -70,12 +70,7 @@ impl GlobalService {
             .filter_map(|x| x.guid.as_ref().or(x.url.as_ref()))
             .collect();
 
-        let content = reqwest::get(&channel.url)
-            .await
-            .unwrap()
-            .bytes()
-            .await
-            .unwrap();
+        let content = reqwest::get(&channel.url).await?.bytes().await?;
 
         let rss_channel = feed_rs::parser::parse(&content[..])?;
         let mut channel_updated = false;

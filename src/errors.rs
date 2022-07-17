@@ -15,6 +15,7 @@ mod problems_uri {
     pub const AUTHENTICATION: &str = "/problem/authentication";
     pub const DATABASE: &str = "/problem/database";
     pub const NOT_FOUND: &str = "/problem/not-found";
+    pub const REQWEST: &str = "/problem/reqwest";
 }
 
 #[derive(Debug)]
@@ -133,6 +134,19 @@ impl From<jwt::Error> for ApiError {
     fn from(err: jwt::Error) -> Self {
         tracing::error!("jwt error: {}", err);
         ApiError::unauthorized(format!("JWT error: {}", err))
+    }
+}
+
+impl From<reqwest::Error> for ApiError {
+    fn from(err: reqwest::Error) -> Self {
+        tracing::error!("reqwest error: {}", err);
+        ApiError::custom(
+            Uri::from_str(problems_uri::REQWEST).unwrap(),
+            "Reqwest error".into(),
+            format!("Reqwest error: {}", err),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            HashMap::with_capacity(0),
+        )
     }
 }
 
