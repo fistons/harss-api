@@ -2024,6 +2024,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2 0.9.9",
+ "tokio",
  "tracing",
  "tracing-actix-web",
  "tracing-bunyan-formatter",
@@ -2506,7 +2507,6 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "874e93a365a598dc3dadb197565952cb143ae4aa716f7bcc933a8d836f6bf89f"
 dependencies = [
- "actix-rt",
  "native-tls",
  "once_cell",
  "tokio",
@@ -2671,7 +2671,19 @@ dependencies = [
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",
+ "tokio-macros",
  "winapi",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "1.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9724f9a975fb987ef7a3cd9be0350edcbe130698af5b8f7a631e23d42d052484"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

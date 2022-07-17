@@ -23,10 +23,10 @@ pub async fn start_poller(db: DatabaseConnection) {
     scheduler
         .every(polling_interval)
         .run(move || refresh(global_service.clone()));
-    actix_rt::spawn(async move {
+    tokio::spawn(async move {
         loop {
             scheduler.run_pending().await;
-            actix_rt::time::sleep(Duration::from_millis(100)).await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
         }
     });
 }

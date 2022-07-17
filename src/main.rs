@@ -6,7 +6,7 @@ use rss_aggregator::observability::{get_subscriber, init_subscriber};
 use rss_aggregator::poller::start_poller;
 use rss_aggregator::startup;
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
     // Init dotenv
     dotenv::dotenv().ok();
