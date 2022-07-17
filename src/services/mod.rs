@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use chrono::Utc;
@@ -60,25 +61,31 @@ impl GlobalService {
 
     #[tracing::instrument(skip(self), level = "debug")]
     pub async fn refresh_channel(&self, channel: &HttpChannel) -> Result<(), ApiError> {
+        // Fetch the content of the channel
+        let content = reqwest::get(&channel.url).await?.bytes().await?;
+        let rss_channel = feed_rs::parser::parse(&content[..])?;
+
         // Get the ids of the already fetched items
-        let items = self
+        let items_set = self
             .item_service
             .get_all_items_of_channel(channel.id)
-            .await?;
-        let items: Vec<&String> = items
-            .iter()
-            .filter_map(|x| x.guid.as_ref().or(x.url.as_ref()))
-            .collect();
+            .await?
+            .into_iter()
+            .filter_map(|x| x.guid.or(x.url))
+            .collect::<HashSet<String>>();
 
-        let content = reqwest::get(&channel.url).await?.bytes().await?;
+        // Filters out the item not already fetched
+        //TODO: check how the updated articles behave
+        let new_items = rss_channel
+            .entries
+            .into_iter()
+            .filter(|item| !items_set.contains(&item.id))
+            .collect::<Vec<_>>();
 
-        let rss_channel = feed_rs::parser::parse(&content[..])?;
         let mut channel_updated = false;
-        for item in rss_channel.entries.into_iter() {
-            if !items.contains(&&item.id) {
-                self.item_service.insert(item, channel.id).await.unwrap();
-                channel_updated = true;
-            }
+        for new_item in new_items {
+            self.item_service.insert(new_item, channel.id).await?;
+            channel_updated = true;
         }
 
         if channel_updated {
