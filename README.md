@@ -7,10 +7,10 @@ RSS, but in rust
 **This is still a prototype, not fit for production yet. The API is still subject to breaking change, without warning.
 Use at our own risk!**
 
-**Even if it is still a prototype, it's still open to issue, idea, any input**
+**Even if it is still a prototype, it's still open to issue, idea, any input.**
 
-**This is my pet project to lean rust, so there is, and there will probably a lot of bad code, but I'm here to learn
-so if you want to highlight something, you're more than welcome**
+**This is my pet project to learn rust, so there is, and there will probably be a lot of bad code, but I'm here to learn
+so if you want to highlight something, you're more than welcome!**
 
 ## Configuration
 
