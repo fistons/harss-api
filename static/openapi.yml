@@ -606,6 +606,10 @@ components:
           $ref: '#/components/schemas/ItemRead'
         starred:
           $ref: '#/components/schemas/ItemStarred'
+        channel_id:
+          $ref: '#/components/schemas/ChannelID'
+        channel_name:
+          $ref: '#/components/schemas/ChannelName'
     ItemStarred:
       type: boolean
       description: The item has been read

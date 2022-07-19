@@ -69,6 +69,8 @@ pub struct HttpUserItem {
     pub publish_timestamp: Option<DateTime<Utc>>,
     pub read: bool,
     pub starred: bool,
+    pub channel_id: i32,
+    pub channel_name: String,
 }
 
 pub fn item_from_rss_entry(entry: Entry, channel_id: i32) -> items::ActiveModel {

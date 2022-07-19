@@ -5,6 +5,7 @@ use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
 
 use entity::channel_users;
 use entity::channel_users::Entity as ChannelUsers;
+use entity::channels;
 use entity::items;
 use entity::items::Entity as Item;
 use entity::prelude::UsersItems;
@@ -54,8 +55,11 @@ impl ItemService {
     ) -> Result<PagedResult<HttpUserItem>, ApiError> {
         let item_paginator = Item::find()
             .join(JoinType::RightJoin, items::Relation::UsersItems.def())
+            .join(JoinType::RightJoin, items::Relation::Channels.def())
             .column_as(users_items::Column::Read, "read")
             .column_as(users_items::Column::Starred, "starred")
+            .column_as(channels::Column::Name, "channel_name")
+            .column_as(channels::Column::Id, "channel_id")
             .filter(users_items::Column::ChannelId.eq(chan_id))
             .filter(users_items::Column::UserId.eq(user_id))
             .order_by_desc(items::Column::Id)
@@ -100,6 +104,9 @@ impl ItemService {
     ) -> Result<PagedResult<HttpUserItem>, ApiError> {
         let mut query = Item::find()
             .join(JoinType::RightJoin, items::Relation::UsersItems.def())
+            .join(JoinType::RightJoin, items::Relation::Channels.def())
+            .column_as(channels::Column::Name, "channel_name")
+            .column_as(channels::Column::Id, "channel_id")
             .column(users_items::Column::Read)
             .column(users_items::Column::Starred)
             .filter(users_items::Column::UserId.eq(user_id));
