@@ -62,7 +62,7 @@ impl ItemService {
             .column_as(channels::Column::Id, "channel_id")
             .filter(users_items::Column::ChannelId.eq(chan_id))
             .filter(users_items::Column::UserId.eq(user_id))
-            .order_by_desc(items::Column::Id)
+            .order_by_desc(items::Column::PublishTimestamp)
             .into_model::<HttpUserItem>()
             .paginate(&self.db, page_size);
 
@@ -88,7 +88,7 @@ impl ItemService {
     ) -> Result<Vec<items::Model>, ApiError> {
         Ok(Item::find()
             .filter(items::Column::ChannelId.eq(chan_id))
-            .order_by_desc(items::Column::Id)
+            .order_by_desc(items::Column::PublishTimestamp)
             .all(&self.db)
             .await?)
     }
@@ -120,7 +120,7 @@ impl ItemService {
         }
 
         let item_paginator = query
-            .order_by_desc(items::Column::Id)
+            .order_by_desc(items::Column::PublishTimestamp)
             .into_model::<HttpUserItem>()
             .paginate(&self.db, page_size);
 
