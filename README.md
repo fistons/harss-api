@@ -22,9 +22,10 @@ All the configuration must be pass through environment variables.
  * `PASSWORD_SALT`: String used as a salt for password encoding
  * `RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION` true/false (default false): Allow user to register an account. Otherwise, an admin should do it
  * `POLLING_INTERVAL`: The number of seconds between feeds update. Default `300`
- * `OTEL_EXPORTER_JAEGER_AGENT_HOST`: Hostname/IP of the jaeger agent. Default `localhost`
+ * `OTEL_EXPORTER_JAEGER_AGENT_HOST`: Hostname/IP of the [jaeger](https://www.jaegertracing.io/) agent. Default `localhost`
  * `OTEL_EXPORTER_JAEGER_AGENT_PORT`: Port of the jaeger agent. Default `6831`
  * `RUST_LOG`: (error/warn/info/debug/trace) Log level. Default `info`
+ * `SENTRY_DSN`: Your [sentry](https://sentry.io/welcome/) DSN if you have one. If not provided, disable sentry
 
 ## What does it use
 
