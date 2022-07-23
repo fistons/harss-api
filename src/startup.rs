@@ -43,6 +43,7 @@ pub async fn startup(
     HttpServer::new(move || {
         App::new()
             .wrap(tracing_actix_web::TracingLogger::default())
+            .wrap(sentry_actix::Sentry::default())
             .app_data(Data::new(application_service.clone()))
             .app_data(Data::new(redis.clone()))
             .configure(routes::configure)

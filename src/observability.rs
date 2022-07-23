@@ -1,3 +1,4 @@
+use sentry::ClientInitGuard;
 use tracing::{subscriber::set_global_default, Subscriber};
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
@@ -18,9 +19,17 @@ pub fn get_subscriber(name: String, env_filter: String) -> impl Subscriber + Syn
         .with(env_filter)
         .with(JsonStorageLayer)
         .with(formatting_layer)
+        .with(sentry_tracing::layer())
         .with(telemetry)
 }
 pub fn init_subscriber(subscriber: impl Subscriber + Sync + Send) {
     LogTracer::init().expect("Failed to set logger");
     set_global_default(subscriber).expect("Failed to set subscriber");
+}
+
+pub fn init_sentry() -> ClientInitGuard {
+    sentry::init(sentry::ClientOptions {
+        release: sentry::release_name!(),
+        ..Default::default()
+    })
 }

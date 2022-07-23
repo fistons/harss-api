@@ -2,6 +2,7 @@ use std::env;
 use std::net::TcpListener;
 
 use rss_aggregator::databases::{init_postgres_connection, init_redis_connection};
+use rss_aggregator::observability;
 use rss_aggregator::observability::{get_subscriber, init_subscriber};
 use rss_aggregator::poller::start_poller;
 use rss_aggregator::startup;
@@ -22,6 +23,8 @@ async fn main() -> std::io::Result<()> {
     )?;
 
     start_poller(postgres_connection.clone()).await;
+
+    let _sentry_guard = observability::init_sentry();
 
     startup::startup(postgres_connection, redis_pool, listener).await
 }
