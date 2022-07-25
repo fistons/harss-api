@@ -91,18 +91,23 @@ impl ChannelService {
 
     /// # Select all the channels
     #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn select_all(&self) -> Result<Vec<HttpChannel>, ApiError> {
+    pub async fn select_all_enabled(&self) -> Result<Vec<HttpChannel>, ApiError> {
         Ok(Channel::find()
+            .filter(channels::Column::Disabled.eq(false))
             .into_model::<HttpChannel>()
             .all(&self.db)
             .await?)
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn select_all_by_user_id(&self, user_id: i32) -> Result<Vec<HttpChannel>, ApiError> {
+    pub async fn select_all_enabled_by_user_id(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<HttpChannel>, ApiError> {
         Ok(Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(user_id))
+            .filter(channels::Column::Disabled.eq(false))
             .into_model::<HttpChannel>()
             .all(&self.db)
             .await?)

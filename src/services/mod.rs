@@ -29,19 +29,8 @@ impl GlobalService {
 
     #[tracing::instrument(skip(self), level = "debug")]
     pub async fn refresh_all_channels(&self) {
-        match self.channel_service.select_all().await {
-            Ok(channels) => {
-                let mut failed_channels: Vec<i32> = vec![];
-                for channel in channels.iter() {
-                    if let Err(oops) = self.refresh_channel(channel).await {
-                        failed_channels.push(channel.id);
-                        tracing::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
-                    }
-                }
-                if let Err(x) = self.channel_service.fail_channels(failed_channels).await {
-                    tracing::error!("Error while updating failed channel count: {}", x);
-                }
-            }
+        match self.channel_service.select_all_enabled().await {
+            Ok(channels) => self.update_channels(channels).await,
             Err(oops) => {
                 tracing::error!("Couldn't get channels to refresh {:?}", oops);
             }
@@ -50,17 +39,29 @@ impl GlobalService {
 
     #[tracing::instrument(skip(self), level = "debug")]
     pub async fn refresh_channel_of_user(&self, user_id: i32) {
-        match self.channel_service.select_all_by_user_id(user_id).await {
-            Ok(channels) => {
-                for channel in channels.iter() {
-                    if let Err(oops) = self.refresh_channel(channel).await {
-                        tracing::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
-                    }
-                }
-            }
+        match self
+            .channel_service
+            .select_all_enabled_by_user_id(user_id)
+            .await
+        {
+            Ok(channels) => self.update_channels(channels).await,
             Err(oops) => {
                 tracing::error!("Couldn't get channels to refresh {:?}", oops);
             }
+        }
+    }
+
+    #[tracing::instrument(skip(self), level = "debug")]
+    async fn update_channels(&self, channels: Vec<HttpChannel>) {
+        let mut failed_channels: Vec<i32> = vec![];
+        for channel in channels.iter() {
+            if let Err(oops) = self.refresh_channel(channel).await {
+                failed_channels.push(channel.id);
+                tracing::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
+            }
+        }
+        if let Err(x) = self.channel_service.fail_channels(failed_channels).await {
+            tracing::error!("Error while updating failed channel count: {}", x);
         }
     }
 
