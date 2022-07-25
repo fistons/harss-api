@@ -556,6 +556,12 @@ components:
         items_read:
           type: integer
           description: Number of read items for this channel
+        failure_count:
+          type: integer
+          description: Number of time this channel failed to be updated
+        disabled:
+          type: boolean
+          description: Tells if the channel is disabled or not
     ChannelID:
       type: integer
       description: ID of a channel.
