@@ -14,6 +14,23 @@ pub struct ChannelService {
     db: DatabaseConnection,
 }
 
+/// Generate a select statement for channel and user
+fn user_channel_select_statement() -> Select<Channel> {
+    Channel::find()
+        .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
+        .join(JoinType::LeftJoin, channels::Relation::UsersItems.def())
+        .column_as(users_items::Column::ItemId.count(), "items_count")
+        .column_as(
+            Expr::expr(
+                Expr::col(users_items::Column::Read)
+                    .into_simple_expr()
+                    .cast_as(Alias::new("integer")),
+            )
+            .sum(),
+            "items_read",
+        )
+}
+
 impl ChannelService {
     pub fn new(db: DatabaseConnection) -> Self {
         ChannelService { db }
@@ -25,19 +42,7 @@ impl ChannelService {
         chan_id: i32,
         user_id: i32,
     ) -> Result<Option<HttpUserChannel>, ApiError> {
-        Ok(Channel::find()
-            .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
-            .join(JoinType::LeftJoin, channels::Relation::UsersItems.def())
-            .column_as(users_items::Column::ItemId.count(), "items_count")
-            .column_as(
-                Expr::expr(
-                    Expr::col(users_items::Column::Read)
-                        .into_simple_expr()
-                        .cast_as(Alias::new("integer")),
-                )
-                .sum(),
-                "items_read",
-            )
+        Ok(user_channel_select_statement()
             .filter(channel_users::Column::UserId.eq(user_id))
             .filter(channel_users::Column::ChannelId.eq(chan_id))
             .group_by(channels::Column::Id)
@@ -54,19 +59,7 @@ impl ChannelService {
         page: usize,
         page_size: usize,
     ) -> Result<PagedResult<HttpUserChannel>, ApiError> {
-        let channel_paginator = Channel::find()
-            .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
-            .join(JoinType::LeftJoin, channels::Relation::UsersItems.def())
-            .column_as(users_items::Column::ItemId.count(), "items_count")
-            .column_as(
-                Expr::expr(
-                    Expr::col(users_items::Column::Read)
-                        .into_simple_expr()
-                        .cast_as(Alias::new("integer")),
-                )
-                .sum(),
-                "items_read",
-            )
+        let channel_paginator = user_channel_select_statement()
             .filter(channel_users::Column::UserId.eq(u_id))
             .group_by(channels::Column::Id)
             .group_by(channel_users::Column::RegistrationTimestamp)
