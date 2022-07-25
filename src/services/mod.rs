@@ -31,10 +31,15 @@ impl GlobalService {
     pub async fn refresh_all_channels(&self) {
         match self.channel_service.select_all().await {
             Ok(channels) => {
+                let mut failed_channels: Vec<i32> = vec![];
                 for channel in channels.iter() {
                     if let Err(oops) = self.refresh_channel(channel).await {
+                        failed_channels.push(channel.id);
                         tracing::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
                     }
+                }
+                if let Err(x) = self.channel_service.fail_channels(failed_channels).await {
+                    tracing::error!("Error while updating failed channel count: {}", x);
                 }
             }
             Err(oops) => {
