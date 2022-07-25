@@ -51,7 +51,7 @@ impl GlobalService {
         }
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self, channels), level = "debug")]
     async fn update_channels(&self, channels: Vec<HttpChannel>) {
         let mut failed_channels: Vec<i32> = vec![];
         for channel in channels.iter() {
@@ -62,6 +62,10 @@ impl GlobalService {
         }
         if let Err(x) = self.channel_service.fail_channels(failed_channels).await {
             tracing::error!("Error while updating failed channel count: {}", x);
+        }
+
+        if let Err(x) = self.channel_service.disable_channels().await {
+            tracing::error!("Error while disabling failed channel count: {}", x);
         }
     }
 
