@@ -19,6 +19,8 @@ pub struct Model {
     pub url: String,
     pub registration_timestamp: DateTimeWithTimeZone,
     pub last_update: Option<DateTimeWithTimeZone>,
+    pub disabled: bool,
+    pub failure_count: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
@@ -28,6 +30,8 @@ pub enum Column {
     Url,
     RegistrationTimestamp,
     LastUpdate,
+    Disabled,
+    FailureCount,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DerivePrimaryKey)]
@@ -58,6 +62,8 @@ impl ColumnTrait for Column {
             Self::Url => ColumnType::String(Some(512u32)).def(),
             Self::RegistrationTimestamp => ColumnType::TimestampWithTimeZone.def(),
             Self::LastUpdate => ColumnType::TimestampWithTimeZone.def().null(),
+            Self::Disabled => ColumnType::Boolean.def(),
+            Self::FailureCount => ColumnType::Integer.def(),
         }
     }
 }

@@ -25,6 +25,8 @@ pub struct HttpChannel {
     pub name: String,
     pub url: String,
     pub last_update: Option<DateTime<Utc>>,
+    pub failure_count: i32,
+    pub disabled: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, FromQueryResult)]
@@ -37,6 +39,8 @@ pub struct HttpUserChannel {
     pub items_count: i64,
     #[serde(serialize_with = "ser_with")]
     pub items_read: Option<i64>,
+    pub failure_count: i32,
+    pub disabled: bool,
 }
 
 /// Serialize an optional i64, defaulting to 0 if its None
