@@ -191,8 +191,6 @@ impl ChannelService {
         Ok(())
     }
 
-    //TODO: Is a modulo a really good idea? what happens if we change the FAILURE_THRESHOLD value?
-    //TODO: PR on SeaORM for mod operation
     /// Disable all the channels where the failed count is a multiple of FAILURE_THRESHOLD.
     /// If FAILURE_THRESHOLD = 0, don't do anything
     #[tracing::instrument(skip(self), level = "debug")]
@@ -204,15 +202,27 @@ impl ChannelService {
         if threshold > 0 {
             let disabled_channels: UpdateResult = Channel::update_many()
                 .col_expr(channels::Column::Disabled, Expr::value(true))
-                .filter(channels::Column::FailureCount.gt(0))
-                .filter(Expr::cust(
-                    &format!("MOD(failure_count, {}) = 0", threshold)[..],
-                ))
+                .filter(channels::Column::FailureCount.eq(threshold))
                 .exec(&self.db)
                 .await?;
 
             tracing::debug!("Disabled {} channels", disabled_channels.rows_affected);
         }
+        Ok(())
+    }
+
+    /// Enable a channel and reset it's failure count
+    #[tracing::instrument(skip(self), level = "debug")]
+    pub async fn enable_channel(&self, id: i32) -> Result<(), ApiError> {
+        Channel::update_many()
+            .col_expr(channels::Column::Disabled, Expr::value(false))
+            .col_expr(channels::Column::FailureCount, Expr::value(0))
+            .filter(channels::Column::Id.eq(id))
+            .exec(&self.db)
+            .await?;
+
+        tracing::debug!("Chanel {} enabled", id);
+
         Ok(())
     }
 }

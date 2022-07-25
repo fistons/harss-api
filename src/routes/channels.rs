@@ -96,10 +96,29 @@ async fn import_opml(
     Ok(HttpResponse::Created().finish())
 }
 
+#[post("/channel/{id}/enable")]
+#[tracing::instrument(skip(services), level = "debug")]
+async fn enable_channel(
+    id: web::Path<i32>,
+    services: web::Data<ApplicationServices>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    if user.is_admin() {
+        services
+            .channel_service
+            .enable_channel(id.into_inner())
+            .await?;
+        Ok(HttpResponse::Accepted().finish())
+    } else {
+        Ok(HttpResponse::Forbidden().finish())
+    }
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_channel)
         .service(get_channels)
         .service(new_channel)
         .service(get_items_of_channel)
+        .service(enable_channel)
         .service(import_opml);
 }

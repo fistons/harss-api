@@ -160,6 +160,26 @@ paths:
                 $ref: '#/components/schemas/Channel'
         default:
           $ref: '#/components/responses/Error'
+  /channel/{id}/enable:
+    post:
+      operationId: enable_channel
+      tags:
+        - Channels
+      summary: Enable the channel and reset it's failure count.
+      description: Enable the channel and reset it's failure count.
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of a channel
+          required: true
+          example: 1
+          schema:
+            $ref: '#/components/schemas/ChannelID'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
   /channel/{id}/items:
     get:
       operationId: get_items_of_channel
