@@ -120,6 +120,8 @@ impl ChannelService {
             url: Set(new_channel.url.to_owned()),
             last_update: NotSet,
             registration_timestamp: Set(Utc::now().into()),
+            disabled: Set(false),
+            failure_count: Set(0),
         };
 
         Ok(channel.insert(&self.db).await?)
