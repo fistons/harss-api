@@ -203,6 +203,7 @@ impl ChannelService {
             let disabled_channels: UpdateResult = Channel::update_many()
                 .col_expr(channels::Column::Disabled, Expr::value(true))
                 .filter(channels::Column::FailureCount.eq(threshold))
+                .filter(channels::Column::Disabled.eq(false))
                 .exec(&self.db)
                 .await?;
 
