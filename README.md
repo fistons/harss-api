@@ -27,6 +27,7 @@ All the configuration must be pass through environment variables.
  * `RUST_LOG`: (error/warn/info/debug/trace) Log level. Default `info`
  * `SENTRY_DSN`: Your [sentry](https://sentry.io/welcome/) DSN if you have one. If not provided, disable sentry
  * `FAILURE_THRESHOLD`: Number of failure before automatically disabling a channel. If 0, never disable it. Default `3` 
+ * `FETCH_TIMEOUT`: Timeout in seconds for RSS feed fetching. Default `3` 
 
 ## What does it use
 

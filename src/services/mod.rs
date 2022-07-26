@@ -1,3 +1,4 @@
+use core::time::Duration;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -17,6 +18,7 @@ pub mod users;
 pub struct GlobalService {
     item_service: Arc<ItemService>,
     channel_service: Arc<ChannelService>,
+    client: reqwest::Client,
 }
 
 impl GlobalService {
@@ -24,6 +26,16 @@ impl GlobalService {
         Self {
             item_service: Arc::new(item_service),
             channel_service: Arc::new(channel_service),
+            client: reqwest::ClientBuilder::default()
+                .timeout(Duration::from_secs(
+                    std::env::var("FETCH_TIMEOUT")
+                        .unwrap_or_else(|_| String::from("3"))
+                        .parse()
+                        .expect("FETCH_TIMEOUT must be an integer"),
+                ))
+                .user_agent("rss-aggregator")
+                .build()
+                .unwrap(),
         }
     }
 
@@ -72,7 +84,8 @@ impl GlobalService {
     #[tracing::instrument(skip(self), level = "debug")]
     pub async fn refresh_channel(&self, channel: &HttpChannel) -> Result<(), ApiError> {
         // Fetch the content of the channel
-        let content = reqwest::get(&channel.url).await?.bytes().await?;
+
+        let content = self.client.get(&channel.url).send().await?.bytes().await?;
         let rss_channel = feed_rs::parser::parse(&content[..])?;
 
         // Get the ids of the already fetched items

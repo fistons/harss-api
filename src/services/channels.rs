@@ -179,7 +179,7 @@ impl ChannelService {
 
     #[tracing::instrument(skip(self), level = "debug")]
     pub async fn fail_channels(&self, channels_id: Vec<i32>) -> Result<(), ApiError> {
-        Channel::update_many()
+        let failed_channels: UpdateResult = Channel::update_many()
             .col_expr(
                 channels::Column::FailureCount,
                 Expr::col(channels::Column::FailureCount).add(1),
@@ -187,6 +187,8 @@ impl ChannelService {
             .filter(channels::Column::Id.is_in(channels_id))
             .exec(&self.db)
             .await?;
+
+        tracing::debug!("Failed {} channels", failed_channels.rows_affected);
 
         Ok(())
     }
