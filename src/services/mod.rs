@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use chrono::Utc;
+use tracing::Instrument;
 
 use crate::errors::ApiError;
 use crate::model::HttpChannel;
@@ -65,17 +66,22 @@ impl GlobalService {
 
     #[tracing::instrument(skip(self, channels), level = "debug")]
     async fn update_channels(&self, channels: Vec<HttpChannel>) {
-        let mut failed_channels: Vec<i32> = vec![];
-        for channel in channels.iter() {
-            if let Err(oops) = self.refresh_channel(channel).await {
-                failed_channels.push(channel.id);
-                tracing::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
-            }
-        }
-        if let Err(x) = self.channel_service.fail_channels(failed_channels).await {
-            tracing::error!("Error while updating failed channel count: {}", x);
+        let mut tasks = vec![];
+        for channel in channels.into_iter() {
+            let service = self.clone();
+            let future = async move {
+                if let Err(oops) = service.refresh_channel(&channel).await {
+                    tracing::error!("Couldn't refresh channel {}: {:?}", channel.id, oops);
+
+                    if let Err(oops) = service.channel_service.fail_channels(channel.id).await {
+                        tracing::error!("Couldn't fail channel {}: {:?}", channel.id, oops);
+                    }
+                }
+            };
+            tasks.push(tokio::spawn(future.in_current_span()));
         }
 
+        futures_util::future::join_all(tasks).await;
         if let Err(x) = self.channel_service.disable_channels().await {
             tracing::error!("Error while disabling failed channel count: {}", x);
         }
