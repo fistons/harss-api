@@ -1,7 +1,6 @@
 services:
   api:
-    build:
-      context: .
+    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator:latest
     ports:
       - "8080:8080"
     links:
@@ -18,14 +17,14 @@ services:
       JAEGER_ENABLED: true
       OTEL_EXPORTER_JAEGER_AGENT_HOST: jaeger
       OTEL_EXPORTER_JAEGER_AGENT_PORT: 6831
-      RUST_LOG: debug
+      RUST_LOG: info
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
-          #      jaeger:
-          #        condition: service_started
+      jaeger:
+        condition: service_started
     healthcheck: 
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
   redis:
