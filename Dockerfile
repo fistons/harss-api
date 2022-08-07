@@ -28,7 +28,8 @@ FROM alpine
 LABEL maintainer=eric@pedr0.net
 RUN addgroup -S rss-aggregator && adduser -S rss-aggregator -G rss-aggregator
 
-RUN apk --no-cache add curl # Needed for the docker health check
+RUN apk --no-cache add curl tzdata # Needed for the docker health check and fix issue with chrono
+RUN cp /usr/share/zoneinfo/Europe/Paris /etc/localtime
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/rss-aggregator /usr/local/bin
 COPY static/ static/

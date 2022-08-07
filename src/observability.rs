@@ -5,11 +5,16 @@ use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 pub fn get_subscriber(name: String, env_filter: String) -> impl Subscriber + Sync + Send {
-    let tracer = opentelemetry_jaeger::new_pipeline()
-        .with_service_name(&name)
-        .install_batch(opentelemetry::runtime::Tokio)
-        .unwrap();
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    // Building the jaeger layer, if needed
+    let telemetry = if std::env::var("JAEGER_ENABLED").is_ok() {
+        let tracer = opentelemetry_jaeger::new_pipeline()
+            .with_service_name(&name)
+            .install_batch(opentelemetry::runtime::Tokio)
+            .unwrap();
+        Some(tracing_opentelemetry::layer().with_tracer(tracer))
+    } else {
+        None
+    };
 
     let env_filter =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));

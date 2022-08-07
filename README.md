@@ -21,6 +21,7 @@ All the configuration must be pass through environment variables.
  * `JWT_SECRET`: String used as the key for JWT
  * `RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION` true/false (default false): Allow user to register an account. Otherwise, an admin should do it
  * `POLLING_INTERVAL`: The number of seconds between feeds update. Default `300`
+ * `JAEGER_ENABLED`: If set to any value, enabled the Jaeger telemetry layer. Default `not set` 
  * `OTEL_EXPORTER_JAEGER_AGENT_HOST`: Hostname/IP of the [jaeger](https://www.jaegertracing.io/) agent. Default `localhost`
  * `OTEL_EXPORTER_JAEGER_AGENT_PORT`: Port of the jaeger agent. Default `6831`
  * `RUST_LOG`: (error/warn/info/debug/trace) Log level. Default `info`
