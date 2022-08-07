@@ -1,3 +1,8 @@
+use argon2::{
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
+use rand_core::OsRng;
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*};
 
@@ -71,13 +76,21 @@ impl UserService {
 
 #[tracing::instrument(skip(pwd), level = "trace")]
 fn encode_password(pwd: &str) -> String {
-    let salt = std::env::var("PASSWORD_SALT").unwrap_or_else(|_| String::from("lepetitcerebos"));
-    let config = argon2::Config::default();
+    let argon2 = Argon2::default();
+    let salt = SaltString::generate(&mut OsRng);
 
-    argon2::hash_encoded(pwd.as_bytes(), salt.as_bytes(), &config).unwrap()
+    let password_hash = argon2
+        .hash_password(pwd.as_bytes(), &salt)
+        .unwrap()
+        .to_string();
+
+    password_hash
 }
 
-#[tracing::instrument(skip_all, level = "trace")]
+#[tracing::instrument(skip_all, level = "debug")]
 pub fn match_password(user: &users::Model, candidate: &str) -> bool {
-    argon2::verify_encoded(&user.password, candidate.as_bytes()).unwrap()
+    let parsed_hash = PasswordHash::new(&user.password).unwrap();
+    Argon2::default()
+        .verify_password(candidate.as_bytes(), &parsed_hash)
+        .is_ok()
 }
