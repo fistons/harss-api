@@ -27,7 +27,7 @@ async fn new_user(
         tracing::debug!("Recording new user {:?}", new_user);
         let data = new_user.into_inner();
 
-        if data.role == UserRole::Admin && admin {
+        if data.role == UserRole::Admin && !admin {
             tracing::debug!("Tried to create a new admin with a non admin user");
             return Ok(HttpResponse::Unauthorized().finish());
         }
