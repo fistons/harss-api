@@ -19,7 +19,7 @@ pub struct HttpNewChannel {
 }
 
 /// Source of articles, over da web
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, FromQueryResult)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, FromQueryResult)]
 pub struct HttpChannel {
     pub id: i32,
     pub name: String,
@@ -29,7 +29,7 @@ pub struct HttpChannel {
     pub disabled: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, FromQueryResult)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, FromQueryResult)]
 pub struct HttpUserChannel {
     pub id: i32,
     pub name: String,

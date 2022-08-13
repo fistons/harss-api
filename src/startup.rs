@@ -11,7 +11,6 @@ use crate::services::items::ItemService;
 use crate::services::users::UserService;
 use crate::services::GlobalService;
 
-#[derive(Clone)]
 pub struct ApplicationServices {
     pub global_service: GlobalService,
     pub item_service: ItemService,
@@ -40,12 +39,14 @@ pub async fn startup(
 ) -> std::io::Result<()> {
     let application_service = build_services(&database);
 
+    let services = Data::new(application_service);
+    let redis = Data::new(redis);
     HttpServer::new(move || {
         App::new()
             .wrap(tracing_actix_web::TracingLogger::default())
             .wrap(sentry_actix::Sentry::default())
-            .app_data(Data::new(application_service.clone()))
-            .app_data(Data::new(redis.clone()))
+            .app_data(services.clone())
+            .app_data(redis.clone())
             .configure(routes::configure)
             .service(actix_files::Files::new("/", "./static/").index_file("index.html"))
     })
