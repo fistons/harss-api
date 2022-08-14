@@ -5,7 +5,7 @@ authors = ["Eric <Fistons> <eric@pedr0.net>"]
 edition = "2021"
 
 [workspace]
-members = [".", "entity"]
+members = [".", "entity", "fetcher"]
 
 [lib]
 path = "src/lib.rs"

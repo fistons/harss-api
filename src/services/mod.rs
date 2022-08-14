@@ -81,7 +81,10 @@ impl GlobalService {
             tasks.push(tokio::spawn(future.in_current_span()));
         }
 
-        futures_util::future::join_all(tasks).await;
+        for task in tasks {
+            task.await.unwrap();
+        }
+
         if let Err(x) = self.channel_service.disable_channels().await {
             tracing::error!("Error while disabling failed channel count: {}", x);
         }
