@@ -10,6 +10,7 @@ WORKDIR /app
 
 FROM chef AS planner
 COPY entity/Cargo.toml ./entity/Cargo.toml
+COPY fetcher/Cargo.toml ./fetcher/Cargo.toml
 COPY Cargo.* ./
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -20,6 +21,7 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 # Build application
 COPY entity/src entity/src
+COPY fetcher/src fetcher/src
 COPY src/ src/
 RUN touch src/main.rs
 RUN cargo build --release --target x86_64-unknown-linux-musl --bin rss-aggregator
