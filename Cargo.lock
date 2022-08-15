@@ -2287,7 +2287,6 @@ dependencies = [
  "dotenv",
  "entity",
  "feed-rs",
- "futures-util",
  "hmac 0.11.0",
  "http-auth-basic",
  "jwt",
