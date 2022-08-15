@@ -1,4 +1,3 @@
-use reqwest::Response;
 use sea_orm::entity::*;
 
 use entity::channels::Entity as Channel;
