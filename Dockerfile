@@ -20,6 +20,7 @@ COPY --from=planner /app/recipe.json recipe.json
 # Build dependencies - this is the caching Docker layer!
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 # Build application
+COPY rss-common/src rss-common/src
 COPY entity/src entity/src
 COPY fetcher/src fetcher/src
 COPY src/ src/

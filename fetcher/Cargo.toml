@@ -19,6 +19,7 @@ dotenvy = "0.15"
 sea-orm = { version = "^0", features = ["sqlx-sqlite", "sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"] }
 chrono = "0.4"
 tracing = { version = "0.1", features = ["log"] }
+feed-rs = "1.1.0"
 
 entity = { path = "../entity" }
 rss-common = { path = "../rss-common" }

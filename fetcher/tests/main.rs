@@ -1,24 +1,26 @@
 use reqwest::Client;
 use wiremock::matchers::{method, path};
-use wiremock::{Mock, ResponseTemplate};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use helpers::configure_database;
-
-use crate::helpers::build_mock;
 
 mod helpers;
 
 #[tokio::test]
-async fn test_1() {
-    let mock = build_mock().await;
+async fn happy_path() {
+    // Create DB and webserver
+    let mock = MockServer::start().await;
     let db = configure_database(mock.uri()).await;
 
+    // Prepare the web server
+    let bytes = include_bytes!("feed.xml").to_vec();
+    let response = ResponseTemplate::new(200).set_body_raw(bytes, "application/xml");
     Mock::given(method("GET"))
         .and(path("/coucou"))
-        .respond_with(ResponseTemplate::new(200))
+        .respond_with(response)
         .expect(1)
         .mount(&mock)
         .await;
 
-    fetcher::fetch(Client::default(), db).await;
+    fetcher::Fetcher::new(Client::default(), db).fetch().await;
 }

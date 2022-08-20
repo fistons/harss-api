@@ -5,19 +5,16 @@ use sea_orm::{
     ActiveModelTrait, ConnectionTrait, Database, DatabaseConnection, DbBackend, NotSet, Schema,
     Set, TransactionTrait,
 };
-use wiremock::MockServer;
 
 use entity::channel_users::Entity as ChannelUsers;
 use entity::channels;
 use entity::channels::Entity as Channels;
 use entity::items;
 use entity::items::Entity as Items;
+use entity::sea_orm_active_enums::UserRole;
+use entity::users;
 use entity::users::Entity as Users;
 use entity::users_items::Entity as UserItems;
-
-pub async fn build_mock() -> MockServer {
-    MockServer::start().await
-}
 
 pub async fn configure_database(host: String) -> DatabaseConnection {
     let db = Database::connect("sqlite::memory:").await.unwrap();
@@ -50,11 +47,23 @@ pub async fn configure_database(host: String) -> DatabaseConnection {
         .await
         .unwrap();
 
+    for user in user_fixture() {
+        user.insert(&txn).await.unwrap();
+    }
+
     for channel in channels_fixture(&host) {
         let channel = channel.insert(&txn).await.unwrap();
-        dbg!(&channel);
+
+        entity::channel_users::ActiveModel {
+            channel_id: Set(channel.id),
+            user_id: Set(1),
+            registration_timestamp: Set(Utc::now().into()),
+        }
+        .insert(&txn)
+        .await
+        .unwrap();
+
         for item in items_fixtures(channel.id) {
-            dbg!(&item);
             item.insert(&txn).await.unwrap();
         }
     }
@@ -86,6 +95,15 @@ fn items_fixtures(chan_id: i32) -> Vec<items::ActiveModel> {
         fetch_timestamp: Set(Utc::now().into()),
         publish_timestamp: Set(None),
         channel_id: Set(chan_id),
+    }]
+}
+
+fn user_fixture() -> Vec<users::ActiveModel> {
+    vec![users::ActiveModel {
+        id: Set(1),
+        username: Set(fake::faker::lorem::en::Word().fake()),
+        password: Set(fake::faker::lorem::en::Word().fake()),
+        role: Set(UserRole::Basic),
     }]
 }
 

@@ -16,7 +16,8 @@ async fn main() {
     let client = build_client().expect("Could not build client");
     let db = build_pool().await;
 
-    fetcher::fetch(client, db).await;
+    let fetcher = fetcher::Fetcher::new(client, db);
+    fetcher.fetch().await;
 }
 
 fn build_client() -> reqwest::Result<Client> {
