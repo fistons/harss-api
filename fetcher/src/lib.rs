@@ -1,8 +1,8 @@
-use reqwest::Response;
 use sea_orm::entity::*;
 
 use entity::channels::Entity as Channel;
 
+#[tracing::instrument(skip_all)]
 pub async fn fetch(client: reqwest::Client, pool: sea_orm::DatabaseConnection) {
     let channels = Channel::find().all(&pool).await.unwrap();
 

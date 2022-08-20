@@ -7,6 +7,12 @@ use std::time::Duration;
 async fn main() {
     dotenv().ok();
 
+    let subscriber =
+        rss_common::observability::get_subscriber("rss_aggregator-fetcher".into(), "info".into());
+    rss_common::observability::init_subscriber(subscriber);
+
+    let _sentry_guard = rss_common::observability::init_sentry();
+
     let client = build_client().expect("Could not build client");
     let db = build_pool().await;
 
