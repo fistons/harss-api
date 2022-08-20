@@ -906,9 +906,20 @@ dependencies = [
  "dotenvy",
  "entity",
  "fake",
+ "opentelemetry",
+ "opentelemetry-jaeger",
  "reqwest",
  "sea-orm",
+ "sentry",
+ "sentry-actix",
+ "sentry-tracing",
  "tokio",
+ "tracing",
+ "tracing-actix-web",
+ "tracing-bunyan-formatter",
+ "tracing-log",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
  "wiremock",
 ]
 
@@ -2290,27 +2301,35 @@ dependencies = [
  "hmac 0.11.0",
  "http-auth-basic",
  "jwt",
- "opentelemetry",
- "opentelemetry-jaeger",
  "rand_core 0.6.3",
  "redis",
  "reqwest",
+ "rss-common",
  "sea-orm",
  "secrecy",
- "sentry",
  "sentry-actix",
- "sentry-tracing",
  "serde",
  "serde_json",
  "sha2 0.9.9",
  "tokio",
  "tracing",
  "tracing-actix-web",
+ "uuid",
+]
+
+[[package]]
+name = "rss-common"
+version = "0.1.0"
+dependencies = [
+ "opentelemetry",
+ "opentelemetry-jaeger",
+ "sentry",
+ "sentry-tracing",
+ "tracing",
  "tracing-bunyan-formatter",
  "tracing-log",
  "tracing-opentelemetry",
  "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]

@@ -5,7 +5,7 @@ authors = ["Eric <Fistons> <eric@pedr0.net>"]
 edition = "2021"
 
 [workspace]
-members = [".", "entity", "fetcher"]
+members = [".", "entity", "fetcher", "rss-common"]
 
 [lib]
 path = "src/lib.rs"
@@ -36,22 +36,13 @@ deadpool-redis = "0.10"
 clokwerk = "0.4.0-rc1"
 sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-actix-rustls", "macros", "debug-print"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-entity = { path = "entity" }
-
-# Tracing stuff
+secrecy = { version = "0.8", features = ["serde"] }
+sentry-actix = "0.27.0"
 tracing-actix-web = "0.6.0"
 tracing = { version = "0.1", features = ["log"] }
-tracing-log = "0.1"
-tracing-bunyan-formatter = "0.3"
-tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
-tracing-opentelemetry = "0.17"
-opentelemetry = { version = "0.17", features = ["tokio"] }
-opentelemetry-jaeger = { version = "0.16", features = ["rt-tokio"] }
-sentry-tracing = "0.27.0"
-sentry-actix = "0.27.0"
-sentry = "0.27.0"
 
-secrecy = { version = "0.8", features = ["serde"] }
+entity = { path = "entity" }
+rss-common = { path = "rss-common"}
 
 [dev-dependencies]
 actix-rt = "2.7"
