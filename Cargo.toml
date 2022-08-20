@@ -15,7 +15,7 @@ path = "src/main.rs"
 name = "rss-aggregator"
 
 [dependencies]
-reqwest = { version = "0.11", features = ["json", "tokio-rustls"] } # Request stuff over the web
+reqwest = { version = "0.11", features = ["json", "tokio-rustls", "native-tls-vendored"] } # Request stuff over the web
 actix-web = { version = "4" } # Serve stuff over the web
 actix-files = "0.6.0"
 actix-xml = "0.2.0"
@@ -34,7 +34,7 @@ uuid = { version = "1.1.2", features = ["v4"] }
 redis = { version = "0.21.5", features = ["r2d2", "tokio-comp", "connection-manager"] }
 deadpool-redis = "0.10"
 clokwerk = "0.4.0-rc1"
-sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-actix-rustls", "macros", "debug-print"] }
+sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 secrecy = { version = "0.8", features = ["serde"] }
 sentry-actix = "0.27.0"
