@@ -56,16 +56,17 @@ impl Fetcher {
                         .collect::<Vec<entity::items::ActiveModel>>();
 
                     let user_ids = self.get_users_of_channel(channel.id).await;
-
+                    let txn = self.pool.begin().await.unwrap();
                     for item in new_items {
-                        let item = item.insert(&self.pool).await.unwrap();
+                        let item = item.insert(&txn).await.unwrap();
                         for user_id in &user_ids {
                             self.build_user_channels(user_id, &channel.id, &item.id)
-                                .insert(&self.pool)
+                                .insert(&txn)
                                 .await
                                 .unwrap();
                         }
                     }
+                    txn.commit().await.unwrap();
                 }
             }
             Err(_error) => (),
