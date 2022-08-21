@@ -66,6 +66,7 @@ pub async fn configure_database(host: String) -> DatabaseConnection {
         for item in items_fixtures(channel.id) {
             item.insert(&txn).await.unwrap();
         }
+        build_user_channels(1, 1, 1).insert(&txn).await.unwrap();
     }
 
     txn.commit().await.unwrap();
@@ -87,8 +88,8 @@ fn channels_fixture(host: &str) -> Vec<channels::ActiveModel> {
 
 fn items_fixtures(chan_id: i32) -> Vec<items::ActiveModel> {
     vec![items::ActiveModel {
-        id: Set(chan_id),
-        guid: Set(optional_fake_sentence()),
+        id: Set(1),
+        guid: Set(Some("https://canard.com/i-dont-exist".into())),
         title: Set(optional_fake_sentence()),
         url: Set(optional_fake_url()),
         content: Set(optional_fake_sentence()),
@@ -105,6 +106,20 @@ fn user_fixture() -> Vec<users::ActiveModel> {
         password: Set(fake::faker::lorem::en::Word().fake()),
         role: Set(UserRole::Basic),
     }]
+}
+
+fn build_user_channels(
+    user_id: i32,
+    chan_id: i32,
+    item_id: i32,
+) -> entity::users_items::ActiveModel {
+    entity::users_items::ActiveModel {
+        user_id: Set(user_id),
+        channel_id: Set(chan_id),
+        item_id: Set(item_id),
+        read: Set(false),
+        starred: Set(false),
+    }
 }
 
 fn optional_fake_sentence() -> Option<String> {
