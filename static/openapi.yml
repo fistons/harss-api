@@ -31,15 +31,6 @@ tags:
   - name: Users
     description: User management
 paths:
-  /refresh:
-    post:
-      operationId: refresh_items
-      summary: Refresh all the RSS channels
-      tags:
-        - Items
-      responses:
-        '202':
-          $ref: '#/components/responses/Accepted'
   /users:
     get:
       operationId: list_users

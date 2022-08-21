@@ -40,30 +40,6 @@ impl GlobalService {
         }
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn refresh_all_channels(&self) {
-        match self.channel_service.select_all_enabled().await {
-            Ok(channels) => self.update_channels(channels).await,
-            Err(oops) => {
-                tracing::error!("Couldn't get channels to refresh {:?}", oops);
-            }
-        }
-    }
-
-    #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn refresh_channel_of_user(&self, user_id: i32) {
-        match self
-            .channel_service
-            .select_all_enabled_by_user_id(user_id)
-            .await
-        {
-            Ok(channels) => self.update_channels(channels).await,
-            Err(oops) => {
-                tracing::error!("Couldn't get channels to refresh {:?}", oops);
-            }
-        }
-    }
-
     #[tracing::instrument(skip(self, channels), level = "debug")]
     async fn update_channels(&self, channels: Vec<HttpChannel>) {
         let mut tasks = vec![];
