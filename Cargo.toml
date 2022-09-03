@@ -14,32 +14,32 @@ path = "src/lib.rs"
 path = "src/main.rs"
 name = "rss-aggregator"
 
+[workspace.dependencies]
+
 [dependencies]
-reqwest = { version = "0.11", features = ["json", "tokio-rustls", "native-tls-vendored"] } # Request stuff over the web
 actix-web = { version = "4" } # Serve stuff over the web
-actix-files = "0.6.0"
-actix-xml = "0.2.0"
+actix-files = "0.6"
+actix-xml = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-feed-rs = "1.1.0"
-dotenv = "0.15"
+dotenvy = "0.15"
 argon2 = "0.4"
 rand_core = { version = "0.6", features = ["std"] }
-http-auth-basic = "0.3.3"
-jwt = "0.14.0"
-hmac = "0.11.0"
-sha2 = "0.9.5"
+http-auth-basic = "0.3"
+jwt = "0.14"
+hmac = "0.11"
+sha2 = "0.9"
 chrono = "0.4"
-uuid = { version = "1.1.2", features = ["v4"] }
-redis = { version = "0.21.5", features = ["r2d2", "tokio-comp", "connection-manager"] }
+uuid = { version = "1.1", features = ["v4"] }
+redis = { version = "0.21", features = ["r2d2", "tokio-comp", "connection-manager"] }
 deadpool-redis = "0.10"
-clokwerk = "0.4.0-rc1"
 sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 secrecy = { version = "0.8", features = ["serde"] }
 sentry-actix = "0.27.0"
 tracing-actix-web = "0.6.0"
 tracing = { version = "0.1", features = ["log"] }
+thiserror = "1.0.32"
 
 entity = { path = "entity" }
 rss-common = { path = "rss-common"}
