@@ -29,7 +29,8 @@ async fn happy_path() {
     // "Fetch" stuff
     fetcher::Fetcher::new(Client::default(), db.clone())
         .fetch()
-        .await;
+        .await
+        .unwrap();
 
     // Check that stuff have been inserted
     let inserted_items = Item::find()

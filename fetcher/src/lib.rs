@@ -6,11 +6,24 @@ use reqwest::Client;
 use sea_orm::prelude::DateTimeWithTimeZone;
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
+use tokio::task::JoinError;
 use tracing::Instrument;
 
 use entity::channel_users::Entity as ChannelUser;
 use entity::channels::Entity as Channel;
 use entity::items::Entity as Item;
+
+#[derive(thiserror::Error, Debug)]
+pub enum FetchError {
+    #[error("Database error: {0}")]
+    SqlError(#[from] sea_orm::DbErr),
+    #[error("Parsing error: {0}")]
+    ParseError(#[from] feed_rs::parser::ParseFeedError),
+    #[error("Could not fetch the feed: {0}")]
+    GetError(#[from] reqwest::Error),
+    #[error(transparent)]
+    TaskError(#[from] JoinError),
+}
 
 #[derive(Clone)]
 pub struct Fetcher {
@@ -24,8 +37,8 @@ impl Fetcher {
     }
 
     #[tracing::instrument(skip_all)]
-    pub async fn fetch(&self) {
-        let channels = Channel::find().all(&self.pool).await.unwrap();
+    pub async fn fetch(&self) -> Result<(), FetchError> {
+        let channels = Channel::find().all(&self.pool).await?;
 
         let mut tasks = vec![];
         for channel in channels {
@@ -37,64 +50,65 @@ impl Fetcher {
         }
 
         for task in tasks {
-            task.await.unwrap();
+            task.await??;
         }
+
+        Ok(())
     }
+
     #[tracing::instrument(skip(self))]
-    async fn update_channel(&self, channel: entity::channels::Model) {
-        match self.client.get(&channel.url).send().await {
-            Ok(response) => {
-                if let Ok(data) = response.bytes().await {
-                    let feed = feed_rs::parser::parse(&data[..]).unwrap();
-                    let current_items = self.fetch_current_items_id(&channel).await;
+    async fn update_channel(&self, channel: entity::channels::Model) -> Result<(), FetchError> {
+        let response = self.client.get(&channel.url).send().await?;
 
-                    let new_items = feed
-                        .entries
-                        .into_iter()
-                        .filter(|item| !current_items.contains(&item.id))
-                        .map(|entry| item_from_rss_entry(entry, channel.id))
-                        .collect::<Vec<entity::items::ActiveModel>>();
+        let data = response.bytes().await?;
+        let feed = feed_rs::parser::parse(&data[..])?;
+        let current_items = self.fetch_current_items_id(&channel).await?;
 
-                    let user_ids = self.get_users_of_channel(channel.id).await;
-                    let txn = self.pool.begin().await.unwrap();
-                    for item in new_items {
-                        let item = item.insert(&txn).await.unwrap();
-                        for user_id in &user_ids {
-                            self.build_user_channels(user_id, &channel.id, &item.id)
-                                .insert(&txn)
-                                .await
-                                .unwrap();
-                        }
-                    }
-                    txn.commit().await.unwrap();
-                }
+        let new_items = feed
+            .entries
+            .into_iter()
+            .filter(|item| !current_items.contains(&item.id))
+            .map(|entry| item_from_rss_entry(entry, channel.id))
+            .collect::<Vec<entity::items::ActiveModel>>();
+
+        let user_ids = self.get_users_of_channel(channel.id).await?;
+        let txn = self.pool.begin().await?;
+        for item in new_items {
+            let item = item.insert(&txn).await?;
+            for user_id in &user_ids {
+                self.build_user_channels(user_id, &channel.id, &item.id)
+                    .insert(&txn)
+                    .await?;
             }
-            Err(_error) => (),
         }
+        txn.commit().await?;
+
+        Ok(())
     }
 
-    async fn fetch_current_items_id(&self, channel: &entity::channels::Model) -> HashSet<String> {
+    async fn fetch_current_items_id(
+        &self,
+        channel: &entity::channels::Model,
+    ) -> Result<HashSet<String>, sea_orm::DbErr> {
         let items: Vec<entity::items::Model> = Item::find()
             .filter(entity::items::Column::ChannelId.eq(channel.id))
             .all(&self.pool)
-            .await
-            .unwrap();
+            .await?;
 
-        items
+        Ok(items
             .into_iter()
             .filter_map(|x| x.guid)
-            .collect::<HashSet<String>>()
+            .collect::<HashSet<String>>())
     }
 
-    async fn get_users_of_channel(&self, channel_id: i32) -> Vec<i32> {
-        ChannelUser::find()
+    async fn get_users_of_channel(&self, channel_id: i32) -> Result<Vec<i32>, sea_orm::DbErr> {
+        Ok(ChannelUser::find()
             .select_only()
             .column(entity::channel_users::Column::UserId)
             .filter(entity::channel_users::Column::ChannelId.eq(channel_id))
             .into_values::<_, QueryAs>()
             .all(&self.pool)
-            .await
-            .unwrap()
+            .await?)
     }
 
     fn build_user_channels(

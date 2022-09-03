@@ -19,7 +19,9 @@ async fn main() {
     let db = build_pool().await;
 
     let fetcher = fetcher::Fetcher::new(client, db);
-    fetcher.fetch().await;
+    if let Err(err) = fetcher.fetch().await {
+        tracing::error!("Ho noes! {err}");
+    }
 }
 
 fn build_client() -> reqwest::Result<Client> {
