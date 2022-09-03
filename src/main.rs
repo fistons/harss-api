@@ -6,7 +6,7 @@ use std::net::TcpListener;
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     // Init dotenv
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
 
     let subscriber =
         rss_common::observability::get_subscriber("rss_aggregator".into(), "info".into());

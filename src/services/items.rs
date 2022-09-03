@@ -1,10 +1,7 @@
-use feed_rs::model::Entry;
 use sea_orm::sea_query::Expr;
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
 
-use entity::channel_users;
-use entity::channel_users::Entity as ChannelUsers;
 use entity::channels;
 use entity::items;
 use entity::items::Entity as Item;
@@ -12,7 +9,7 @@ use entity::prelude::UsersItems;
 use entity::users_items;
 
 use crate::errors::ApiError;
-use crate::model::{item_from_rss_entry, HttpUserItem, PagedResult};
+use crate::model::{HttpUserItem, PagedResult};
 
 #[derive(Clone)]
 pub struct ItemService {
@@ -22,27 +19,6 @@ pub struct ItemService {
 impl ItemService {
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
-    }
-
-    #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn insert(&self, entry: Entry, channel_id: i32) -> Result<items::Model, ApiError> {
-        let item = item_from_rss_entry(entry, channel_id)
-            .insert(&self.db)
-            .await?;
-
-        for user_id in self.get_users_of_channel(channel_id).await? {
-            entity::users_items::ActiveModel {
-                user_id: Set(user_id),
-                channel_id: Set(channel_id),
-                item_id: Set(item.id),
-                read: Set(false),
-                starred: Set(false),
-            }
-            .insert(&self.db)
-            .await?;
-        }
-
-        Ok(item)
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
@@ -137,18 +113,6 @@ impl ItemService {
             elements_number,
             total_items: total_items_and_pages.number_of_items,
         })
-    }
-
-    /// Select all the users ids linked to a channel
-    #[tracing::instrument(skip(self), level = "debug")]
-    async fn get_users_of_channel(&self, channel_id: i32) -> Result<Vec<i32>, ApiError> {
-        Ok(ChannelUsers::find()
-            .select_only()
-            .column(channel_users::Column::UserId)
-            .filter(channel_users::Column::ChannelId.eq(channel_id))
-            .into_values::<_, QueryAs>()
-            .all(&self.db)
-            .await?)
     }
 
     /// Update the read status of an item for a given user
