@@ -1,4 +1,6 @@
+use anyhow::Context;
 use std::collections::HashSet;
+use std::error::Error;
 
 use chrono::Utc;
 use feed_rs::model::Entry;
@@ -6,7 +8,6 @@ use reqwest::Client;
 use sea_orm::prelude::DateTimeWithTimeZone;
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
-use tokio::task::JoinError;
 use tracing::Instrument;
 
 use entity::channel_users::Entity as ChannelUser;
@@ -22,7 +23,7 @@ pub enum FetchError {
     #[error("Could not fetch the feed: {0}")]
     GetError(#[from] reqwest::Error),
     #[error(transparent)]
-    TaskError(#[from] JoinError),
+    UnexpectedError(#[from] anyhow::Error),
 }
 
 #[derive(Clone)]
@@ -37,8 +38,11 @@ impl Fetcher {
     }
 
     #[tracing::instrument(skip_all)]
-    pub async fn fetch(&self) -> Result<(), FetchError> {
-        let channels = Channel::find().all(&self.pool).await?;
+    pub async fn fetch(&self) -> Result<(), anyhow::Error> {
+        let channels = Channel::find()
+            .all(&self.pool)
+            .await
+            .context("Could not get channels to update")?;
 
         let mut tasks = vec![];
         for channel in channels {
@@ -50,9 +54,10 @@ impl Fetcher {
         }
 
         for task in tasks {
-            task.await??;
+            if let Err(meh) = task.await {
+                tracing::error!("{:?}", meh.source());
+            }
         }
-
         Ok(())
     }
 
@@ -102,13 +107,13 @@ impl Fetcher {
     }
 
     async fn get_users_of_channel(&self, channel_id: i32) -> Result<Vec<i32>, sea_orm::DbErr> {
-        Ok(ChannelUser::find()
+        ChannelUser::find()
             .select_only()
             .column(entity::channel_users::Column::UserId)
             .filter(entity::channel_users::Column::ChannelId.eq(channel_id))
             .into_values::<_, QueryAs>()
             .all(&self.pool)
-            .await?)
+            .await
     }
 
     fn build_user_channels(

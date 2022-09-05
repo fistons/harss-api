@@ -881,6 +881,7 @@ dependencies = [
 name = "fetcher"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "dotenvy",
  "entity",
