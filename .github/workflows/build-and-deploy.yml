@@ -20,8 +20,15 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
-        name: Build and push
+        name: Build and push API
         uses: docker/build-push-action@v3
         with:
           push: true
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator:latest
+      -
+        name: Build and push fetcher
+        uses: docker/build-push-action@v3
+        with:
+          file: fetcher.Dockerfile
+          push: true
+          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest          

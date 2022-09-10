@@ -15,6 +15,7 @@ path = "src/main.rs"
 name = "rss-aggregator"
 
 [dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
 actix-web = { version = "4" } # Serve stuff over the web
 actix-files = "0.6"
 actix-xml = "0.2"
@@ -31,7 +32,7 @@ chrono = "0.4"
 uuid = { version = "1.1", features = ["v4"] }
 redis = { version = "0.21", features = ["r2d2", "tokio-comp", "connection-manager"] }
 deadpool-redis = "0.10"
-sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"] }
+sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "debug-print"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 secrecy = { version = "0.8", features = ["serde"] }
 sentry-actix = "0.27.0"
@@ -40,7 +41,7 @@ tracing = { version = "0.1", features = ["log"] }
 thiserror = "1"
 
 entity = { path = "entity" }
-rss-common = { path = "rss-common"}
+rss-common = { path = "rss-common" }
 
 [dev-dependencies]
 actix-rt = "2.7"
