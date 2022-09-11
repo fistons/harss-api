@@ -39,6 +39,7 @@ sentry-actix = "0.27.0"
 tracing-actix-web = "0.6.0"
 tracing = { version = "0.1", features = ["log"] }
 thiserror = "1"
+anyhow = "1"
 
 entity = { path = "entity" }
 rss-common = { path = "rss-common" }

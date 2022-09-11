@@ -2269,6 +2269,7 @@ dependencies = [
  "actix-rt",
  "actix-web",
  "actix-xml",
+ "anyhow",
  "argon2",
  "chrono",
  "deadpool-redis",

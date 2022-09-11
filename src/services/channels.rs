@@ -6,7 +6,6 @@ use sea_orm::{entity::*, query::*, DbErr};
 use entity::channels::Entity as Channel;
 use entity::{channel_users, channels, users_items};
 
-use crate::errors::ApiError;
 use crate::model::{HttpChannel, HttpNewChannel, HttpUserChannel, PagedResult};
 
 #[derive(Clone)]
@@ -41,14 +40,14 @@ impl ChannelService {
         &self,
         chan_id: i32,
         user_id: i32,
-    ) -> Result<Option<HttpUserChannel>, ApiError> {
-        Ok(user_channel_select_statement()
+    ) -> Result<Option<HttpUserChannel>, DbErr> {
+        user_channel_select_statement()
             .filter(channel_users::Column::UserId.eq(user_id))
             .filter(channel_users::Column::ChannelId.eq(chan_id))
             .group_by(channels::Column::Id)
             .into_model::<HttpUserChannel>()
             .one(&self.db)
-            .await?)
+            .await
     }
 
     ///  Select all the channels of a user, along side the total number of items
@@ -58,7 +57,7 @@ impl ChannelService {
         u_id: i32,
         page: usize,
         page_size: usize,
-    ) -> Result<PagedResult<HttpUserChannel>, ApiError> {
+    ) -> Result<PagedResult<HttpUserChannel>, DbErr> {
         let channel_paginator = user_channel_select_statement()
             .filter(channel_users::Column::UserId.eq(u_id))
             .group_by(channels::Column::Id)
@@ -84,26 +83,26 @@ impl ChannelService {
 
     /// # Select all the channels
     #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn select_all_enabled(&self) -> Result<Vec<HttpChannel>, ApiError> {
-        Ok(Channel::find()
+    pub async fn select_all_enabled(&self) -> Result<Vec<HttpChannel>, DbErr> {
+        Channel::find()
             .filter(channels::Column::Disabled.eq(false))
             .into_model::<HttpChannel>()
             .all(&self.db)
-            .await?)
+            .await
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
     pub async fn select_all_enabled_by_user_id(
         &self,
         user_id: i32,
-    ) -> Result<Vec<HttpChannel>, ApiError> {
-        Ok(Channel::find()
+    ) -> Result<Vec<HttpChannel>, DbErr> {
+        Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(user_id))
             .filter(channels::Column::Disabled.eq(false))
             .into_model::<HttpChannel>()
             .all(&self.db)
-            .await?)
+            .await
     }
 
     /// # Create a new channel in the database
@@ -111,7 +110,7 @@ impl ChannelService {
     async fn create_new_channel(
         &self,
         new_channel: &HttpNewChannel,
-    ) -> Result<channels::Model, ApiError> {
+    ) -> Result<channels::Model, DbErr> {
         let channel = channels::ActiveModel {
             id: NotSet,
             name: Set(new_channel.name.to_owned()),
@@ -122,7 +121,7 @@ impl ChannelService {
             failure_count: Set(0),
         };
 
-        Ok(channel.insert(&self.db).await?)
+        channel.insert(&self.db).await
     }
 
     /// Create or linked an existing channel to a user
@@ -131,7 +130,7 @@ impl ChannelService {
         &self,
         new_channel: HttpNewChannel,
         other_user_id: i32,
-    ) -> Result<channels::Model, ApiError> {
+    ) -> Result<channels::Model, DbErr> {
         let channel = match Channel::find()
             .filter(channels::Column::Url.eq(&*new_channel.url))
             .one(&self.db)
@@ -157,7 +156,7 @@ impl ChannelService {
                 );
                 Ok(channel)
             }
-            Err(x) => Err(x.into()),
+            Err(x) => Err(x),
         }
     }
 
@@ -167,7 +166,7 @@ impl ChannelService {
         &self,
         channel_id: i32,
         date: DateTime<Utc>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), DbErr> {
         Channel::update_many()
             .col_expr(channels::Column::LastUpdate, Expr::value(date))
             .filter(channels::Column::Id.eq(channel_id))
@@ -178,7 +177,7 @@ impl ChannelService {
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn fail_channels(&self, channel_id: i32) -> Result<(), ApiError> {
+    pub async fn fail_channels(&self, channel_id: i32) -> Result<(), DbErr> {
         Channel::update_many()
             .col_expr(
                 channels::Column::FailureCount,
@@ -193,7 +192,7 @@ impl ChannelService {
     /// Disable all the channels where the failed count is a multiple of FAILURE_THRESHOLD.
     /// If FAILURE_THRESHOLD = 0, don't do anything
     #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn disable_channels(&self) -> Result<(), ApiError> {
+    pub async fn disable_channels(&self) -> Result<(), DbErr> {
         let threshold = std::env::var("FAILURE_THRESHOLD")
             .map(|x| x.parse::<u32>().unwrap_or(3))
             .unwrap_or(3);
@@ -213,7 +212,7 @@ impl ChannelService {
 
     /// Enable a channel and reset it's failure count
     #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn enable_channel(&self, id: i32) -> Result<(), ApiError> {
+    pub async fn enable_channel(&self, id: i32) -> Result<(), DbErr> {
         Channel::update_many()
             .col_expr(channels::Column::Disabled, Expr::value(false))
             .col_expr(channels::Column::FailureCount, Expr::value(0))

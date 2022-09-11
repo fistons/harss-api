@@ -1,11 +1,12 @@
 use actix_web::{post, web, HttpResponse};
+use anyhow::{anyhow, Context};
 use deadpool_redis::{redis::cmd, Pool};
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::errors::ApiError;
+use crate::routes::ApiError;
 use crate::startup::ApplicationServices;
 
 #[derive(Deserialize, Debug)]
@@ -69,8 +70,9 @@ pub async fn refresh_auth(
         let user = services
             .user_service
             .get_user(user_login)
-            .await?
-            .ok_or_else(|| ApiError::not_found("User not found"))?;
+            .await
+            .context("Could not get user")?
+            .ok_or_else(|| anyhow!("Unknown user"))?;
         /* Create a new JWT */
         let access_token = crate::services::auth::get_jwt(&user).await?;
 

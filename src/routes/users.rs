@@ -6,9 +6,10 @@ use serde_json::json;
 
 use entity::sea_orm_active_enums::UserRole;
 
-use crate::errors::ApiError;
 use crate::model::{HttpNewUser, PageParameters, PagedResult};
+use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
+use crate::services::AuthenticationError;
 use crate::startup::ApplicationServices;
 
 #[post("/users")]
@@ -67,7 +68,9 @@ async fn list_users(
 
         Ok(HttpResponse::Ok().json(users))
     } else {
-        Err(ApiError::unauthorized("You are not allowed to do that"))
+        Err(ApiError::AuthenticationError(
+            AuthenticationError::Forbidden("no".into()),
+        ))
     }
 }
 
