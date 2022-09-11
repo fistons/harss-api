@@ -1,13 +1,10 @@
 use std::fmt::Debug;
 
 use chrono::{DateTime, Utc};
-use feed_rs::model::Entry;
-use sea_orm::prelude::DateTimeWithTimeZone;
-use sea_orm::{FromQueryResult, NotSet, Set};
+use sea_orm::FromQueryResult;
 use secrecy::Secret;
 use serde::{Deserialize, Serialize, Serializer};
 
-use entity::items;
 use entity::sea_orm_active_enums::UserRole;
 
 pub mod opml;
@@ -76,24 +73,6 @@ pub struct HttpUserItem {
     pub starred: bool,
     pub channel_id: i32,
     pub channel_name: String,
-}
-
-pub fn item_from_rss_entry(entry: Entry, channel_id: i32) -> items::ActiveModel {
-    let title = entry.title.map(|x| x.content);
-    let guid = Some(entry.id);
-    let url = entry.links.get(0).map(|x| String::from(&x.href[..]));
-    let content = entry.summary.map(|x| x.content);
-    let now: DateTimeWithTimeZone = Utc::now().into();
-    items::ActiveModel {
-        id: NotSet,
-        guid: Set(guid),
-        title: Set(title),
-        url: Set(url),
-        content: Set(content),
-        fetch_timestamp: Set(now),
-        publish_timestamp: Set(entry.published.map(|x| x.into()).or(Some(now))),
-        channel_id: Set(channel_id),
-    }
 }
 
 /// Filter parameters on read/starred items' status

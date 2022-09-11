@@ -5,7 +5,7 @@ authors = ["Eric <Fistons> <eric@pedr0.net>"]
 edition = "2021"
 
 [workspace]
-members = [".", "entity"]
+members = [".", "entity", "fetcher", "rss-common"]
 
 [lib]
 path = "src/lib.rs"
@@ -15,44 +15,33 @@ path = "src/main.rs"
 name = "rss-aggregator"
 
 [dependencies]
-reqwest = { version = "0.11", features = ["json", "native-tls-vendored"] } # Request stuff over the web
+openssl = { version = "0.10", features = ["vendored"] }
 actix-web = { version = "4" } # Serve stuff over the web
-actix-files = "0.6.0"
-actix-xml = "0.2.0"
+actix-files = "0.6"
+actix-xml = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-feed-rs = "1.0.0"
-dotenv = "0.15"
+dotenvy = "0.15"
 argon2 = "0.4"
 rand_core = { version = "0.6", features = ["std"] }
-futures-util = "0.3.15"
-http-auth-basic = "0.1.3"
-jwt = "0.14.0"
-hmac = "0.11.0"
-sha2 = "0.9.5"
+http-auth-basic = "0.3"
+jwt = "0.14"
+hmac = "0.11"
+sha2 = "0.9"
 chrono = "0.4"
-uuid = { version = "0.8.2", features = ["v4"] }
-redis = { version = "0.20", features = ["r2d2", "tokio-comp", "connection-manager"] }
+uuid = { version = "1.1", features = ["v4"] }
+redis = { version = "0.21", features = ["r2d2", "tokio-comp", "connection-manager"] }
 deadpool-redis = "0.10"
-clokwerk = "0.4.0-rc1"
-sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "debug-print"] }
+sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-entity = { path = "entity" }
-
-# Tracing stuff
+secrecy = { version = "0.8", features = ["serde"] }
+sentry-actix = "0.27.0"
 tracing-actix-web = "0.6.0"
 tracing = { version = "0.1", features = ["log"] }
-tracing-log = "0.1"
-tracing-bunyan-formatter = "0.3"
-tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
-tracing-opentelemetry = "0.17"
-opentelemetry = { version = "0.17", features = ["tokio"] }
-opentelemetry-jaeger = { version = "0.16", features = ["rt-tokio"] }
-sentry-tracing = "0.27.0"
-sentry-actix = "0.27.0"
-sentry = "0.27.0"
+thiserror = "1"
 
-secrecy = { version = "0.8", features = ["serde"] }
+entity = { path = "entity" }
+rss-common = { path = "rss-common" }
 
 [dev-dependencies]
 actix-rt = "2.7"

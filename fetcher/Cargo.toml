@@ -1,0 +1,31 @@
+[package]
+name = "fetcher"
+version = "0.1.0"
+authors = ["Eric <Fistons> <eric@pedr0.net>"]
+edition = "2021"
+
+[[bin]]
+name = "fetcher"
+path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"
+name = "fetcher"
+
+[dependencies]
+reqwest = { version = "0.11", features = ["tokio-rustls", "native-tls-vendored"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+dotenvy = "0.15"
+sea-orm = { version = "^0", features = ["sqlx-sqlite", "sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"] }
+chrono = "0.4"
+tracing = { version = "0.1", features = ["log"] }
+feed-rs = "1.1.0"
+thiserror = "1"
+anyhow = "1"
+
+entity = { path = "../entity" }
+rss-common = { path = "../rss-common" }
+
+[dev-dependencies]
+wiremock = "0.5"
+fake = { version = "2.5.0", features = ["http", "chrono"] }

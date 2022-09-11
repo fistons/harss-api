@@ -86,23 +86,8 @@ pub async fn unread_item(
     Ok(HttpResponse::Accepted().finish())
 }
 
-#[post("/refresh")]
-#[tracing::instrument(skip(services), level = "debug")]
-pub async fn refresh_items(
-    services: web::Data<ApplicationServices>,
-    user: AuthenticatedUser,
-) -> Result<HttpResponse, ApiError> {
-    services
-        .global_service
-        .refresh_channel_of_user(user.id)
-        .await;
-
-    Ok(HttpResponse::Accepted().finish())
-}
-
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_all_items)
-        .service(refresh_items)
         .service(star_items)
         .service(unstar_items)
         .service(read_item)

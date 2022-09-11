@@ -2,12 +2,13 @@ use actix_web::http::header::HeaderMap;
 use actix_web::web::Data;
 use actix_web::{dev, FromRequest, HttpRequest};
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use futures_util::future::LocalBoxFuture;
 use hmac::{Hmac, NewMac};
 use http_auth_basic::Credentials;
 use jwt::{SignWithKey, VerifyWithKey};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
+use std::future::Future;
+use std::pin::Pin;
 
 use entity::sea_orm_active_enums::UserRole;
 use entity::users;
@@ -48,7 +49,7 @@ struct Claims {
 
 impl FromRequest for AuthenticatedUser {
     type Error = ApiError;
-    type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
 
     #[tracing::instrument(skip_all, level = "trace")]
     fn from_request(req: &HttpRequest, _: &mut dev::Payload) -> Self::Future {
