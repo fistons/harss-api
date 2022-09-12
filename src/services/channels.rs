@@ -176,40 +176,6 @@ impl ChannelService {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn fail_channels(&self, channel_id: i32) -> Result<(), DbErr> {
-        Channel::update_many()
-            .col_expr(
-                channels::Column::FailureCount,
-                Expr::col(channels::Column::FailureCount).add(1),
-            )
-            .filter(channels::Column::Id.eq(channel_id))
-            .exec(&self.db)
-            .await?;
-        Ok(())
-    }
-
-    /// Disable all the channels where the failed count is a multiple of FAILURE_THRESHOLD.
-    /// If FAILURE_THRESHOLD = 0, don't do anything
-    #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn disable_channels(&self) -> Result<(), DbErr> {
-        let threshold = std::env::var("FAILURE_THRESHOLD")
-            .map(|x| x.parse::<u32>().unwrap_or(3))
-            .unwrap_or(3);
-
-        if threshold > 0 {
-            let disabled_channels: UpdateResult = Channel::update_many()
-                .col_expr(channels::Column::Disabled, Expr::value(true))
-                .filter(channels::Column::FailureCount.eq(threshold))
-                .filter(channels::Column::Disabled.eq(false))
-                .exec(&self.db)
-                .await?;
-
-            tracing::debug!("Disabled {} channels", disabled_channels.rows_affected);
-        }
-        Ok(())
-    }
-
     /// Enable a channel and reset it's failure count
     #[tracing::instrument(skip(self), level = "debug")]
     pub async fn enable_channel(&self, id: i32) -> Result<(), DbErr> {
