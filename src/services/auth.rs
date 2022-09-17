@@ -6,7 +6,7 @@ use actix_web::web::Data;
 use actix_web::{dev, FromRequest, HttpRequest};
 use anyhow::{anyhow, Context};
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use hmac::{Hmac, NewMac};
+use hmac::{Hmac, Mac};
 use http_auth_basic::Credentials;
 use jwt::{SignWithKey, VerifyWithKey};
 use serde::{Deserialize, Serialize};

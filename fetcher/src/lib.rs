@@ -59,8 +59,8 @@ impl Fetcher {
         }
 
         for task in tasks {
-            if let Err(meh) = task.await {
-                tracing::error!("{:?}", meh.source());
+            if let Err(error) = task.await {
+                tracing::error!("{:?}", error.source());
             }
         }
 

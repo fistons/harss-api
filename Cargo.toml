@@ -25,9 +25,9 @@ dotenvy = "0.15"
 argon2 = "0.4"
 rand_core = { version = "0.6", features = ["std"] }
 http-auth-basic = "0.3"
-jwt = "0.14"
-hmac = "0.11"
-sha2 = "0.9"
+jwt = "0.16"
+hmac = "0.12"
+sha2 = "0.10"
 chrono = "0.4"
 uuid = { version = "1.1", features = ["v4"] }
 redis = { version = "0.21", features = ["r2d2", "tokio-comp", "connection-manager"] }
@@ -43,10 +43,6 @@ anyhow = "1"
 
 entity = { path = "entity" }
 rss-common = { path = "rss-common" }
-
-[dev-dependencies]
-actix-rt = "2.7"
-
 
 [profile.release]
 strip = true
