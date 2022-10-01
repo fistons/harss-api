@@ -1,7 +1,7 @@
 use actix_web::{get, post, web, HttpResponse};
 
-use crate::errors::ApiError;
 use crate::model::{IdListParameter, PageParameters, ReadStarredParameters};
+use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
 use crate::startup::ApplicationServices;
 

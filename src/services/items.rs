@@ -1,6 +1,6 @@
 use sea_orm::sea_query::Expr;
-use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
+use sea_orm::{DatabaseConnection, DbErr};
 
 use entity::channels;
 use entity::items;
@@ -8,7 +8,6 @@ use entity::items::Entity as Item;
 use entity::prelude::UsersItems;
 use entity::users_items;
 
-use crate::errors::ApiError;
 use crate::model::{HttpUserItem, PagedResult};
 
 #[derive(Clone)]
@@ -28,7 +27,7 @@ impl ItemService {
         user_id: i32,
         page: usize,
         page_size: usize,
-    ) -> Result<PagedResult<HttpUserItem>, ApiError> {
+    ) -> Result<PagedResult<HttpUserItem>, DbErr> {
         let item_paginator = Item::find()
             .join(JoinType::RightJoin, items::Relation::UsersItems.def())
             .join(JoinType::RightJoin, items::Relation::Channels.def())
@@ -58,15 +57,12 @@ impl ItemService {
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn get_all_items_of_channel(
-        &self,
-        chan_id: i32,
-    ) -> Result<Vec<items::Model>, ApiError> {
-        Ok(Item::find()
+    pub async fn get_all_items_of_channel(&self, chan_id: i32) -> Result<Vec<items::Model>, DbErr> {
+        Item::find()
             .filter(items::Column::ChannelId.eq(chan_id))
             .order_by_desc(items::Column::PublishTimestamp)
             .all(&self.db)
-            .await?)
+            .await
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
@@ -77,7 +73,7 @@ impl ItemService {
         page_size: usize,
         read: Option<bool>,
         starred: Option<bool>,
-    ) -> Result<PagedResult<HttpUserItem>, ApiError> {
+    ) -> Result<PagedResult<HttpUserItem>, DbErr> {
         let mut query = Item::find()
             .join(JoinType::RightJoin, items::Relation::UsersItems.def())
             .join(JoinType::RightJoin, items::Relation::Channels.def())
@@ -122,7 +118,7 @@ impl ItemService {
         user_id: i32,
         ids: Vec<i32>,
         read: bool,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), DbErr> {
         UsersItems::update_many()
             .col_expr(users_items::Column::Read, Expr::value(read))
             .filter(users_items::Column::UserId.eq(user_id))
@@ -140,7 +136,7 @@ impl ItemService {
         user_id: i32,
         ids: Vec<i32>,
         starred: bool,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), DbErr> {
         UsersItems::update_many()
             .col_expr(users_items::Column::Starred, Expr::value(starred))
             .filter(users_items::Column::UserId.eq(user_id))

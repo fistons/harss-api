@@ -1,6 +1,6 @@
 services:
   api:
-    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator:latest
+    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
     ports:
       - "8080:8080"
     links:

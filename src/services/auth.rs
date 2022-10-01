@@ -1,19 +1,21 @@
+use std::future::Future;
+use std::pin::Pin;
+
 use actix_web::http::header::HeaderMap;
 use actix_web::web::Data;
 use actix_web::{dev, FromRequest, HttpRequest};
+use anyhow::{anyhow, Context};
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use hmac::{Hmac, NewMac};
+use hmac::{Hmac, Mac};
 use http_auth_basic::Credentials;
 use jwt::{SignWithKey, VerifyWithKey};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
-use std::future::Future;
-use std::pin::Pin;
 
+use crate::services::AuthenticationError;
 use entity::sea_orm_active_enums::UserRole;
 use entity::users;
 
-use crate::errors::ApiError;
 use crate::services::users::UserService;
 use crate::startup::ApplicationServices;
 
@@ -48,7 +50,7 @@ struct Claims {
 }
 
 impl FromRequest for AuthenticatedUser {
-    type Error = ApiError;
+    type Error = AuthenticationError;
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
 
     #[tracing::instrument(skip_all, level = "trace")]
@@ -59,7 +61,9 @@ impl FromRequest for AuthenticatedUser {
 }
 
 /// # Extract the authenticated user from the request
-async fn extract_authenticated_user(req: &HttpRequest) -> Result<AuthenticatedUser, ApiError> {
+async fn extract_authenticated_user(
+    req: &HttpRequest,
+) -> Result<AuthenticatedUser, AuthenticationError> {
     let req = req.clone();
     let header_value = match extract_value_authentication_header(req.headers()) {
         Ok(header) => header,
@@ -71,7 +75,9 @@ async fn extract_authenticated_user(req: &HttpRequest) -> Result<AuthenticatedUs
     let value = if let Some(token) = split_header.next() {
         token
     } else {
-        return Err(ApiError::unauthorized("Invalid Authorization header value"));
+        return Err(AuthenticationError::Unauthorized(
+            "Invalid Authorization header value".into(),
+        ));
     };
 
     let req = req.clone();
@@ -88,19 +94,20 @@ async fn extract_authenticated_user(req: &HttpRequest) -> Result<AuthenticatedUs
             check_and_get_authed_user(&user, &password, &services.user_service).await
         }
 
-        (error, _) => Err(ApiError::unauthorized(format!(
-            "Unknown Authorization scheme: {}",
-            error
-        ))),
+        (_error, _) => Err(AuthenticationError::UnknownAuthScheme),
     };
 }
 
 /// # Extract the authentication string form the Header
-fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, ApiError> {
+fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, AuthenticationError> {
     let token: &str = match headers.get("Authorization") {
-        None => return Err(ApiError::unauthorized("Missing Authorization header value")),
+        None => {
+            return Err(AuthenticationError::Unauthorized(
+                "Missing Authorization header value".into(),
+            ))
+        }
         Some(header) => header.to_str().map_err(|x| {
-            ApiError::unauthorized(format!("Invalid Authentication header value: {}", x))
+            AuthenticationError::Unauthorized(format!("Invalid Authentication header value: {}", x))
         })?,
     };
 
@@ -112,14 +119,24 @@ async fn check_and_get_user(
     user: &str,
     password: &str,
     user_service: &UserService,
-) -> Result<users::Model, ApiError> {
-    let user = match user_service.get_user(user).await? {
-        None => return Err(ApiError::unauthorized("Invalid credentials")),
+) -> Result<users::Model, AuthenticationError> {
+    let user = match user_service
+        .get_user(user)
+        .await
+        .context("Database error")?
+    {
+        None => {
+            return Err(AuthenticationError::Unauthorized(
+                "Invalid credentials".into(),
+            ))
+        }
         Some(u) => u,
     };
 
     if !crate::services::users::match_password(&user, password) {
-        return Err(ApiError::unauthorized("Invalid credentials"));
+        return Err(AuthenticationError::Unauthorized(
+            "Invalid credentials".into(),
+        ));
     }
 
     Ok(user)
@@ -130,13 +147,15 @@ async fn check_and_get_authed_user(
     user: &str,
     password: &str,
     user_service: &UserService,
-) -> Result<AuthenticatedUser, ApiError> {
+) -> Result<AuthenticatedUser, AuthenticationError> {
     let user = check_and_get_user(user, password, user_service).await?;
     Ok(AuthenticatedUser::from_user(&user))
 }
 
 /// # Return user and password from basic auth value
-fn extract_credentials_from_http_basic(token: &str) -> Result<(String, String), ApiError> {
+fn extract_credentials_from_http_basic(
+    token: &str,
+) -> Result<(String, String), AuthenticationError> {
     let credentials = Credentials::from_header(token.into()).unwrap();
     Ok((credentials.user_id, credentials.password))
 }
@@ -146,14 +165,14 @@ pub async fn get_jwt_from_login_request(
     user: &str,
     password: &str,
     user_service: &UserService,
-) -> Result<String, ApiError> {
+) -> Result<String, AuthenticationError> {
     let user = check_and_get_user(user, password, user_service).await?;
 
     get_jwt(&user).await
 }
 
 /// # Generate a JWT for the given user
-pub async fn get_jwt(user: &users::Model) -> Result<String, ApiError> {
+pub async fn get_jwt(user: &users::Model) -> Result<String, AuthenticationError> {
     let utc: DateTime<Utc> = Utc::now() + Duration::minutes(15); //TODO: Set this as a variable
     let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_secret().as_bytes()).unwrap();
 
@@ -171,13 +190,14 @@ pub fn extract_login_from_refresh_token(token: &str) -> &str {
     token.split('.').collect::<Vec<&str>>()[1]
 }
 
-async fn verify_jwt(token: &str) -> Result<AuthenticatedUser, ApiError> {
-    let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_secret().as_bytes()).unwrap();
+async fn verify_jwt(token: &str) -> Result<AuthenticatedUser, AuthenticationError> {
+    let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_secret().as_bytes())
+        .map_err(|_| anyhow!("Invalid key length"))?;
     let claims: Claims = token.verify_with_key(&key)?;
 
     let date = Utc.timestamp(claims.exp, 0);
     if date.lt(&Utc::now()) {
-        return Err(ApiError::unauthorized("Token is expired, go home."));
+        return Err(AuthenticationError::ExpiredToken);
     }
     Ok(claims.user)
 }

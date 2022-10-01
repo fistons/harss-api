@@ -3,14 +3,13 @@ use argon2::{
     Argon2,
 };
 use rand_core::OsRng;
-use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*};
+use sea_orm::{DatabaseConnection, DbErr};
 
 use entity::sea_orm_active_enums::UserRole;
 use entity::users;
 use entity::users::Entity as User;
 
-use crate::errors::ApiError;
 use crate::model::{HttpUser, PagedResult};
 
 #[derive(Clone)]
@@ -24,11 +23,11 @@ impl UserService {
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn get_user(&self, wanted_username: &str) -> Result<Option<users::Model>, ApiError> {
-        Ok(User::find()
+    pub async fn get_user(&self, wanted_username: &str) -> Result<Option<users::Model>, DbErr> {
+        User::find()
             .filter(users::Column::Username.eq(wanted_username))
             .one(&self.db)
-            .await?)
+            .await
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
@@ -36,7 +35,7 @@ impl UserService {
         &self,
         page: usize,
         page_size: usize,
-    ) -> Result<PagedResult<HttpUser>, ApiError> {
+    ) -> Result<PagedResult<HttpUser>, DbErr> {
         let user_paginator = User::find()
             .into_model::<HttpUser>()
             .paginate(&self.db, page_size);
@@ -62,7 +61,7 @@ impl UserService {
         login: &str,
         pwd: &str,
         user_role: UserRole,
-    ) -> Result<users::Model, ApiError> {
+    ) -> Result<users::Model, DbErr> {
         let new_user = users::ActiveModel {
             id: NotSet,
             username: Set(String::from(login)),
@@ -70,7 +69,7 @@ impl UserService {
             role: Set(user_role),
         };
 
-        Ok(new_user.insert(&self.db).await?)
+        new_user.insert(&self.db).await
     }
 }
 

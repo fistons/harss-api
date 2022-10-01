@@ -1,16 +1,20 @@
-use anyhow::Context;
+extern crate core;
+
 use std::collections::HashSet;
 use std::error::Error;
 
+use anyhow::Context;
 use chrono::Utc;
-use feed_rs::model::Entry;
+use feed_rs::model::{Entry, Feed};
 use reqwest::Client;
 use sea_orm::prelude::DateTimeWithTimeZone;
+use sea_orm::sea_query::Expr;
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
 use tracing::Instrument;
 
 use entity::channel_users::Entity as ChannelUser;
+use entity::channels;
 use entity::channels::Entity as Channel;
 use entity::items::Entity as Item;
 
@@ -40,6 +44,7 @@ impl Fetcher {
     #[tracing::instrument(skip_all)]
     pub async fn fetch(&self) -> Result<(), anyhow::Error> {
         let channels = Channel::find()
+            .filter(channels::Column::Disabled.eq(false))
             .all(&self.pool)
             .await
             .context("Could not get channels to update")?;
@@ -54,19 +59,26 @@ impl Fetcher {
         }
 
         for task in tasks {
-            if let Err(meh) = task.await {
-                tracing::error!("{:?}", meh.source());
+            if let Err(error) = task.await {
+                tracing::error!("{:?}", error.source());
             }
         }
+
+        self.disable_channels().await?;
+
         Ok(())
     }
 
     #[tracing::instrument(skip(self))]
-    async fn update_channel(&self, channel: entity::channels::Model) -> Result<(), FetchError> {
-        let response = self.client.get(&channel.url).send().await?;
+    async fn update_channel(&self, channel: channels::Model) -> Result<(), FetchError> {
+        let feed = match self.get_and_parse_feed(&channel).await {
+            Ok(feed) => feed,
+            Err(error) => {
+                self.fail_channels(channel.id).await?;
+                return Err(error);
+            }
+        };
 
-        let data = response.bytes().await?;
-        let feed = feed_rs::parser::parse(&data[..])?;
         let current_items = self.fetch_current_items_id(&channel).await?;
 
         let new_items = feed
@@ -91,9 +103,50 @@ impl Fetcher {
         Ok(())
     }
 
+    async fn get_and_parse_feed(&self, channel: &channels::Model) -> Result<Feed, FetchError> {
+        let response = self.client.get(&channel.url).send().await?;
+        let data = response.bytes().await?;
+
+        Ok(feed_rs::parser::parse(&data[..])?)
+    }
+
+    #[tracing::instrument(skip(self), level = "debug")]
+    async fn fail_channels(&self, channel_id: i32) -> Result<(), FetchError> {
+        Channel::update_many()
+            .col_expr(
+                channels::Column::FailureCount,
+                Expr::col(channels::Column::FailureCount).add(1),
+            )
+            .filter(channels::Column::Id.eq(channel_id))
+            .exec(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    /// Disable all the channels where the failed count is a multiple of FAILURE_THRESHOLD.
+    /// If FAILURE_THRESHOLD = 0, don't do anything
+    #[tracing::instrument(skip(self), level = "debug")]
+    async fn disable_channels(&self) -> Result<(), FetchError> {
+        let threshold = std::env::var("FAILURE_THRESHOLD")
+            .map(|x| x.parse::<u32>().unwrap_or(3))
+            .unwrap_or(3);
+
+        if threshold > 0 {
+            let disabled_channels: UpdateResult = Channel::update_many()
+                .col_expr(channels::Column::Disabled, Expr::value(true))
+                .filter(channels::Column::FailureCount.eq(threshold))
+                .filter(channels::Column::Disabled.eq(false))
+                .exec(&self.pool)
+                .await?;
+
+            tracing::debug!("Disabled {} channels", disabled_channels.rows_affected);
+        }
+        Ok(())
+    }
+
     async fn fetch_current_items_id(
         &self,
-        channel: &entity::channels::Model,
+        channel: &channels::Model,
     ) -> Result<HashSet<String>, sea_orm::DbErr> {
         let items: Vec<entity::items::Model> = Item::find()
             .filter(entity::items::Column::ChannelId.eq(channel.id))

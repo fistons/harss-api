@@ -3,9 +3,9 @@ use actix_web::{get, post, web, HttpResponse};
 use actix_xml::Xml;
 use serde_json::json;
 
-use crate::errors::ApiError;
 use crate::model::opml::Opml;
 use crate::model::{HttpNewChannel, PageParameters};
+use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
 use crate::startup::ApplicationServices;
 
