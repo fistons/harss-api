@@ -4,20 +4,29 @@ use std::pin::Pin;
 use actix_web::http::header::HeaderMap;
 use actix_web::web::Data;
 use actix_web::{dev, FromRequest, HttpRequest};
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use hmac::{Hmac, Mac};
 use http_auth_basic::Credentials;
 use jwt::{SignWithKey, VerifyWithKey};
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
-use crate::services::AuthenticationError;
 use entity::sea_orm_active_enums::UserRole;
 use entity::users;
 
 use crate::services::users::UserService;
+use crate::services::AuthenticationError;
 use crate::startup::ApplicationServices;
+
+lazy_static! {
+    /// Generate the JWT key at runtime. If the JWT_SECRET environment variable is not set,
+    /// fail miserably
+    static ref JWT_KEY: Hmac<Sha256> =  Hmac::new_from_slice(std::env::var("JWT_SECRET")
+        .expect("A JWT_SECRET is mandatory")
+        .as_bytes()).unwrap();
+}
 
 /// # Represent an authenticated user, from JWT or HTTP Basic Auth
 #[derive(Debug, Deserialize, Serialize)]
@@ -173,9 +182,7 @@ pub async fn get_jwt_from_login_request(
 
 /// # Generate a JWT for the given user
 pub async fn get_jwt(user: &users::Model) -> Result<String, AuthenticationError> {
-    let utc: DateTime<Utc> = Utc::now() + Duration::minutes(15); //TODO: Set this as a variable
-    let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_secret().as_bytes()).unwrap();
-
+    let utc: DateTime<Utc> = Utc::now() + Duration::minutes(15);
     let authenticated_user = AuthenticatedUser::from_user(user);
 
     let claim = Claims {
@@ -183,7 +190,7 @@ pub async fn get_jwt(user: &users::Model) -> Result<String, AuthenticationError>
         exp: utc.timestamp(),
     };
 
-    Ok(claim.sign_with_key(&key)?)
+    Ok(claim.sign_with_key(&(*JWT_KEY))?)
 }
 
 pub fn extract_login_from_refresh_token(token: &str) -> &str {
@@ -191,19 +198,11 @@ pub fn extract_login_from_refresh_token(token: &str) -> &str {
 }
 
 async fn verify_jwt(token: &str) -> Result<AuthenticatedUser, AuthenticationError> {
-    let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_secret().as_bytes())
-        .map_err(|_| anyhow!("Invalid key length"))?;
-    let claims: Claims = token.verify_with_key(&key)?;
+    let claims: Claims = token.verify_with_key(&(*JWT_KEY))?;
 
     let date = Utc.timestamp(claims.exp, 0);
     if date.lt(&Utc::now()) {
         return Err(AuthenticationError::ExpiredToken);
     }
     Ok(claims.user)
-}
-
-fn get_jwt_secret() -> String {
-    std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| String::from("aecda4f3-08a2-43e4-8b42-575455ade8b0"))
-    //TODO: bad.
 }

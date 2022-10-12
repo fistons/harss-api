@@ -25,6 +25,7 @@ dotenvy = "0.15"
 argon2 = "0.4"
 rand_core = { version = "0.6", features = ["std"] }
 http-auth-basic = "0.3"
+lazy_static = "1.4"
 jwt = "0.16"
 hmac = "0.12"
 sha2 = "0.10"

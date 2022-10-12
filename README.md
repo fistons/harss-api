@@ -18,7 +18,7 @@ All the configuration must be pass through environment variables.
 
  * `DATABASE_URL` (required): The URL to the postgres database as `postgres://POSTGRES_USER:POSTGRES_PASSWORD@HOST:5432/rss-aggregator`
  * `REDIS_URL`: The redis URL as `redis://HOST`. Default `redis://locahost`
- * `JWT_SECRET`: String used as the key for JWT
+ * `JWT_SECRET` (required): String used as the key for JWT
  * `RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION` true/false (default false): Allow user to register an account. Otherwise, an admin should do it
  * `POLLING_INTERVAL`: The number of seconds between feeds update. Default `300`
  * `JAEGER_ENABLED`: If set to any value, enabled the Jaeger telemetry layer. Default `not set` 
