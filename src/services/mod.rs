@@ -1,10 +1,31 @@
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
+use feed_rs::parser::ParseFeedError;
 
 pub mod auth;
 pub mod channels;
 pub mod items;
 pub mod users;
+
+#[derive(thiserror::Error, Debug)]
+pub enum RssParsingError {
+    #[error("Non OK Http status returned: {0}")]
+    NonOkStatus(u16),
+    #[error("Error while fetching the feed: {0}")]
+    HttpError(#[from] reqwest::Error),
+    #[error("Parse error: {0}")]
+    ParseFeedError(#[from] ParseFeedError),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ServiceError {
+    #[error("Database error: {0}")]
+    SqlError(#[from] sea_orm::DbErr),
+    #[error("Rss parsing error: {0}")]
+    RssError(#[from] RssParsingError),
+    #[error(transparent)]
+    FeedValidationError(#[from] anyhow::Error),
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuthenticationError {

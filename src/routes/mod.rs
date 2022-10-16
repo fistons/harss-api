@@ -2,7 +2,7 @@ use actix_web::http::StatusCode;
 use actix_web::{web, HttpResponse, ResponseError};
 use serde_json::json;
 
-use crate::services::AuthenticationError;
+use crate::services::{AuthenticationError, ServiceError};
 
 pub mod auth;
 pub mod channels;
@@ -21,10 +21,13 @@ pub enum ApiError {
     RedisPoolError(#[from] deadpool_redis::PoolError),
     #[error("Database error: {0}")]
     DatabaseError(#[from] sea_orm::DbErr),
+    #[error("{0}")]
+    ServiceError(#[from] ServiceError),
     #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
 
+//TODO: Improve error translation, this sucks ass. I should probably remove a layer here
 impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
         match self {

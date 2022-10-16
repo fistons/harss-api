@@ -5,12 +5,15 @@ use sea_orm::{entity::*, query::*, DbErr};
 
 use entity::channels::Entity as Channel;
 use entity::{channel_users, channels, users_items};
+use RssParsingError::NonOkStatus;
 
 use crate::model::{HttpChannel, HttpNewChannel, HttpUserChannel, PagedResult};
+use crate::services::{RssParsingError, ServiceError};
 
 #[derive(Clone)]
 pub struct ChannelService {
     db: DatabaseConnection,
+    client: reqwest::Client,
 }
 
 /// Generate a select statement for channel and user
@@ -32,7 +35,12 @@ fn user_channel_select_statement() -> Select<Channel> {
 
 impl ChannelService {
     pub fn new(db: DatabaseConnection) -> Self {
-        ChannelService { db }
+        let client = reqwest::Client::builder()
+            .user_agent("rss-aggregator checker (+https://github.com/fistons/rss-aggregator)")
+            .build()
+            .expect("Could not build client");
+
+        ChannelService { db, client }
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
@@ -40,14 +48,14 @@ impl ChannelService {
         &self,
         chan_id: i32,
         user_id: i32,
-    ) -> Result<Option<HttpUserChannel>, DbErr> {
-        user_channel_select_statement()
+    ) -> Result<Option<HttpUserChannel>, ServiceError> {
+        Ok(user_channel_select_statement()
             .filter(channel_users::Column::UserId.eq(user_id))
             .filter(channel_users::Column::ChannelId.eq(chan_id))
             .group_by(channels::Column::Id)
             .into_model::<HttpUserChannel>()
             .one(&self.db)
-            .await
+            .await?)
     }
 
     ///  Select all the channels of a user, along side the total number of items
@@ -57,7 +65,7 @@ impl ChannelService {
         u_id: i32,
         page: usize,
         page_size: usize,
-    ) -> Result<PagedResult<HttpUserChannel>, DbErr> {
+    ) -> Result<PagedResult<HttpUserChannel>, ServiceError> {
         let channel_paginator = user_channel_select_statement()
             .filter(channel_users::Column::UserId.eq(u_id))
             .group_by(channels::Column::Id)
@@ -83,26 +91,26 @@ impl ChannelService {
 
     /// # Select all the channels
     #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn select_all_enabled(&self) -> Result<Vec<HttpChannel>, DbErr> {
-        Channel::find()
+    pub async fn select_all_enabled(&self) -> Result<Vec<HttpChannel>, ServiceError> {
+        Ok(Channel::find()
             .filter(channels::Column::Disabled.eq(false))
             .into_model::<HttpChannel>()
             .all(&self.db)
-            .await
+            .await?)
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
     pub async fn select_all_enabled_by_user_id(
         &self,
         user_id: i32,
-    ) -> Result<Vec<HttpChannel>, DbErr> {
-        Channel::find()
+    ) -> Result<Vec<HttpChannel>, ServiceError> {
+        Ok(Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(user_id))
             .filter(channels::Column::Disabled.eq(false))
             .into_model::<HttpChannel>()
             .all(&self.db)
-            .await
+            .await?)
     }
 
     /// # Create a new channel in the database
@@ -110,7 +118,10 @@ impl ChannelService {
     async fn create_new_channel(
         &self,
         new_channel: &HttpNewChannel,
-    ) -> Result<channels::Model, DbErr> {
+    ) -> Result<channels::Model, ServiceError> {
+        // Check that the feed is a parsable RSS feed
+        check_feed(&self.client, &new_channel.url).await?;
+
         let channel = channels::ActiveModel {
             id: NotSet,
             name: Set(new_channel.name.to_owned()),
@@ -121,7 +132,7 @@ impl ChannelService {
             failure_count: Set(0),
         };
 
-        channel.insert(&self.db).await
+        Ok(channel.insert(&self.db).await?)
     }
 
     /// Create or linked an existing channel to a user
@@ -130,7 +141,7 @@ impl ChannelService {
         &self,
         new_channel: HttpNewChannel,
         other_user_id: i32,
-    ) -> Result<channels::Model, DbErr> {
+    ) -> Result<channels::Model, ServiceError> {
         let channel = match Channel::find()
             .filter(channels::Column::Url.eq(&*new_channel.url))
             .one(&self.db)
@@ -156,7 +167,7 @@ impl ChannelService {
                 );
                 Ok(channel)
             }
-            Err(x) => Err(x),
+            Err(x) => Err(x.into()),
         }
     }
 
@@ -166,7 +177,7 @@ impl ChannelService {
         &self,
         channel_id: i32,
         date: DateTime<Utc>,
-    ) -> Result<(), DbErr> {
+    ) -> Result<(), ServiceError> {
         Channel::update_many()
             .col_expr(channels::Column::LastUpdate, Expr::value(date))
             .filter(channels::Column::Id.eq(channel_id))
@@ -189,5 +200,93 @@ impl ChannelService {
         tracing::debug!("Chanel {} enabled", id);
 
         Ok(())
+    }
+}
+
+/// Check that the feed is correct
+async fn check_feed(client: &reqwest::Client, url: &str) -> Result<(), RssParsingError> {
+    let response = client.get(url).send().await?;
+    if !response.status().is_success() {
+        return Err(NonOkStatus(response.status().as_u16()));
+    }
+    let feed_content = response.bytes().await?;
+    feed_rs::parser::parse(&feed_content[..])?;
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use wiremock::matchers::method;
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_check_feed_is_ok() {
+        let mock = MockServer::start().await;
+        let client = reqwest::Client::default();
+
+        let valid_response = r#"
+        <?xml version="1.0" encoding="UTF-8" ?>
+        <rss version="2.0">
+        <channel>
+          <title>W3Schools Home Page</title>
+          <link>https://www.w3schools.com</link>
+          <description>Free web building tutorials</description>
+          <item>
+            <title>RSS Tutorial</title>
+            <link>https://www.w3schools.com/xml/xml_rss.asp</link>
+            <description>New RSS tutorial on W3Schools</description>
+          </item>
+        </channel>
+        "#;
+
+        let response = ResponseTemplate::new(200).set_body_raw(valid_response, "application/xml");
+
+        Mock::given(method("GET"))
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock)
+            .await;
+
+        assert!(check_feed(&client, &mock.uri()).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_check_feed_non_200() {
+        let mock = MockServer::start().await;
+        let client = reqwest::Client::default();
+
+        let response = ResponseTemplate::new(404);
+
+        Mock::given(method("GET"))
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock)
+            .await;
+
+        assert!(matches!(
+            check_feed(&client, &mock.uri()).await,
+            Err(RssParsingError::NonOkStatus { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_check_feed_invalid_rss() {
+        let mock = MockServer::start().await;
+        let client = reqwest::Client::default();
+
+        let response = ResponseTemplate::new(200).set_body_raw("rss lol", "application/xml");
+        Mock::given(method("GET"))
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock)
+            .await;
+
+        assert!(matches!(
+            check_feed(&client, &mock.uri()).await,
+            Err(RssParsingError::ParseFeedError { .. })
+        ));
     }
 }
