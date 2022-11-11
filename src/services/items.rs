@@ -119,11 +119,7 @@ impl ItemService {
         ids: Vec<i32>,
         read: bool,
     ) -> Result<(), DbErr> {
-        UsersItems::update_many()
-            .col_expr(users_items::Column::Read, Expr::value(read))
-            .filter(users_items::Column::UserId.eq(user_id))
-            .filter(users_items::Column::ItemId.is_in(ids))
-            .exec(&self.db)
+        self.update_column(user_id, ids, users_items::Column::Read, read)
             .await?;
 
         Ok(())
@@ -137,13 +133,26 @@ impl ItemService {
         ids: Vec<i32>,
         starred: bool,
     ) -> Result<(), DbErr> {
+        self.update_column(user_id, ids, users_items::Column::Starred, starred)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Update the given column with given value for the given user and items ids.
+    async fn update_column(
+        &self,
+        user_id: i32,
+        ids: Vec<i32>,
+        column: users_items::Column,
+        value: bool,
+    ) -> Result<(), DbErr> {
         UsersItems::update_many()
-            .col_expr(users_items::Column::Starred, Expr::value(starred))
+            .col_expr(column, Expr::value(value))
             .filter(users_items::Column::UserId.eq(user_id))
             .filter(users_items::Column::ItemId.is_in(ids))
             .exec(&self.db)
             .await?;
-
         Ok(())
     }
 }
