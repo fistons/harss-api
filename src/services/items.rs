@@ -25,8 +25,8 @@ impl ItemService {
         &self,
         chan_id: i32,
         user_id: i32,
-        page: usize,
-        page_size: usize,
+        page: u64,
+        page_size: u64,
     ) -> Result<PagedResult<HttpUserItem>, DbErr> {
         let item_paginator = Item::find()
             .join(JoinType::RightJoin, items::Relation::UsersItems.def())
@@ -69,8 +69,8 @@ impl ItemService {
     pub async fn get_items_of_user(
         &self,
         user_id: i32,
-        page: usize,
-        page_size: usize,
+        page: u64,
+        page_size: u64,
         read: Option<bool>,
         starred: Option<bool>,
     ) -> Result<PagedResult<HttpUserItem>, DbErr> {

@@ -63,8 +63,8 @@ impl ChannelService {
     pub async fn select_page_by_user_id(
         &self,
         u_id: i32,
-        page: usize,
-        page_size: usize,
+        page: u64,
+        page_size: u64,
     ) -> Result<PagedResult<HttpUserChannel>, ServiceError> {
         let channel_paginator = user_channel_select_statement()
             .filter(channel_users::Column::UserId.eq(u_id))

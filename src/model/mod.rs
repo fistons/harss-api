@@ -92,22 +92,22 @@ pub struct IdListParameter {
 #[derive(Debug, Deserialize)]
 pub struct PageParameters {
     /// * The `page` field should be superior or equals to 1
-    page: Option<usize>,
+    page: Option<u64>,
     /// * The `size` field should be between 1 and 20
-    size: Option<usize>,
+    size: Option<u64>,
 }
 
 impl PageParameters {
     /// Return the given page, or 1 if not provided.
     /// If the given page is 0, return 1.
-    pub fn get_page(&self) -> usize {
+    pub fn get_page(&self) -> u64 {
         self.page.unwrap_or(1).max(1)
     }
 
     /// Return the given size of the page, or 20 if not provided.
     /// The result is clamped between 1 and 200.
-    pub fn get_size(&self) -> usize {
-        self.size.unwrap_or(20).clamp(1, 200)
+    pub fn get_size(&self) -> u64 {
+        self.size.unwrap_or(20u64).clamp(1, 200)
     }
 }
 
@@ -122,13 +122,13 @@ where
     /// Actual content.
     pub content: Vec<T>,
     /// Number of the page.
-    pub page: usize,
+    pub page: u64,
     /// Desired size of the page.
-    pub page_size: usize,
+    pub page_size: u64,
     /// Total number of pages.
-    pub total_pages: usize,
+    pub total_pages: u64,
     /// Number of elements returned.
     pub elements_number: usize,
     /// Total number of elements.
-    pub total_items: usize,
+    pub total_items: u64,
 }

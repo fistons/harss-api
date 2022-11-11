@@ -33,8 +33,8 @@ impl UserService {
     #[tracing::instrument(skip(self), level = "debug")]
     pub async fn list_users(
         &self,
-        page: usize,
-        page_size: usize,
+        page: u64,
+        page_size: u64,
     ) -> Result<PagedResult<HttpUser>, DbErr> {
         let user_paginator = User::find()
             .into_model::<HttpUser>()
