@@ -1,20 +1,7 @@
-[package]
-name = "rss-aggregator"
-version = "0.1.0"
-authors = ["Eric <Fistons> <eric@pedr0.net>"]
-edition = "2021"
-
 [workspace]
-members = [".", "entity", "fetcher", "rss-common"]
+members = [".", "entity", "fetcher", "rss-common", "api"]
 
-[lib]
-path = "src/lib.rs"
-
-[[bin]]
-path = "src/main.rs"
-name = "rss-aggregator"
-
-[dependencies]
+[workspace.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
 actix-web = { version = "4" }
 actix-files = "0.6"
@@ -33,7 +20,6 @@ chrono = "0.4"
 uuid = { version = "1.1", features = ["v4"] }
 redis = { version = "0.22", features = ["r2d2", "tokio-comp", "connection-manager"] }
 deadpool-redis = "0.11.0"
-sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 secrecy = { version = "0.8", features = ["serde"] }
 sentry-actix = "0.29.0"
@@ -43,12 +29,18 @@ thiserror = "1"
 anyhow = "1"
 reqwest = { version = "0.11", features = ["tokio-rustls", "native-tls-vendored"] }
 feed-rs = "1"
-
-entity = { path = "entity" }
-rss-common = { path = "rss-common" }
-
-[dev-dependencies]
+sea-orm = { version = "^0", features = ["sqlx-sqlite", "sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"] }
+fake = { version = "2.5.0", features = ["http", "chrono"] }
+tracing-log = "0.1"
+tracing-bunyan-formatter = "0.3"
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+tracing-opentelemetry = "0.18"
+opentelemetry = { version = "0.18", features = ["rt-tokio"] }
+opentelemetry-jaeger = { version = "0.17", features = ["rt-tokio"] }
+sentry-tracing = "0.29.0"
+sentry = "0.29.0"
 wiremock = "0.5"
+
 
 [profile.release]
 strip = true

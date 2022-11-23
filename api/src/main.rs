@@ -1,5 +1,5 @@
-use rss_aggregator::databases::{init_postgres_connection, init_redis_connection};
-use rss_aggregator::startup;
+use api::databases::{init_postgres_connection, init_redis_connection};
+use api::startup;
 use std::env;
 use std::net::TcpListener;
 

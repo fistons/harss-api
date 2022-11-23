@@ -1,0 +1,49 @@
+[package]
+name = "api"
+version = "0.1.0"
+authors = ["Eric <Fistons> <eric@pedr0.net>"]
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "rss-aggregator"
+
+[dependencies]
+openssl.workspace = true
+actix-web.workspace = true
+actix-files.workspace = true
+actix-xml.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+dotenvy.workspace = true
+argon2.workspace = true
+rand_core.workspace = true
+http-auth-basic.workspace = true
+lazy_static.workspace = true
+jwt.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+redis.workspace = true
+deadpool-redis.workspace = true
+sea-orm.workspace = true
+tokio.workspace = true
+secrecy.workspace = true
+sentry-actix.workspace = true
+tracing-actix-web.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+reqwest.workspace = true
+feed-rs.workspace = true
+
+entity = { path = "../entity" }
+rss-common = { path = "../rss-common" }
+
+[dev-dependencies]
+wiremock.workspace = true
+

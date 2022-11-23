@@ -12,6 +12,7 @@ FROM chef AS planner
 COPY entity/Cargo.toml ./entity/Cargo.toml
 COPY rss-common/Cargo.toml ./rss-common/Cargo.toml
 COPY fetcher/Cargo.toml ./fetcher/Cargo.toml
+COPY api/Cargo.toml ./api/Cargo.toml
 COPY Cargo.* ./
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -25,8 +26,8 @@ RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path r
 COPY rss-common/src rss-common/src
 COPY entity/src entity/src
 COPY fetcher/src fetcher/src
-COPY src/ src/
-RUN touch src/main.rs
+COPY api/src/ api/src/
+RUN touch api/src/main.rs
 RUN cargo build --release --target x86_64-unknown-linux-musl --all
 
 FROM alpine AS api
@@ -37,7 +38,7 @@ RUN apk --no-cache add curl tzdata # Needed for the docker health check and fix 
 RUN cp /usr/share/zoneinfo/Europe/Paris /etc/localtime
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/rss-aggregator /usr/local/bin
-COPY static/ static/
+COPY api/static/ static/
 
 EXPOSE 8080
 USER rss-aggregator
@@ -45,7 +46,7 @@ ENTRYPOINT ["rss-aggregator"]
 
 FROM alpine as fetcher
 LABEL maintainer=eric@pedr0.net
-RUN addgroup -S rss-aggregator && adduser -S rss-aggregator -G rss-aggregator
+RUN addgroup -S rss-fetcher && adduser -S rss-fetcher -G rss-fetcher
 
 RUN apk --no-cache add curl tzdata # Needed for the docker health check and fix issue with chrono
 RUN cp /usr/share/zoneinfo/Europe/Paris /etc/localtime
@@ -53,5 +54,5 @@ RUN cp /usr/share/zoneinfo/Europe/Paris /etc/localtime
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/fetcher /usr/local/bin
 
 EXPOSE 8080
-USER rss-aggregator
+USER rss-fetcher
 ENTRYPOINT ["fetcher"]

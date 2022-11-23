@@ -297,6 +297,43 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
 
 [[package]]
+name = "api"
+version = "0.1.0"
+dependencies = [
+ "actix-files",
+ "actix-web",
+ "actix-xml",
+ "anyhow",
+ "argon2",
+ "chrono",
+ "deadpool-redis",
+ "dotenvy",
+ "entity",
+ "feed-rs",
+ "hmac",
+ "http-auth-basic",
+ "jwt",
+ "lazy_static",
+ "openssl",
+ "rand_core 0.6.4",
+ "redis",
+ "reqwest",
+ "rss-common",
+ "sea-orm",
+ "secrecy",
+ "sentry-actix",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-actix-web",
+ "uuid",
+ "wiremock",
+]
+
+[[package]]
 name = "arc-swap"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2286,43 +2323,6 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi",
-]
-
-[[package]]
-name = "rss-aggregator"
-version = "0.1.0"
-dependencies = [
- "actix-files",
- "actix-web",
- "actix-xml",
- "anyhow",
- "argon2",
- "chrono",
- "deadpool-redis",
- "dotenvy",
- "entity",
- "feed-rs",
- "hmac",
- "http-auth-basic",
- "jwt",
- "lazy_static",
- "openssl",
- "rand_core 0.6.4",
- "redis",
- "reqwest",
- "rss-common",
- "sea-orm",
- "secrecy",
- "sentry-actix",
- "serde",
- "serde_json",
- "sha2",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-actix-web",
- "uuid",
- "wiremock",
 ]
 
 [[package]]

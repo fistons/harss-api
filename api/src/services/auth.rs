@@ -204,7 +204,7 @@ async fn verify_jwt(token: &str) -> Result<AuthenticatedUser, AuthenticationErro
     let date = if let Single(t) = Utc.timestamp_opt(claims.exp, 0) {
         t
     } else {
-        return return Err(AuthenticationError::ExpiredToken);
+        return Err(AuthenticationError::ExpiredToken);
     };
 
     if date.lt(&Utc::now()) {
