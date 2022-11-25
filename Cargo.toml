@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "entity", "fetcher", "rss-common", "api"]
+members = ["crates/api", "crates/entity", "crates/fetcher", "crates/rss-common"]
 
 [workspace.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
