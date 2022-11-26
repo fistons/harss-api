@@ -5,6 +5,7 @@ use actix_web::http::header::HeaderMap;
 use actix_web::web::Data;
 use actix_web::{dev, FromRequest, HttpRequest};
 use anyhow::Context;
+use chrono::LocalResult::Single;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use hmac::{Hmac, Mac};
 use http_auth_basic::Credentials;
@@ -200,7 +201,12 @@ pub fn extract_login_from_refresh_token(token: &str) -> &str {
 async fn verify_jwt(token: &str) -> Result<AuthenticatedUser, AuthenticationError> {
     let claims: Claims = token.verify_with_key(&(*JWT_KEY))?;
 
-    let date = Utc.timestamp(claims.exp, 0);
+    let date = if let Single(t) = Utc.timestamp_opt(claims.exp, 0) {
+        t
+    } else {
+        return Err(AuthenticationError::ExpiredToken);
+    };
+
     if date.lt(&Utc::now()) {
         return Err(AuthenticationError::ExpiredToken);
     }

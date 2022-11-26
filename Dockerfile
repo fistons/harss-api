@@ -9,9 +9,10 @@ RUN update-ca-certificates
 WORKDIR /app
 
 FROM chef AS planner
-COPY entity/Cargo.toml ./entity/Cargo.toml
-COPY rss-common/Cargo.toml ./rss-common/Cargo.toml
-COPY fetcher/Cargo.toml ./fetcher/Cargo.toml
+COPY crates/entity/Cargo.toml ./crates/entity/Cargo.toml
+COPY crates/rss-common/Cargo.toml ./crates/rss-common/Cargo.toml
+COPY crates/fetcher/Cargo.toml ./crates/fetcher/Cargo.toml
+COPY crates/api/Cargo.toml ./crates/api/Cargo.toml
 COPY Cargo.* ./
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -22,11 +23,11 @@ RUN apt-get install libssl-dev -y
 # Build dependencies - this is the caching Docker layer!
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 # Build application
-COPY rss-common/src rss-common/src
-COPY entity/src entity/src
-COPY fetcher/src fetcher/src
-COPY src/ src/
-RUN touch src/main.rs
+COPY crates/rss-common/src crates/rss-common/src
+COPY crates/entity/src crates/entity/src
+COPY crates/fetcher/src crates/fetcher/src
+COPY crates/api/src/ crates/api/src/
+RUN touch crates/api/src/main.rs
 RUN cargo build --release --target x86_64-unknown-linux-musl --all
 
 FROM alpine AS api
@@ -37,7 +38,7 @@ RUN apk --no-cache add curl tzdata # Needed for the docker health check and fix 
 RUN cp /usr/share/zoneinfo/Europe/Paris /etc/localtime
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/rss-aggregator /usr/local/bin
-COPY static/ static/
+COPY crates/api/static/ static/
 
 EXPOSE 8080
 USER rss-aggregator
@@ -45,7 +46,7 @@ ENTRYPOINT ["rss-aggregator"]
 
 FROM alpine as fetcher
 LABEL maintainer=eric@pedr0.net
-RUN addgroup -S rss-aggregator && adduser -S rss-aggregator -G rss-aggregator
+RUN addgroup -S rss-fetcher && adduser -S rss-fetcher -G rss-fetcher
 
 RUN apk --no-cache add curl tzdata # Needed for the docker health check and fix issue with chrono
 RUN cp /usr/share/zoneinfo/Europe/Paris /etc/localtime
@@ -53,5 +54,5 @@ RUN cp /usr/share/zoneinfo/Europe/Paris /etc/localtime
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/fetcher /usr/local/bin
 
 EXPOSE 8080
-USER rss-aggregator
+USER rss-fetcher
 ENTRYPOINT ["fetcher"]

@@ -19,7 +19,7 @@ openapi linting:
     - docker
   stage: check
   script:
-    - spectral lint --fail-severity=warn --format junit -o report.xml static/openapi.yml
+    - spectral lint --fail-severity=warn --format junit -o report.xml api/static/openapi.yml
   artifacts:
     when: always
     reports:

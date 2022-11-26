@@ -1,0 +1,31 @@
+[package]
+name = "fetcher"
+version = "0.1.0"
+authors = ["Eric <Fistons> <eric@pedr0.net>"]
+edition = "2021"
+
+[[bin]]
+name = "fetcher"
+path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"
+name = "fetcher"
+
+[dependencies]
+reqwest.workspace = true
+tokio.workspace = true
+dotenvy.workspace = true
+sea-orm.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+feed-rs.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+
+entity = { path = "../entity" }
+rss-common = { path = "../rss-common" }
+
+[dev-dependencies]
+wiremock.workspace = true
+fake.workspace = true
