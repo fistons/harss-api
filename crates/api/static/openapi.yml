@@ -82,6 +82,31 @@ paths:
           $ref: '#/components/responses/ObjectCreatedResponse'
         default:
           $ref: '#/components/responses/Error'
+  /channels/search:
+    get:
+      operationId: search_channels
+      tags:
+        - Channels
+      summary: Returns a list of RSS channels for the given URL.
+      description: Fetch the content of the URL and search for RSS channels
+      parameters:
+        - name: url
+          in: query
+          required: true
+          example: "https://canardpc.com"
+          schema:
+            $ref: '#/components/schemas/WebsiteURL'
+      responses:
+        '200':
+          description: A list of found channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoundChannel'
+        default:
+          $ref: '#/components/responses/Error'
   /channels:
     get:
       operationId: get_channels
@@ -538,6 +563,17 @@ components:
           $ref: '#/components/schemas/ChannelName'
         url:
           $ref: '#/components/schemas/ChannelURL'
+    FoundChannel:
+      type: object
+      description: A RSS channel found in a website
+      required:
+        - title
+        - url
+      properties:
+        title:
+          $ref: '#/components/schemas/ChannelName'
+        url:
+          $ref: '#/components/schemas/ChannelURL'
     Channel:
       type: object
       description: A RSS Channel.
@@ -590,6 +626,13 @@ components:
       nullable: false
       description: URL of a RSS channel.
       example: "https://canardpc.com/rss.xml"
+    WebsiteURL:
+      type: string
+      format: URL
+      minLength: 1
+      nullable: false
+      description: URL of a website.
+      example: "https://canardpc.com"
     Item:
       type: object
       required:
