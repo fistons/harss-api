@@ -330,6 +330,8 @@ paths:
     post:
       operationId: read_items
       summary: Set items as read
+      tags:
+        - Items
       requestBody:
         required: true
         description: List of items IDs to read
@@ -344,6 +346,8 @@ paths:
     post:
       operationId: unread_items
       summary: Set items as unread
+      tags:
+        - Items
       requestBody:
         required: true
         description: List of items IDs to unread
@@ -358,6 +362,8 @@ paths:
     post:
       operationId: star_items
       summary: Set items as starred
+      tags:
+        - Items
       requestBody:
         required: true
         description: List of items IDs to star
@@ -372,6 +378,8 @@ paths:
     post:
       operationId: unstar_items
       summary: Set items as un-starred
+      tags:
+        - Items
       requestBody:
         required: true
         description: List of items IDs to un-star
