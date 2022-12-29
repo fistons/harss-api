@@ -1,12 +1,14 @@
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse};
 use actix_xml::Xml;
+use serde::Deserialize;
 use serde_json::json;
 
 use crate::model::opml::Opml;
 use crate::model::{HttpNewChannel, PageParameters};
 use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
+use crate::services::rss_detector;
 use crate::startup::ApplicationServices;
 
 #[get("/channel/{id}")]
@@ -114,8 +116,23 @@ async fn enable_channel(
     }
 }
 
+#[derive(Deserialize)]
+struct QueryParamsUrl {
+    url: String,
+}
+
+#[get("/channels/search")]
+async fn search_channels(
+    _user: AuthenticatedUser,
+    query_params: web::Query<QueryParamsUrl>,
+) -> Result<HttpResponse, ApiError> {
+    let found_channels = rss_detector::download_and_look_for_rss(&query_params.url).await?;
+    Ok(HttpResponse::Ok().json(found_channels))
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_channel)
+    cfg.service(search_channels)
+        .service(get_channel)
         .service(get_channels)
         .service(new_channel)
         .service(get_items_of_channel)

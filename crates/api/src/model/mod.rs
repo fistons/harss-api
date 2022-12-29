@@ -132,3 +132,18 @@ where
     /// Total number of elements.
     pub total_items: u64,
 }
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct FoundRssChannel {
+    url: String,
+    title: String,
+}
+
+impl FoundRssChannel {
+    pub fn new(url: &str, title: &str) -> Self {
+        FoundRssChannel {
+            url: url.to_owned(),
+            title: title.to_owned(),
+        }
+    }
+}
