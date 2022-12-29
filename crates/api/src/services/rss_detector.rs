@@ -1,9 +1,9 @@
 use once_cell::sync::Lazy;
 use scraper::Selector;
 
-use crate::model::FoundRssChannels;
+use crate::model::FoundRssChannel;
 
-static ALTERNATE_LINK_HEAD: Lazy<Selector> =
+static ALTERNATE_LINK_HEADER: Lazy<Selector> =
     Lazy::new(|| Selector::parse(r#"link[type="application/rss+xml"]"#).unwrap());
 
 async fn download_url(url: &str) -> anyhow::Result<String> {
@@ -20,20 +20,20 @@ async fn download_url(url: &str) -> anyhow::Result<String> {
     Ok(String::from_utf8_lossy(&url_content).to_string())
 }
 
-pub fn look_for_rss(content: &str) -> Vec<FoundRssChannels> {
+pub fn look_for_rss(content: &str) -> Vec<FoundRssChannel> {
     let document = scraper::Html::parse_document(content);
 
     document
-        .select(&ALTERNATE_LINK_HEAD)
+        .select(&ALTERNATE_LINK_HEADER)
         .filter_map(|element| {
             let url = element.value().attr("href")?;
             let title = element.value().attr("title")?;
-            Some(FoundRssChannels::new(url, title))
+            Some(FoundRssChannel::new(url, title))
         })
         .collect()
 }
 
-pub async fn download_and_look_for_rss(url: &str) -> anyhow::Result<Vec<FoundRssChannels>> {
+pub async fn download_and_look_for_rss(url: &str) -> anyhow::Result<Vec<FoundRssChannel>> {
     let content = download_url(url).await?;
     Ok(look_for_rss(&content))
 }
@@ -68,7 +68,7 @@ mod tests {
 
         assert_eq!(
             download_and_look_for_rss(&url).await.unwrap(),
-            vec![FoundRssChannels::new(
+            vec![FoundRssChannel::new(
                 "https://blog.pedr0.net/rss/",
                 "Pedr0.net"
             )]

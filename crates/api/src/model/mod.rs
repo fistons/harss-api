@@ -134,14 +134,14 @@ where
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
-pub struct FoundRssChannels {
+pub struct FoundRssChannel {
     url: String,
     title: String,
 }
 
-impl FoundRssChannels {
+impl FoundRssChannel {
     pub fn new(url: &str, title: &str) -> Self {
-        FoundRssChannels {
+        FoundRssChannel {
             url: url.to_owned(),
             title: title.to_owned(),
         }
