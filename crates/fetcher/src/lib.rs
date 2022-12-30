@@ -98,6 +98,7 @@ impl Fetcher {
                     .await?;
             }
         }
+        self.update_channel_timestamp(&channel.id, &txn).await?;
         txn.commit().await?;
 
         Ok(())
@@ -108,6 +109,20 @@ impl Fetcher {
         let data = response.bytes().await?;
 
         Ok(feed_rs::parser::parse(&data[..])?)
+    }
+
+    #[tracing::instrument(skip(self, txn), level = "debug")]
+    async fn update_channel_timestamp<C>(&self, channel_id: &i32, txn: &C) -> Result<(), FetchError>
+    where
+        C: ConnectionTrait,
+    {
+        let now: DateTimeWithTimeZone = Utc::now().into();
+        Channel::update_many()
+            .col_expr(channels::Column::LastUpdate, Expr::value(now))
+            .filter(channels::Column::Id.eq(*channel_id))
+            .exec(txn)
+            .await?;
+        Ok(())
     }
 
     #[tracing::instrument(skip(self), level = "debug")]
