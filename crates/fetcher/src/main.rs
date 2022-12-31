@@ -10,7 +10,7 @@ use rss_common::observability;
 async fn main() {
     dotenv().ok();
 
-    let subscriber = observability::get_subscriber("rss_aggregator-fetcher".into(), "info".into());
+    let subscriber = observability::get_subscriber("rss_aggregator-fetcher", "info");
     observability::init_subscriber(subscriber);
 
     let _sentry_guard = observability::init_sentry();

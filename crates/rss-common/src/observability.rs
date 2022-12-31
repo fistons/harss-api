@@ -1,14 +1,13 @@
 use sentry::ClientInitGuard;
 use tracing::{subscriber::set_global_default, Subscriber};
-use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
-pub fn get_subscriber(name: String, env_filter: String) -> impl Subscriber + Sync + Send {
+pub fn get_subscriber(name: &str, env_filter: &str) -> impl Subscriber + Sync + Send {
     // Building the jaeger layer, if needed
     let telemetry = if std::env::var("JAEGER_ENABLED").is_ok() {
         let tracer = opentelemetry_jaeger::new_agent_pipeline()
-            .with_service_name(&name)
+            .with_service_name(name)
             .install_batch(opentelemetry::runtime::Tokio)
             .unwrap();
         Some(tracing_opentelemetry::layer().with_tracer(tracer))
@@ -18,12 +17,11 @@ pub fn get_subscriber(name: String, env_filter: String) -> impl Subscriber + Syn
 
     let env_filter =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));
-    let formatting_layer = BunyanFormattingLayer::new(name, std::io::stdout);
+    let fmt = tracing_subscriber::fmt::Layer::new();
 
     Registry::default()
         .with(env_filter)
-        .with(JsonStorageLayer)
-        .with(formatting_layer)
+        .with(fmt)
         .with(sentry_tracing::layer())
         .with(telemetry)
 }

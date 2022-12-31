@@ -8,8 +8,7 @@ async fn main() -> std::io::Result<()> {
     // Init dotenv
     dotenvy::dotenv().ok();
 
-    let subscriber =
-        rss_common::observability::get_subscriber("rss_aggregator".into(), "info".into());
+    let subscriber = rss_common::observability::get_subscriber("rss_aggregator", "info");
     rss_common::observability::init_subscriber(subscriber);
 
     let postgres_connection = init_postgres_connection().await;
