@@ -56,7 +56,7 @@ pub async fn unstar_items(
     Ok(HttpResponse::Accepted().finish())
 }
 
-#[post("/item/{item_id}/read")]
+#[post("/items/read")]
 #[tracing::instrument(skip(services), level = "debug")]
 pub async fn read_item(
     ids: web::Json<IdListParameter>,
@@ -71,7 +71,7 @@ pub async fn read_item(
     Ok(HttpResponse::Accepted().finish())
 }
 
-#[post("/item/{item_id}/unread")]
+#[post("/items/unread")]
 #[tracing::instrument(skip(services), level = "debug")]
 pub async fn unread_item(
     ids: web::Json<IdListParameter>,

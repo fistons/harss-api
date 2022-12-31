@@ -401,10 +401,13 @@ components:
       bearerFormat: JWT
   schemas:
     ItemIdList:
-      type: array
+      type: object
       description: A list of Item ID.
-      items:
-        $ref: '#/components/schemas/ItemID'
+      properties:
+        ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemID'
     PagedChannels:
       type: object
       allOf:
