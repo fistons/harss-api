@@ -8,14 +8,8 @@ info:
     email: eric@pedr0.net
     url: https://pedr0.net
 servers:
-  - url: '{protocol}://rss-dev-api.pedr0.net'
+  - url: 'https://rss-dev-api.pedr0.net'
     description: Dev RSS Api
-    variables:
-      protocol:
-        enum:
-          - http
-          - https
-        default: https
   - url: 'http://localhost:8080'
     description: Local RSS Api, for tests purpose
 security:
@@ -237,6 +231,8 @@ paths:
       tags:
         - Authentication
       summary: Create a JWT and a refresh token
+      security:
+        - {}
       description: |
         Creates a JWT/refresh token. The generated token is valid for 15 minutes. The refresh token is valid
         for 5 days
@@ -264,6 +260,8 @@ paths:
       tags:
         - Authentication
       summary: Refresh the JWT
+      security:
+        - {}
       description: |
         Creates a JWT/refresh token. The generated JWT is valid for 15 minutes. The refresh token is valid
         for 5 days
