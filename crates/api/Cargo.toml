@@ -22,7 +22,6 @@ dotenvy.workspace = true
 argon2.workspace = true
 rand_core.workspace = true
 http-auth-basic.workspace = true
-lazy_static.workspace = true
 jwt.workspace = true
 hmac.workspace = true
 sha2.workspace = true
