@@ -7,10 +7,12 @@ use actix_web::{dev, FromRequest, HttpRequest};
 use anyhow::Context;
 use chrono::LocalResult::Single;
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use deadpool_redis::Pool;
 use hmac::{Hmac, Mac};
 use http_auth_basic::Credentials;
 use jwt::{SignWithKey, VerifyWithKey};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
+use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
@@ -21,13 +23,14 @@ use crate::services::users::UserService;
 use crate::services::AuthenticationError;
 use crate::startup::ApplicationServices;
 
-lazy_static! {
-    /// Generate the JWT key at runtime. If the JWT_SECRET environment variable is not set,
-    /// fail miserably
-    static ref JWT_KEY: Hmac<Sha256> =  Hmac::new_from_slice(std::env::var("JWT_SECRET")
-        .expect("A JWT_SECRET is mandatory")
-        .as_bytes()).unwrap();
-}
+static JWT_KEY: Lazy<Hmac<Sha256>> = Lazy::new(|| {
+    Hmac::new_from_slice(
+        std::env::var("JWT_SECRET")
+            .expect("A JWT_SECRET is mandatory")
+            .as_bytes(),
+    )
+    .unwrap()
+});
 
 /// # Represent an authenticated user, from JWT or HTTP Basic Auth
 #[derive(Debug, Deserialize, Serialize)]
@@ -99,9 +102,17 @@ async fn extract_authenticated_user(
                 Ok(credentials) => credentials,
                 Err(e) => return Err(e),
             };
+            let redis_pool = req.app_data::<Data<Pool>>().unwrap();
 
             let services = req.app_data::<Data<ApplicationServices>>().unwrap();
-            check_and_get_authed_user(&user, &password, &services.user_service).await
+            check_and_get_authed_user(
+                &user,
+                &password,
+                &services.user_service,
+                redis_pool,
+                header_value,
+            )
+            .await
         }
 
         (_error, _) => Err(AuthenticationError::UnknownAuthScheme),
@@ -157,9 +168,38 @@ async fn check_and_get_authed_user(
     user: &str,
     password: &str,
     user_service: &UserService,
+    redis_pool: &Pool,
+    redis_key: &str,
 ) -> Result<AuthenticatedUser, AuthenticationError> {
+    // Fist, check that the user is not already in the cache
+    let mut redis = redis_pool
+        .get()
+        .await
+        .context("Couldn't get redis connection")?;
+    let value: Option<String> = redis
+        .get(format!("Basic:{}", redis_key))
+        .await
+        .context("Could not get value")?;
+
+    if let Some(value) = value {
+        // We have something, cool!
+        let user: AuthenticatedUser =
+            serde_json::from_str(&value).context("Could not deserialize user from redis")?;
+        return Ok(user);
+    }
+
+    // Nothing? Authenticate dance!
     let user = check_and_get_user(user, password, user_service).await?;
-    Ok(AuthenticatedUser::from_user(&user))
+    let user = AuthenticatedUser::from_user(&user);
+
+    // Store it in redis
+    let serialized_user = serde_json::to_string(&user).context("Could serialize user for redis")?;
+    redis
+        .set_ex::<_, _, ()>(&format!("Basic:{}", redis_key), serialized_user, 60 * 15)
+        .await
+        .context("Could not store user in redis")?;
+
+    Ok(user)
 }
 
 /// # Return user and password from basic auth value
