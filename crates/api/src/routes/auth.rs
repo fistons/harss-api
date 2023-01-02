@@ -1,6 +1,7 @@
 use actix_web::{post, web, HttpResponse};
 use anyhow::{anyhow, Context};
-use deadpool_redis::{redis::cmd, Pool};
+use deadpool_redis::Pool;
+use redis::AsyncCommands;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use serde_json::json;
@@ -36,14 +37,9 @@ pub async fn login(
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
 
     let mut redis = redis_pool.get().await?;
-
-    cmd("SETEX")
-        .arg(&refresh_token)
-        .arg(60 * 60 * 24 * 5) // 5 days
-        .arg(1)
-        .query_async::<_, ()>(&mut redis)
-        .await
-        .unwrap();
+    redis
+        .set_ex::<_, _, ()>(&refresh_token, 1, 60 * 60 * 24 * 5)
+        .await?;
 
     Ok(HttpResponse::Ok()
         .json(json!({"access_token": access_token, "refresh_token": refresh_token})))
@@ -59,11 +55,7 @@ pub async fn refresh_auth(
     let mut redis = redis_pool.get().await?;
 
     let token = refresh_token.token.expose_secret();
-    let token_exists = cmd("EXISTS")
-        .arg(token)
-        .query_async::<_, bool>(&mut redis)
-        .await
-        .unwrap();
+    let token_exists = redis.exists::<_, bool>(token).await?;
 
     if token_exists {
         let user_login = crate::services::auth::extract_login_from_refresh_token(token);
