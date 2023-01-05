@@ -5,6 +5,7 @@ members = ["crates/api", "crates/entity", "crates/fetcher", "crates/rss-common"]
 openssl = { version = "0.10", features = ["vendored"] }
 actix-web = { version = "4" }
 actix-files = "0.6"
+actix-governor = "0.3.2"
 actix-xml = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
