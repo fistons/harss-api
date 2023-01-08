@@ -2,7 +2,7 @@ use std::net::TcpListener;
 
 use actix_governor::Governor;
 use actix_web::web::Data;
-use actix_web::{App, HttpServer};
+use actix_web::{web, App, HttpServer};
 use deadpool_redis::Pool;
 use sea_orm::DatabaseConnection;
 
@@ -43,12 +43,15 @@ pub async fn startup(
 
     HttpServer::new(move || {
         App::new()
-            .wrap(tracing_actix_web::TracingLogger::default())
-            .wrap(sentry_actix::Sentry::default())
-            .wrap(Governor::new(&governor_conf))
-            .app_data(services.clone())
-            .app_data(redis.clone())
-            .configure(routes::configure)
+            .service(
+                web::scope("/api/v1")
+                    .wrap(Governor::new(&governor_conf))
+                    .wrap(tracing_actix_web::TracingLogger::default())
+                    .wrap(sentry_actix::Sentry::default())
+                    .app_data(services.clone())
+                    .app_data(redis.clone())
+                    .configure(routes::configure),
+            )
             .service(actix_files::Files::new("/", "./static/").index_file("index.html"))
     })
     .listen(listener)?
