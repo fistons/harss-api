@@ -16,21 +16,21 @@ jobs:
         name: Login to DockerHub
         uses: docker/login-action@v2
         with:
-          registry: rg.nl-ams.scw.cloud/pedr0
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: registry.digitalocean.com/rss-repository
+          username: ${{ secrets.DI_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DI_DOCKERHUB_TOKEN }}
       -
         name: Build and push API
         uses: docker/build-push-action@v3
         with:
           push: true
           target: api
-          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
+          tags: registry.digitalocean.com/rss-repository/rss-aggregator-api:latest
       -
         name: Build and push fetcher
         uses: docker/build-push-action@v3
         with:
           push: true
           target: fetcher
-          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
+          tags: registry.digitalocean.com/rss-repository/rss-aggregator-fetcher:latest
           
