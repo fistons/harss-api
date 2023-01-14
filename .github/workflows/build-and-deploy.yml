@@ -27,6 +27,13 @@ jobs:
           target: api
           tags: registry.digitalocean.com/rss-repository/rss-aggregator-api:latest
       -
+        name: Re-Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          registry: registry.digitalocean.com/rss-repository
+          username: ${{ secrets.DI_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DI_DOCKERHUB_TOKEN }}
+      -
         name: Build and push fetcher
         uses: docker/build-push-action@v3
         with:
