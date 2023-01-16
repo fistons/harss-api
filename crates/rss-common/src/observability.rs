@@ -12,6 +12,9 @@ pub fn get_subscriber(name: &str, env_filter: &str) -> impl Subscriber + Sync + 
 
     let datadog = opentelemetry_datadog::new_pipeline()
         .with_service_name(name)
+        .with_agent_endpoint(
+            std::env::var("DD_AGENT").unwrap_or("http://127.0.0.1:8126".to_owned()),
+        )
         .install_batch(opentelemetry::runtime::Tokio)
         .ok()
         .map(|x| tracing_opentelemetry::layer().with_tracer(x));
