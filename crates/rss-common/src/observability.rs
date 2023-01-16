@@ -1,30 +1,15 @@
-use opentelemetry::sdk::trace::{self, RandomIdGenerator, Sampler, Tracer};
+use std::env::var;
 
+use opentelemetry::sdk::trace::{self, RandomIdGenerator, Sampler, Tracer};
 use sentry::ClientInitGuard;
-use tracing::{info, subscriber::set_global_default, Subscriber};
+use tracing::{subscriber::set_global_default, Subscriber};
 use tracing_log::LogTracer;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 pub fn get_subscriber(name: &str, env_filter: &str) -> impl Subscriber + Sync + Send {
-    // Building the jaeger layer, if needed
-    let jaeger = build_jaeger(name);
-
-    let ddog_endpoint = std::env::var("DD_AGENT").unwrap_or("http://127.0.0.1:8126".to_owned());
-    info!("DDog endpoint {}", ddog_endpoint);
-    let datadog = opentelemetry_datadog::new_pipeline()
-        .with_service_name(name)
-        .with_agent_endpoint(ddog_endpoint)
-        .with_trace_config(
-            trace::config()
-                .with_sampler(Sampler::AlwaysOn)
-                .with_id_generator(RandomIdGenerator::default()),
-        )
-        .install_batch(opentelemetry::runtime::Tokio)
-        .ok()
-        .map(|x| tracing_opentelemetry::layer().with_tracer(x));
-    info!("Is datadog reader? {}", datadog.is_some());
+    let telemetry = build_datadog(name).or_else(|| build_jaeger(name));
 
     let env_filter =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));
@@ -34,8 +19,7 @@ pub fn get_subscriber(name: &str, env_filter: &str) -> impl Subscriber + Sync + 
         .with(env_filter)
         .with(fmt)
         .with(sentry_tracing::layer())
-        .with(jaeger)
-        .with(datadog)
+        .with(telemetry)
 }
 pub fn init_subscriber(subscriber: impl Subscriber + Sync + Send) {
     LogTracer::init().expect("Failed to set logger");
@@ -54,13 +38,32 @@ where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
     // Building the jaeger layer, if needed
-    if std::env::var("JAEGER_ENABLED").is_ok() {
-        let tracer = opentelemetry_jaeger::new_agent_pipeline()
+    if var("JAEGER_ENABLED").is_ok() {
+        opentelemetry_jaeger::new_agent_pipeline()
             .with_service_name(name)
             .install_batch(opentelemetry::runtime::Tokio)
-            .unwrap();
-        Some(tracing_opentelemetry::layer().with_tracer(tracer))
+            .map_err(|err| eprintln!("Datadog error {:?}", err))
+            .ok()
+            .map(|x| tracing_opentelemetry::layer().with_tracer(x))
     } else {
         None
     }
+}
+
+fn build_datadog<S>(name: &str) -> Option<OpenTelemetryLayer<S, Tracer>>
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+{
+    opentelemetry_datadog::new_pipeline()
+        .with_service_name(name)
+        .with_agent_endpoint(var("DD_AGENT").unwrap_or_else(|_| "http://127.0.0.1:8126".to_owned()))
+        .with_trace_config(
+            trace::config()
+                .with_sampler(Sampler::AlwaysOn) //TODO Add sampling, one day.
+                .with_id_generator(RandomIdGenerator::default()),
+        )
+        .install_batch(opentelemetry::runtime::Tokio)
+        .map_err(|err| eprintln!("Datadog error {:?}", err))
+        .ok()
+        .map(|x| tracing_opentelemetry::layer().with_tracer(x))
 }
