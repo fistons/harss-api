@@ -41,7 +41,7 @@ impl Fetcher {
         Self { client, pool }
     }
 
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, level = "debug")]
     pub async fn fetch(&self) -> Result<(), anyhow::Error> {
         let channels = Channel::find()
             .filter(channels::Column::Disabled.eq(false))
@@ -69,7 +69,7 @@ impl Fetcher {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), level = "debug")]
     async fn update_channel(&self, channel: channels::Model) -> Result<(), FetchError> {
         let feed = match self.get_and_parse_feed(&channel).await {
             Ok(feed) => feed,
