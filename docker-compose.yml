@@ -27,6 +27,16 @@ services:
         condition: service_started
     healthcheck: 
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
+  fetcher:
+    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
+    links:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
+      RUST_LOG: info
+    depends_on:
+      postgres:
+        condition: service_healthy
   redis:
     image: redis:alpine
   postgres:
