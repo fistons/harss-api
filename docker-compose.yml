@@ -32,6 +32,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
   fetcher:
     image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     links:
       - postgres
     environment:
