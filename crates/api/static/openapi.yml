@@ -8,8 +8,8 @@ info:
     email: eric@pedr0.net
     url: https://pedr0.net
 servers:
-  - url: 'https://rss-dev-api.pedr0.net/api/v1'
-    description: Dev RSS Api
+  - url: 'https://dev.api.harss.net/api/v1'
+    description: Dev RSS Api, please be kind
   - url: 'http://localhost:8080/api/v1'
     description: Local RSS Api, for tests purpose
 security:
