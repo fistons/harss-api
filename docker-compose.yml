@@ -20,7 +20,7 @@ services:
 #      OTEL_EXPORTER_JAEGER_AGENT_HOST: jaeger
 #      OTEL_EXPORTER_JAEGER_AGENT_PORT: 6831
       RUST_LOG: info
-      DD_AGENT: http://host.docker.internal:8186
+      DD_AGENT: http://host.docker.internal:8126
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,6 +37,7 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
       RUST_LOG: info
+      DD_AGENT: http://host.docker.internal:8126
     depends_on:
       postgres:
         condition: service_healthy
