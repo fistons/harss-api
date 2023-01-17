@@ -5,12 +5,15 @@ use argon2::{
 use rand_core::OsRng;
 use sea_orm::{entity::*, query::*};
 use sea_orm::{DatabaseConnection, DbErr};
+use secrecy::{ExposeSecret, Secret};
 
 use entity::sea_orm_active_enums::UserRole;
 use entity::users;
 use entity::users::Entity as User;
 
 use crate::model::{HttpUser, PagedResult};
+use crate::services::ServiceError;
+use crate::services::ServiceError::NonMatchingPassword;
 
 #[derive(Clone)]
 pub struct UserService {
@@ -26,6 +29,14 @@ impl UserService {
     pub async fn get_user(&self, wanted_username: &str) -> Result<Option<users::Model>, DbErr> {
         User::find()
             .filter(users::Column::Username.eq(wanted_username))
+            .one(&self.db)
+            .await
+    }
+
+    #[tracing::instrument(skip(self), level = "debug")]
+    pub async fn get_user_by_id(&self, id: i32) -> Result<Option<users::Model>, DbErr> {
+        User::find()
+            .filter(users::Column::Id.eq(id))
             .one(&self.db)
             .await
     }
@@ -70,6 +81,35 @@ impl UserService {
         };
 
         new_user.insert(&self.db).await
+    }
+
+    //TODO: improve errors
+    #[tracing::instrument(skip(self), level = "debug")]
+    pub async fn update_password(
+        &self,
+        user_id: i32,
+        current_password: &Secret<String>,
+        new_password: &Secret<String>,
+        confirm_password: &Secret<String>,
+    ) -> Result<(), ServiceError> {
+        let user = self
+            .get_user_by_id(user_id)
+            .await?
+            .ok_or_else(|| DbErr::RecordNotFound("User not found".to_owned()))?;
+
+        if !match_password(&user, current_password.expose_secret()) {
+            return Err(NonMatchingPassword);
+        }
+
+        if new_password.expose_secret() != confirm_password.expose_secret() {
+            return Err(NonMatchingPassword);
+        }
+
+        let mut user: users::ActiveModel = user.into();
+        user.password = Set(encode_password(new_password.expose_secret()));
+        user.update(&self.db).await?;
+
+        Ok(())
     }
 }
 

@@ -24,6 +24,8 @@ pub enum ServiceError {
     SqlError(#[from] sea_orm::DbErr),
     #[error("Rss parsing error: {0}")]
     RssError(#[from] RssParsingError),
+    #[error("Given passwords doesn't match")]
+    NonMatchingPassword,
     #[error(transparent)]
     FeedValidationError(#[from] anyhow::Error),
 }

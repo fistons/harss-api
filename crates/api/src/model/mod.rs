@@ -147,3 +147,10 @@ impl FoundRssChannel {
         }
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct UpdatePasswordRequest {
+    pub current_password: Secret<String>,
+    pub new_password: Secret<String>,
+    pub confirm_password: Secret<String>,
+}

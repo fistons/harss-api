@@ -1,12 +1,12 @@
 use std::env;
 
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, patch, post, web, HttpResponse};
 use secrecy::ExposeSecret;
 use serde_json::json;
 
 use entity::sea_orm_active_enums::UserRole;
 
-use crate::model::{HttpNewUser, PageParameters, PagedResult};
+use crate::model::{HttpNewUser, PageParameters, PagedResult, UpdatePasswordRequest};
 use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
 use crate::services::AuthenticationError;
@@ -74,6 +74,31 @@ async fn list_users(
     }
 }
 
+#[patch("/user/update-password")]
+#[tracing::instrument(skip(services), level = "debug")]
+async fn update_password(
+    services: web::Data<ApplicationServices>,
+    request: web::Json<UpdatePasswordRequest>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    if let Err(e) = services
+        .user_service
+        .update_password(
+            user.id,
+            &request.current_password,
+            &request.new_password,
+            &request.confirm_password,
+        )
+        .await
+    {
+        return Err(ApiError::ServiceError(e));
+    }
+    //TODO: Invalid token?
+    Ok(HttpResponse::NoContent().finish())
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(new_user).service(list_users);
+    cfg.service(new_user)
+        .service(list_users)
+        .service(update_password);
 }

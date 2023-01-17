@@ -25,6 +25,25 @@ tags:
   - name: Users
     description: User management
 paths:
+  /user/update-password:
+    patch:
+      operationId: update_password
+      tags:
+        - Users
+      summary: Update user's password
+      description: Update user's password
+      requestBody:
+        required: true
+        description: Update password request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
   /users:
     get:
       operationId: list_users
@@ -512,6 +531,20 @@ components:
         login:
           $ref: '#/components/schemas/UserLogin'
         password:
+          $ref: '#/components/schemas/UserPassword'
+    UpdatePasswordRequest:
+      type: object
+      description: Update password request.
+      required:
+        - current_password
+        - new_password
+        - confirm_password
+      properties:
+        current_password:
+          $ref: '#/components/schemas/UserPassword'
+        new_password:
+          $ref: '#/components/schemas/UserPassword'
+        confirm_password:
           $ref: '#/components/schemas/UserPassword'
     CreateUserRequest:
       type: object
