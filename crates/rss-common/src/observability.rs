@@ -54,16 +54,22 @@ fn build_datadog<S>(name: &str) -> Option<OpenTelemetryLayer<S, Tracer>>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    opentelemetry_datadog::new_pipeline()
-        .with_service_name(name)
-        .with_agent_endpoint(var("DD_AGENT").unwrap_or_else(|_| "http://127.0.0.1:8126".to_owned()))
-        .with_trace_config(
-            trace::config()
-                .with_sampler(Sampler::AlwaysOn) //TODO Add sampling, one day.
-                .with_id_generator(RandomIdGenerator::default()),
-        )
-        .install_batch(opentelemetry::runtime::Tokio)
-        .map_err(|err| eprintln!("Datadog error {:?}", err))
-        .ok()
-        .map(|x| tracing_opentelemetry::layer().with_tracer(x))
+    if var("DD_ENABLED").is_ok() {
+        opentelemetry_datadog::new_pipeline()
+            .with_service_name(name)
+            .with_agent_endpoint(
+                var("DD_AGENT").unwrap_or_else(|_| "http://127.0.0.1:8126".to_owned()),
+            )
+            .with_trace_config(
+                trace::config()
+                    .with_sampler(Sampler::AlwaysOn) //TODO Add sampling, one day.
+                    .with_id_generator(RandomIdGenerator::default()),
+            )
+            .install_batch(opentelemetry::runtime::Tokio)
+            .map_err(|err| eprintln!("Datadog error {:?}", err))
+            .ok()
+            .map(|x| tracing_opentelemetry::layer().with_tracer(x))
+    } else {
+        None
+    }
 }
