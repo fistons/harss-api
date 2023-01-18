@@ -22,7 +22,7 @@ pub struct RefreshRequest {
 }
 
 #[post("/auth/login")]
-#[tracing::instrument(skip(services, redis_pool), level = "debug")]
+#[tracing::instrument(skip(services, redis_pool))]
 pub async fn login(
     login: web::Json<LoginRequest>,
     services: web::Data<ApplicationServices>,
@@ -46,7 +46,7 @@ pub async fn login(
 }
 
 #[post("/auth/refresh")]
-#[tracing::instrument(skip(redis_pool, services), level = "debug")]
+#[tracing::instrument(skip(redis_pool, services))]
 pub async fn refresh_auth(
     refresh_token: web::Json<RefreshRequest>,
     services: web::Data<ApplicationServices>,

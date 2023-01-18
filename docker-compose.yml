@@ -1,12 +1,14 @@
 services:
   api:
     image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:8080"
     links:
       - redis
       - postgres
-      - jaeger
+#      - jaeger
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
       JWT_SECRET: 6ce319be-880a-419f-a39e-0058bceec28a
@@ -14,26 +16,32 @@ services:
       RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION: false
       REDIS_URL: redis://redis
       POLLING_INTERVAL: 300
-      JAEGER_ENABLED: true
-      OTEL_EXPORTER_JAEGER_AGENT_HOST: jaeger
-      OTEL_EXPORTER_JAEGER_AGENT_PORT: 6831
+#      JAEGER_ENABLED: true
+#      OTEL_EXPORTER_JAEGER_AGENT_HOST: jaeger
+#      OTEL_EXPORTER_JAEGER_AGENT_PORT: 6831
       RUST_LOG: info
+      DD_AGENT: http://host.docker.internal:8126
+      DD_ENABLED: true
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
-      jaeger:
-        condition: service_started
+#      jaeger:
+#        condition: service_started
     healthcheck: 
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
   fetcher:
     image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     links:
       - postgres
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
       RUST_LOG: info
+      DD_AGENT: http://host.docker.internal:8126
+      DD_ENABLED: true
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,9 +74,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-  jaeger:
-    image: jaegertracing/all-in-one
-    ports:
-      - 16686:16686 # Expose Web UI
+#  jaeger:
+#    image: jaegertracing/all-in-one
+#    ports:
+#      - 16686:16686 # Expose Web UI
 volumes:
   database: {}

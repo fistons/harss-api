@@ -14,5 +14,6 @@ tracing-subscriber.workspace = true
 tracing-opentelemetry.workspace = true
 opentelemetry.workspace = true
 opentelemetry-jaeger.workspace = true
+opentelemetry-datadog.workspace = true
 sentry-tracing.workspace = true
 sentry.workspace = true

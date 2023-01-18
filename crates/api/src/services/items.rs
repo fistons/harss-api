@@ -20,7 +20,7 @@ impl ItemService {
         Self { db }
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn get_items_of_channel(
         &self,
         chan_id: i32,
@@ -56,7 +56,7 @@ impl ItemService {
         })
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn get_all_items_of_channel(&self, chan_id: i32) -> Result<Vec<items::Model>, DbErr> {
         Item::find()
             .filter(items::Column::ChannelId.eq(chan_id))
@@ -65,7 +65,7 @@ impl ItemService {
             .await
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn get_items_of_user(
         &self,
         user_id: i32,
@@ -112,7 +112,7 @@ impl ItemService {
     }
 
     /// Update the read status of an item for a given user
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn set_item_read(
         &self,
         user_id: i32,
@@ -126,7 +126,7 @@ impl ItemService {
     }
 
     /// Update the read status of an item for a given user
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn set_item_starred(
         &self,
         user_id: i32,

@@ -41,7 +41,7 @@ impl Fetcher {
         Self { client, pool }
     }
 
-    #[tracing::instrument(skip_all, level = "debug")]
+    #[tracing::instrument(skip_all)]
     pub async fn fetch(&self) -> Result<(), anyhow::Error> {
         let channels = Channel::find()
             .filter(channels::Column::Disabled.eq(false))
@@ -69,7 +69,7 @@ impl Fetcher {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     async fn update_channel(&self, channel: channels::Model) -> Result<(), FetchError> {
         let feed = match self.get_and_parse_feed(&channel).await {
             Ok(feed) => feed,
@@ -111,7 +111,7 @@ impl Fetcher {
         Ok(feed_rs::parser::parse(&data[..])?)
     }
 
-    #[tracing::instrument(skip(self, txn), level = "debug")]
+    #[tracing::instrument(skip(self, txn))]
     async fn update_channel_timestamp<C>(&self, channel_id: &i32, txn: &C) -> Result<(), FetchError>
     where
         C: ConnectionTrait,
@@ -125,7 +125,7 @@ impl Fetcher {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     async fn fail_channels(&self, channel_id: i32) -> Result<(), FetchError> {
         Channel::update_many()
             .col_expr(
@@ -140,7 +140,7 @@ impl Fetcher {
 
     /// Disable all the channels where the failed count is a multiple of FAILURE_THRESHOLD.
     /// If FAILURE_THRESHOLD = 0, don't do anything
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     async fn disable_channels(&self) -> Result<(), FetchError> {
         let threshold = std::env::var("FAILURE_THRESHOLD")
             .map(|x| x.parse::<u32>().unwrap_or(3))
