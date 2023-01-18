@@ -12,7 +12,7 @@ use crate::services::rss_detector;
 use crate::startup::ApplicationServices;
 
 #[get("/channel/{id}")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 pub async fn get_channel(
     id: web::Path<i32>,
     services: web::Data<ApplicationServices>,
@@ -30,7 +30,7 @@ pub async fn get_channel(
 }
 
 #[get("/channels")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 pub async fn get_channels(
     services: web::Data<ApplicationServices>,
     page: web::Query<PageParameters>,
@@ -44,7 +44,7 @@ pub async fn get_channels(
 }
 
 #[post("/channels")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 async fn new_channel(
     new_channel: web::Json<HttpNewChannel>,
     services: web::Data<ApplicationServices>,
@@ -60,7 +60,7 @@ async fn new_channel(
 }
 
 #[get("/channel/{chan_id}/items")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 async fn get_items_of_channel(
     chan_id: web::Path<i32>,
     page: web::Query<PageParameters>,
@@ -81,7 +81,7 @@ async fn get_items_of_channel(
 }
 
 #[post("/channels/import")]
-#[tracing::instrument(skip(services, opml), level = "debug")]
+#[tracing::instrument(skip(services, opml))]
 async fn import_opml(
     services: web::Data<ApplicationServices>,
     auth: AuthenticatedUser,
@@ -99,7 +99,7 @@ async fn import_opml(
 }
 
 #[post("/channel/{id}/enable")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 async fn enable_channel(
     id: web::Path<i32>,
     services: web::Data<ApplicationServices>,

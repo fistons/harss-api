@@ -13,7 +13,7 @@ use crate::services::AuthenticationError;
 use crate::startup::ApplicationServices;
 
 #[post("/users")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 async fn new_user(
     new_user: web::Json<HttpNewUser>,
     services: web::Data<ApplicationServices>,
@@ -46,7 +46,7 @@ async fn new_user(
 }
 
 #[get("/users")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 async fn list_users(
     services: web::Data<ApplicationServices>,
     page: web::Query<PageParameters>,

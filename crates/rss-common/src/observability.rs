@@ -16,11 +16,12 @@ pub fn get_subscriber(name: &str, env_filter: &str) -> impl Subscriber + Sync + 
     let fmt = tracing_subscriber::fmt::Layer::new();
 
     Registry::default()
+        .with(telemetry)
+        .with(sentry_tracing::layer())
         .with(env_filter)
         .with(fmt)
-        .with(sentry_tracing::layer())
-        .with(telemetry)
 }
+
 pub fn init_subscriber(subscriber: impl Subscriber + Sync + Send) {
     LogTracer::init().expect("Failed to set logger");
     set_global_default(subscriber).expect("Failed to set subscriber");

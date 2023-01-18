@@ -22,7 +22,7 @@ impl UserService {
         Self { db }
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn get_user(&self, wanted_username: &str) -> Result<Option<users::Model>, DbErr> {
         User::find()
             .filter(users::Column::Username.eq(wanted_username))
@@ -30,7 +30,7 @@ impl UserService {
             .await
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn list_users(
         &self,
         page: u64,
@@ -55,7 +55,7 @@ impl UserService {
         })
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn create_user(
         &self,
         login: &str,
@@ -73,7 +73,7 @@ impl UserService {
     }
 }
 
-#[tracing::instrument(skip(pwd), level = "trace")]
+#[tracing::instrument(skip(pwd))]
 fn encode_password(pwd: &str) -> String {
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
@@ -86,7 +86,7 @@ fn encode_password(pwd: &str) -> String {
     password_hash
 }
 
-#[tracing::instrument(skip_all, level = "debug")]
+#[tracing::instrument(skip_all)]
 pub fn match_password(user: &users::Model, candidate: &str) -> bool {
     let parsed_hash = PasswordHash::new(&user.password).unwrap();
     Argon2::default()

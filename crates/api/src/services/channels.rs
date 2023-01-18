@@ -43,7 +43,7 @@ impl ChannelService {
         ChannelService { db, client }
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn select_by_id_and_user_id(
         &self,
         chan_id: i32,
@@ -59,7 +59,7 @@ impl ChannelService {
     }
 
     ///  Select all the channels of a user, along side the total number of items
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn select_page_by_user_id(
         &self,
         u_id: i32,
@@ -90,7 +90,7 @@ impl ChannelService {
     }
 
     /// # Select all the channels
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn select_all_enabled(&self) -> Result<Vec<HttpChannel>, ServiceError> {
         Ok(Channel::find()
             .filter(channels::Column::Disabled.eq(false))
@@ -99,7 +99,7 @@ impl ChannelService {
             .await?)
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn select_all_enabled_by_user_id(
         &self,
         user_id: i32,
@@ -114,7 +114,7 @@ impl ChannelService {
     }
 
     /// # Create a new channel in the database
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     async fn create_new_channel(
         &self,
         new_channel: &HttpNewChannel,
@@ -136,7 +136,7 @@ impl ChannelService {
     }
 
     /// Create or linked an existing channel to a user
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn create_or_link_channel(
         &self,
         new_channel: HttpNewChannel,
@@ -172,7 +172,7 @@ impl ChannelService {
     }
 
     /// Update the last fetched timestamp of a channel
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn update_last_fetched(
         &self,
         channel_id: i32,
@@ -188,7 +188,7 @@ impl ChannelService {
     }
 
     /// Enable a channel and reset it's failure count
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn enable_channel(&self, id: i32) -> Result<(), DbErr> {
         Channel::update_many()
             .col_expr(channels::Column::Disabled, Expr::value(false))

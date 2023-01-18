@@ -6,7 +6,7 @@ use crate::services::auth::AuthenticatedUser;
 use crate::startup::ApplicationServices;
 
 #[get("/items")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 pub async fn get_all_items(
     page: web::Query<PageParameters>,
     read_starred: web::Query<ReadStarredParameters>,
@@ -27,7 +27,7 @@ pub async fn get_all_items(
 }
 
 #[post("/items/star")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 pub async fn star_items(
     ids: web::Json<IdListParameter>,
     services: web::Data<ApplicationServices>,
@@ -42,7 +42,7 @@ pub async fn star_items(
 }
 
 #[post("/items/unstar")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 pub async fn unstar_items(
     ids: web::Json<IdListParameter>,
     services: web::Data<ApplicationServices>,
@@ -57,7 +57,7 @@ pub async fn unstar_items(
 }
 
 #[post("/items/read")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 pub async fn read_item(
     ids: web::Json<IdListParameter>,
     services: web::Data<ApplicationServices>,
@@ -72,7 +72,7 @@ pub async fn read_item(
 }
 
 #[post("/items/unread")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(services))]
 pub async fn unread_item(
     ids: web::Json<IdListParameter>,
     services: web::Data<ApplicationServices>,
