@@ -6,6 +6,7 @@ use crate::model::FoundRssChannel;
 static ALTERNATE_LINK_HEADER: Lazy<Selector> =
     Lazy::new(|| Selector::parse(r#"link[type="application/rss+xml"]"#).unwrap());
 
+#[tracing::instrument]
 async fn download_url(url: &str) -> anyhow::Result<String> {
     let response = reqwest::get(url).await?;
     if !response.status().is_success() {
@@ -20,6 +21,7 @@ async fn download_url(url: &str) -> anyhow::Result<String> {
     Ok(String::from_utf8_lossy(&url_content).to_string())
 }
 
+#[tracing::instrument(skip(content))]
 pub fn look_for_rss(content: &str) -> Vec<FoundRssChannel> {
     let document = scraper::Html::parse_document(content);
 
@@ -33,6 +35,7 @@ pub fn look_for_rss(content: &str) -> Vec<FoundRssChannel> {
         .collect()
 }
 
+#[tracing::instrument]
 pub async fn download_and_look_for_rss(url: &str) -> anyhow::Result<Vec<FoundRssChannel>> {
     let content = download_url(url).await?;
     Ok(look_for_rss(&content))
