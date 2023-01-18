@@ -30,7 +30,7 @@ services:
 #      jaeger:
 #        condition: service_started
     healthcheck: 
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/ping"]
   fetcher:
     image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
     extra_hosts:
