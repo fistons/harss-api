@@ -24,7 +24,21 @@ tags:
     description: Login and stuff
   - name: Users
     description: User management
+  - name: Miscellaneous
+    description: Miscellaneous stuff
 paths:
+  /ping:
+    get:
+      operationId: ping
+      tags:
+        - Miscellaneous
+      summary: Check if the API is up
+      description: Check if the API is up by returning some Doom Eternal quotes
+      responses:
+        '200':
+          $ref: '#/components/responses/DoomQuoteResponse'
+        default:
+          $ref: '#/components/responses/Error'
   /user/update-password:
     patch:
       operationId: update_password
@@ -786,6 +800,12 @@ components:
       description: The request succeeded, but the response does not contain any information.
     Accepted:
       description: The request has been accepted for processing, but the processing has not been completed
+    DoomQuoteResponse:
+      description: A quote from Doom Eternal
+      content:
+        text/plain:
+          schema:
+            type: string
     ObjectCreatedResponse:
       description: The requested object has been created
       content:

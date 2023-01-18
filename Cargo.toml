@@ -42,6 +42,7 @@ sentry = "0.29"
 wiremock = "0.5"
 scraper = "0.14"
 once_cell = "1"
+rand = "0.8.5"
 
 
 [profile.release]

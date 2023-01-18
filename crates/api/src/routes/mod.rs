@@ -1,5 +1,6 @@
 use actix_web::http::StatusCode;
-use actix_web::{web, HttpResponse, ResponseError};
+use actix_web::{get, web, HttpResponse, ResponseError};
+use rand::Rng;
 use serde_json::json;
 
 use crate::services::{AuthenticationError, ServiceError};
@@ -45,6 +46,33 @@ impl ResponseError for ApiError {
             _ => HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR).finish(),
         }
     }
+}
+
+#[get("/api/v1/ping")]
+#[tracing::instrument]
+pub async fn ping() -> HttpResponse {
+    let mut rng = rand::thread_rng();
+    let quotes = [
+        "We Will Send Unto Them...Only You",
+        "The Slayer Has Entered The Building",
+        "The Slayer Has Control Of The BFG",
+        "The Demons...They Are Everywhere",
+        "No",
+        "The Cost Of Progress",
+        "May You Rot In Hell",
+        "God Rested On The Seventh Day",
+        "Rip And Tear",
+        "Your Affinity For Guns Is Apparent",
+        "The Mark Of The Doom Slayer",
+        "Don't Leave That Plasma Cutter Running",
+        "Now You Know Why We Do This",
+        "Opening The Gate Is Everything",
+        "May We Never Need You Again",
+    ];
+
+    HttpResponse::Ok()
+        .content_type("text/plain")
+        .body(quotes[rng.gen_range(0..quotes.len())])
 }
 
 pub fn configure(cfg: &mut web::ServiceConfig) {

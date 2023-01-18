@@ -47,6 +47,7 @@ pub async fn startup(
             .wrap(sentry_actix::Sentry::default())
             .app_data(services.clone())
             .app_data(redis.clone())
+            .service(routes::ping)
             .service(
                 web::scope("/api/v1")
                     .wrap(Governor::new(&governor_conf))
