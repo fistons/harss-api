@@ -22,6 +22,7 @@ services:
       RUST_LOG: info
       DD_AGENT: http://host.docker.internal:8126
       DD_ENABLED: true
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,11 +43,13 @@ services:
       RUST_LOG: info
       DD_AGENT: http://host.docker.internal:8126
       DD_ENABLED: true
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
   redis:
     image: redis:alpine
+    restart: unless-stopped
   postgres:
     image: postgres:alpine
     environment:
@@ -54,6 +57,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       PGDATA: /data/postgres
+    restart: unless-stopped
     volumes:
       - database:/data/postgres
     healthcheck:
@@ -70,6 +74,7 @@ services:
       - postgres
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
+      restart: unless-stopped
     working_dir: /volume
     depends_on:
       postgres:
@@ -78,5 +83,6 @@ services:
 #    image: jaegertracing/all-in-one
 #    ports:
 #      - 16686:16686 # Expose Web UI
+#    restart: unless-stopped
 volumes:
   database: {}

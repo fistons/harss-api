@@ -154,3 +154,9 @@ pub struct UpdatePasswordRequest {
     pub new_password: Secret<String>,
     pub confirm_password: Secret<String>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateOtherPasswordRequest {
+    pub new_password: Secret<String>,
+    pub confirm_password: Secret<String>,
+}

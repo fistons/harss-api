@@ -177,7 +177,7 @@ async fn check_and_get_authed_user(
         .await
         .context("Couldn't get redis connection")?;
     let value: Option<String> = redis
-        .get(format!("Basic:{}", redis_key))
+        .get(format!("user:{}:{}", user, redis_key))
         .await
         .context("Could not get value")?;
 
@@ -195,7 +195,11 @@ async fn check_and_get_authed_user(
     // Store it in redis
     let serialized_user = serde_json::to_string(&user).context("Could serialize user for redis")?;
     redis
-        .set_ex::<_, _, ()>(&format!("Basic:{}", redis_key), serialized_user, 60 * 15)
+        .set_ex::<_, _, ()>(
+            &format!("user:{}:Basic:{}", user.login, redis_key),
+            serialized_user,
+            60 * 15,
+        )
         .await
         .context("Could not store user in redis")?;
 

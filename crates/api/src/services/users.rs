@@ -84,13 +84,12 @@ impl UserService {
     }
 
     //TODO: improve errors
-    #[tracing::instrument(skip(self), level = "debug")]
+    #[tracing::instrument(skip(self))]
     pub async fn update_password(
         &self,
         user_id: i32,
         current_password: &Secret<String>,
         new_password: &Secret<String>,
-        confirm_password: &Secret<String>,
     ) -> Result<(), ServiceError> {
         let user = self
             .get_user_by_id(user_id)
@@ -101,9 +100,24 @@ impl UserService {
             return Err(NonMatchingPassword);
         }
 
-        if new_password.expose_secret() != confirm_password.expose_secret() {
-            return Err(NonMatchingPassword);
-        }
+        let mut user: users::ActiveModel = user.into();
+        user.password = Set(encode_password(new_password.expose_secret()));
+        user.update(&self.db).await?;
+
+        Ok(())
+    }
+
+    //TODO: improve errors
+    #[tracing::instrument(skip(self))]
+    pub async fn update_other_user_password(
+        &self,
+        user_id: i32,
+        new_password: &Secret<String>,
+    ) -> Result<(), ServiceError> {
+        let user = self
+            .get_user_by_id(user_id)
+            .await?
+            .ok_or_else(|| DbErr::RecordNotFound("User not found".to_owned()))?;
 
         let mut user: users::ActiveModel = user.into();
         user.password = Set(encode_password(new_password.expose_secret()));

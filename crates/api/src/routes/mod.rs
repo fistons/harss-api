@@ -24,6 +24,8 @@ pub enum ApiError {
     DatabaseError(#[from] sea_orm::DbErr),
     #[error("{0}")]
     ServiceError(#[from] ServiceError),
+    #[error("Password mismatch")]
+    PasswordMismatch,
     #[error(transparent)]
     Unexpected(#[from] anyhow::Error),
 }
@@ -33,16 +35,17 @@ impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
         match self {
             ApiError::AuthenticationError(error) =>  error.error_response(),
-            ApiError::NotFound(object_type, id) => HttpResponse::build(StatusCode::NOT_FOUND)
+            ApiError::NotFound(object_type, id) => HttpResponse::NotFound()
                 .json(json!({"type":"/problem/not-found",
                     "title": "Object not found",
                     "status": 404,
                     "detail": format!("Object of type {} with id {} was not found", object_type, id)})),
-            ApiError::DatabaseError(_) | ApiError::RedisError(_) | ApiError::RedisPoolError(_) => HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
+            ApiError::DatabaseError(_) | ApiError::RedisError(_) | ApiError::RedisPoolError(_) => HttpResponse::InternalServerError()
                 .json(json!({"type":"/problem/database",
                     "title": "Error with the database",
                     "status": 500,
                     "detail": "Unexpected error with the database"})),
+            ApiError::PasswordMismatch => HttpResponse::BadRequest().json(json!({"type":"/problem/password-mismatch", "title": "Passwords does not match", "status": 400, "title": "Passwords does not match"})),
             _ => HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR).finish(),
         }
     }

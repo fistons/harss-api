@@ -58,6 +58,25 @@ paths:
           $ref: '#/components/responses/NoContent'
         default:
           $ref: '#/components/responses/Error'
+  /user/{user_id}/update-password:
+    patch:
+      operationId: update_other_password
+      tags:
+        - Users
+      summary: Update other user's password
+      description: Update other user's password. Only admin can do this
+      requestBody:
+        required: true
+        description: Update other's password request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOtherPasswordRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
   /users:
     get:
       operationId: list_users
@@ -556,6 +575,17 @@ components:
       properties:
         current_password:
           $ref: '#/components/schemas/UserPassword'
+        new_password:
+          $ref: '#/components/schemas/UserPassword'
+        confirm_password:
+          $ref: '#/components/schemas/UserPassword'
+    UpdateOtherPasswordRequest:
+      type: object
+      description: Update other's password request.
+      required:
+        - new_password
+        - confirm_password
+      properties:
         new_password:
           $ref: '#/components/schemas/UserPassword'
         confirm_password:
