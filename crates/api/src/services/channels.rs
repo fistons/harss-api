@@ -4,6 +4,7 @@ use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DbErr};
 
 use entity::channels::Entity as Channel;
+use entity::users_items::Entity as UsersItems;
 use entity::{channel_users, channels, users_items};
 use RssParsingError::NonOkStatus;
 
@@ -55,6 +56,20 @@ impl ChannelService {
             .into_model::<HttpUserChannel>()
             .one(&self.db)
             .await?)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn mark_channel_as_read(&self, chan_id: i32, user_id: i32) -> Result<(), DbErr> {
+        UsersItems::update_many()
+            .col_expr(users_items::Column::Read, Expr::value(true))
+            .filter(users_items::Column::ChannelId.eq(chan_id))
+            .filter(users_items::Column::UserId.eq(user_id))
+            .exec(&self.db)
+            .await?;
+
+        tracing::debug!("Chanel {} marked as read for user {}", chan_id, user_id);
+
+        Ok(())
     }
 
     ///  Select all the channels of a user, along side the total number of items
@@ -203,6 +218,7 @@ impl ChannelService {
 }
 
 /// Check that the feed is correct
+#[tracing::instrument(skip(client))]
 async fn check_feed(client: &reqwest::Client, url: &str) -> Result<(), RssParsingError> {
     let response = client.get(url).send().await?;
     if !response.status().is_success() {

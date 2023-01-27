@@ -242,6 +242,26 @@ paths:
           $ref: '#/components/responses/NoContent'
         default:
           $ref: '#/components/responses/Error'
+  /channel/{id}/read:
+    post:
+      operationId: mark_channel_as_read
+      tags:
+        - Channels
+      summary: Marks all the items of the channel as read
+      description: Marks all the items of the channel as read
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of a channel
+          required: true
+          example: 1
+          schema:
+            $ref: '#/components/schemas/ChannelID'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
   /channel/{id}/items:
     get:
       operationId: get_items_of_channel
