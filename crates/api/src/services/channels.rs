@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sea_orm::sea_query::{Alias, Expr};
+use sea_orm::sea_query::{Alias, Expr, SimpleExpr};
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DbErr};
 
@@ -24,8 +24,7 @@ fn user_channel_select_statement() -> Select<Channel> {
         .column_as(users_items::Column::ItemId.count(), "items_count")
         .column_as(
             Expr::expr(
-                Expr::col(users_items::Column::Read)
-                    .into_simple_expr()
+                Into::<SimpleExpr>::into(Expr::col(users_items::Column::Read))
                     .cast_as(Alias::new("integer")),
             )
             .sum(),
