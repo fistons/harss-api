@@ -42,6 +42,7 @@ reqwest.workspace = true
 feed-rs.workspace = true
 scraper.workspace = true
 once_cell.workspace = true
+rand.workspace = true
 
 entity = { path = "../entity" }
 rss-common = { path = "../rss-common" }

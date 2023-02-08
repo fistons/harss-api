@@ -29,6 +29,21 @@ pub async fn get_channel(
     }
 }
 
+#[post("/channel/{id}/read")]
+#[tracing::instrument(skip(services))]
+pub async fn mark_channel_as_read(
+    id: web::Path<i32>,
+    services: web::Data<ApplicationServices>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    services
+        .channel_service
+        .mark_channel_as_read(id.into_inner(), user.id)
+        .await?;
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
 #[get("/channels")]
 #[tracing::instrument(skip(services))]
 pub async fn get_channels(
@@ -132,6 +147,7 @@ async fn search_channels(
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(search_channels)
+        .service(mark_channel_as_read)
         .service(get_channel)
         .service(get_channels)
         .service(new_channel)

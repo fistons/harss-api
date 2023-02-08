@@ -24,7 +24,59 @@ tags:
     description: Login and stuff
   - name: Users
     description: User management
+  - name: Miscellaneous
+    description: Miscellaneous stuff
 paths:
+  /ping:
+    get:
+      operationId: ping
+      tags:
+        - Miscellaneous
+      summary: Check if the API is up
+      description: Check if the API is up by returning some Doom Eternal quotes
+      responses:
+        '200':
+          $ref: '#/components/responses/DoomQuoteResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /user/update-password:
+    patch:
+      operationId: update_password
+      tags:
+        - Users
+      summary: Update user's password
+      description: Update user's password
+      requestBody:
+        required: true
+        description: Update password request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
+  /user/{user_id}/update-password:
+    patch:
+      operationId: update_other_password
+      tags:
+        - Users
+      summary: Update other user's password
+      description: Update other user's password. Only admin can do this
+      requestBody:
+        required: true
+        description: Update other's password request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOtherPasswordRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
   /users:
     get:
       operationId: list_users
@@ -177,6 +229,26 @@ paths:
         - Channels
       summary: Enable the channel and reset it's failure count.
       description: Enable the channel and reset it's failure count.
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of a channel
+          required: true
+          example: 1
+          schema:
+            $ref: '#/components/schemas/ChannelID'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
+  /channel/{id}/read:
+    post:
+      operationId: mark_channel_as_read
+      tags:
+        - Channels
+      summary: Marks all the items of the channel as read
+      description: Marks all the items of the channel as read
       parameters:
         - name: id
           in: path
@@ -513,6 +585,31 @@ components:
           $ref: '#/components/schemas/UserLogin'
         password:
           $ref: '#/components/schemas/UserPassword'
+    UpdatePasswordRequest:
+      type: object
+      description: Update password request.
+      required:
+        - current_password
+        - new_password
+        - confirm_password
+      properties:
+        current_password:
+          $ref: '#/components/schemas/UserPassword'
+        new_password:
+          $ref: '#/components/schemas/UserPassword'
+        confirm_password:
+          $ref: '#/components/schemas/UserPassword'
+    UpdateOtherPasswordRequest:
+      type: object
+      description: Update other's password request.
+      required:
+        - new_password
+        - confirm_password
+      properties:
+        new_password:
+          $ref: '#/components/schemas/UserPassword'
+        confirm_password:
+          $ref: '#/components/schemas/UserPassword'
     CreateUserRequest:
       type: object
       description: User Creation request
@@ -753,6 +850,12 @@ components:
       description: The request succeeded, but the response does not contain any information.
     Accepted:
       description: The request has been accepted for processing, but the processing has not been completed
+    DoomQuoteResponse:
+      description: A quote from Doom Eternal
+      content:
+        text/plain:
+          schema:
+            type: string
     ObjectCreatedResponse:
       description: The requested object has been created
       content:
