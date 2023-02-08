@@ -71,7 +71,7 @@ async fn happy_path() {
 
     assert_eq!(
         inserted_items[0].publish_timestamp,
-        Some(Utc.ymd(2022, 8, 3).and_hms(12, 0, 17).into()),
+        Some(Utc.with_ymd_and_hms(2022, 8, 3, 12, 0, 17).unwrap().into()),
         "Publish timestamp should match"
     );
 
