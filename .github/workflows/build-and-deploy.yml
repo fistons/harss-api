@@ -25,12 +25,14 @@ jobs:
         with:
           push: true
           target: api
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
       -
         name: Build and push fetcher
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
           target: fetcher
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
           
