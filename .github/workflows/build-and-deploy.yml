@@ -3,7 +3,31 @@ name: Build and deploy
 on: [workflow_dispatch]
 
 jobs:
-  docker:
+  amd64:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          registry: rg.nl-ams.scw.cloud/pedr0
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Build and push API
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          target: api
+          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
+      -
+        name: Build and push fetcher
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          target: fetcher
+          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
+  arm-v7:
     runs-on: ubuntu-latest
     steps:
       -
@@ -25,7 +49,7 @@ jobs:
         with:
           push: true
           target: api
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/arm/v7
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
       -
         name: Build and push fetcher
@@ -33,6 +57,38 @@ jobs:
         with:
           push: true
           target: fetcher
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/arm/v7
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
-          
+  arm64:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          registry: rg.nl-ams.scw.cloud/pedr0
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Build and push API
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          target: api
+          platforms: linux/arm64
+          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
+      -
+        name: Build and push fetcher
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          target: fetcher
+          platforms: linux/arm64
+          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
+ 
