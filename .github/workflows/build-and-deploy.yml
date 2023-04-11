@@ -3,31 +3,7 @@ name: Build and deploy
 on: [workflow_dispatch]
 
 jobs:
-  amd64:
-    runs-on: ubuntu-latest
-    steps:
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          registry: rg.nl-ams.scw.cloud/pedr0
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build and push API
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          target: api
-          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest-amd64
-      -
-        name: Build and push fetcher
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          target: fetcher
-          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest-amd64
-  arm-v7:
+  docker:
     runs-on: self-hosted
     steps:
       -
@@ -49,41 +25,14 @@ jobs:
         with:
           push: true
           target: api
-          platforms: linux/arm/v7
-          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest-armv7
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
       -
         name: Build and push fetcher
         uses: docker/build-push-action@v4
         with:
           push: true
           target: fetcher
-          platforms: linux/arm/v7
-          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest-armv7
-  manifest:
-    runs-on: ubuntu-latest
-    needs: [amd64, arm-v7]
-    steps: 
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          registry: rg.nl-ams.scw.cloud/pedr0
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build manifest fetcher
-        run: |
-          docker manifest create \
-          rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest \
-          --amend rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest-amd64 \
-          --amend rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest-armv7 && \
-          docker push rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
-      -
-        name: Build manifest api
-        run: |
-          docker manifest create \
-          rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest \
-          --amend rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest-amd64 \
-          --amend rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest-armv7 && \
-          docker push rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
- 
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
+          
