@@ -76,7 +76,7 @@ Database migrate must be already done.
 
 ```shell
 cargo install sea-orm-cli # if needed
-DATABASE_URL="postgres://rss-aggregator:rss-aggregator@localhost/rss-aggregator" sea-orm-cli generate entity -o entity/src --with-serde both --expanded-format
+DATABASE_URL="postgres://rss-aggregator:rss-aggregator@localhost/rss-aggregator" sea-orm-cli generate entity -o crates/entity/src --with-serde both --expanded-format
 ```
 
 Cf. SeaORM [documentation](https://www.sea-ql.org/SeaORM/docs/generate-entity/sea-orm-cli)
