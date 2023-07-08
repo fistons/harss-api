@@ -8,58 +8,51 @@ pub struct Entity;
 
 impl EntityName for Entity {
     fn table_name(&self) -> &str {
-        "users_items"
+        "channels_errors"
     }
 }
 
 #[derive(Clone, Debug, PartialEq, DeriveModel, DeriveActiveModel, Eq, Serialize, Deserialize)]
 pub struct Model {
-    pub user_id: i32,
-    pub item_id: i32,
+    pub id: i32,
     pub channel_id: i32,
-    pub read: bool,
-    pub starred: bool,
+    pub error_timestamp: DateTimeWithTimeZone,
+    pub error_reason: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
 pub enum Column {
-    UserId,
-    ItemId,
+    Id,
     ChannelId,
-    Read,
-    Starred,
+    ErrorTimestamp,
+    ErrorReason,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DerivePrimaryKey)]
 pub enum PrimaryKey {
-    UserId,
-    ItemId,
-    ChannelId,
+    Id,
 }
 
 impl PrimaryKeyTrait for PrimaryKey {
-    type ValueType = (i32, i32, i32);
+    type ValueType = i32;
     fn auto_increment() -> bool {
-        false
+        true
     }
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]
 pub enum Relation {
     Channels,
-    Items,
-    Users,
 }
 
 impl ColumnTrait for Column {
     type EntityName = Entity;
     fn def(&self) -> ColumnDef {
         match self {
-            Self::UserId => ColumnType::Integer.def(),
-            Self::ItemId => ColumnType::Integer.def(),
+            Self::Id => ColumnType::Integer.def(),
             Self::ChannelId => ColumnType::Integer.def(),
-            Self::Read => ColumnType::Boolean.def(),
-            Self::Starred => ColumnType::Boolean.def(),
+            Self::ErrorTimestamp => ColumnType::TimestampWithTimeZone.def(),
+            Self::ErrorReason => ColumnType::Text.def().null(),
         }
     }
 }
@@ -71,14 +64,6 @@ impl RelationTrait for Relation {
                 .from(Column::ChannelId)
                 .to(super::channels::Column::Id)
                 .into(),
-            Self::Items => Entity::belongs_to(super::items::Entity)
-                .from(Column::ItemId)
-                .to(super::items::Column::Id)
-                .into(),
-            Self::Users => Entity::belongs_to(super::users::Entity)
-                .from(Column::UserId)
-                .to(super::users::Column::Id)
-                .into(),
         }
     }
 }
@@ -86,18 +71,6 @@ impl RelationTrait for Relation {
 impl Related<super::channels::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Channels.def()
-    }
-}
-
-impl Related<super::items::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Items.def()
-    }
-}
-
-impl Related<super::users::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Users.def()
     }
 }
 
