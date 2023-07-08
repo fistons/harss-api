@@ -29,7 +29,7 @@ COPY crates/api/src/ crates/api/src/
 RUN touch crates/api/src/main.rs
 RUN cargo build --release --all
 
-FROM debian:11-slim AS api
+FROM debian:12-slim AS api
 LABEL maintainer=eric@pedr0.net
 ENV DEBIAN_FRONTEND=noninteractive
 RUN adduser rss-fetcher
@@ -44,7 +44,7 @@ EXPOSE 8080
 USER rss-fetcher
 ENTRYPOINT ["rss-aggregator"]
 
-FROM debian:11-slim as fetcher
+FROM debian:12-slim as fetcher
 LABEL maintainer=eric@pedr0.net
 ENV DEBIAN_FRONTEND=noninteractive
 RUN adduser rss-fetcher
