@@ -10,7 +10,7 @@ actix-xml = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 dotenvy = "0.15"
-argon2 = "0.4"
+argon2 = "0.5"
 rand_core = { version = "0.6", features = ["std"] }
 http-auth-basic = "0.3"
 jwt = "0.16"
@@ -18,11 +18,11 @@ hmac = "0.12"
 sha2 = "0.10"
 chrono = "0.4"
 uuid = { version = "1.1", features = ["v4"] }
-redis = { version = "0.22", features = ["r2d2", "tokio-comp", "connection-manager"] }
-deadpool-redis = "0.11"
+redis = { version = "0.23", features = ["r2d2", "tokio-comp", "connection-manager"] }
+deadpool-redis = "0.12"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 secrecy = { version = "0.8", features = ["serde"] }
-sentry-actix = "0.29"
+sentry-actix = "0.31"
 tracing-actix-web = "0.7"
 tracing = { version = "0.1", features = ["log"] }
 thiserror = "1"
@@ -33,14 +33,14 @@ sea-orm = { version = "^0", features = ["sqlx-sqlite", "sqlx-postgres", "runtime
 fake = { version = "2.5", features = ["http", "chrono"] }
 tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter", "fmt", "std", "json"] }
-tracing-opentelemetry = "0.18"
-opentelemetry = { version = "0.18", features = ["rt-tokio"] }
-opentelemetry-jaeger = { version = "0.17", features = ["rt-tokio"] }
-opentelemetry-datadog = { version = "0.6", features = ["reqwest", "reqwest-client"] }
-sentry-tracing = "0.29"
-sentry = "0.29"
+tracing-opentelemetry = "0.19"
+opentelemetry = { version = "0.19", features = ["rt-tokio"] }
+opentelemetry-jaeger = { version = "0.18", features = ["rt-tokio"] }
+opentelemetry-datadog = { version = "0.7", features = ["reqwest", "reqwest-client"] }
+sentry-tracing = "0.31"
+sentry = "0.31"
 wiremock = "0.5"
-scraper = "0.14"
+scraper = "0.17"
 once_cell = "1"
 rand = "0.8.5"
 
