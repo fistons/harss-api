@@ -5,7 +5,7 @@ use sea_orm::sea_query::{Alias, Expr, SimpleExpr};
 
 use entity::{channel_users, channels, channels_errors, users_items};
 use entity::channels::Entity as Channel;
-use entity::channels_errors::Entity as ChannelUsers;
+
 use entity::prelude::ChannelsErrors;
 use entity::users_items::Entity as UsersItems;
 use RssParsingError::NonOkStatus;

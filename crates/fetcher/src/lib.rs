@@ -14,6 +14,7 @@ use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
 use tracing::Instrument;
 
 use entity::channel_users::Entity as ChannelUser;
+use entity::channels_errors;
 use entity::channels;
 use entity::channels::Entity as Channel;
 use entity::items::Entity as Item;
@@ -26,6 +27,8 @@ pub enum FetchError {
     ParseError(#[from] feed_rs::parser::ParseFeedError),
     #[error("Could not fetch the feed: {0}")]
     GetError(#[from] reqwest::Error),
+    #[error("HTTP status code error: Upstream feed returned HTTP status code {0}")]
+    StatusCodeError(u16),
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
 }
@@ -74,7 +77,7 @@ impl Fetcher {
         let feed = match self.get_and_parse_feed(&channel).await {
             Ok(feed) => feed,
             Err(error) => {
-                self.fail_channels(channel.id).await?;
+                self.fail_channels(channel.id, &error.to_string()).await?;
                 return Err(error);
             }
         };
@@ -104,8 +107,14 @@ impl Fetcher {
         Ok(())
     }
 
+    /// Download and parse the feed of the given channel
     async fn get_and_parse_feed(&self, channel: &channels::Model) -> Result<Feed, FetchError> {
         let response = self.client.get(&channel.url).send().await?;
+
+        if !response.status().is_success() {
+            return Err(FetchError::StatusCodeError(response.status().as_u16()));
+        }
+
         let data = response.bytes().await?;
 
         Ok(feed_rs::parser::parse(&data[..])?)
@@ -125,16 +134,31 @@ impl Fetcher {
         Ok(())
     }
 
+
+    /// Update the failure count of the given channel and insert the error in the dedicated table
     #[tracing::instrument(skip(self))]
-    async fn fail_channels(&self, channel_id: i32) -> Result<(), FetchError> {
+    async fn fail_channels(&self, channel_id: i32, error_cause: &str) -> Result<(), FetchError> {
+
+        let txn = self.pool.begin().await?;
         Channel::update_many()
             .col_expr(
                 channels::Column::FailureCount,
                 Expr::col(channels::Column::FailureCount).add(1),
             )
             .filter(channels::Column::Id.eq(channel_id))
-            .exec(&self.pool)
+            .exec(&txn)
             .await?;
+
+        let channel_error = channels_errors::ActiveModel {
+            id: NotSet,
+            channel_id: Set(channel_id), 
+            error_reason: Set(Some(error_cause.to_owned())),
+            error_timestamp: Set(Utc::now().into())
+        };
+
+        channel_error.insert(&txn).await?;
+       
+        txn.commit().await?;
         Ok(())
     }
 
