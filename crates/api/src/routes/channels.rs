@@ -1,11 +1,11 @@
+use actix_web::{get, HttpResponse, post, web};
 use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpResponse};
 use actix_xml::Xml;
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::model::opml::Opml;
 use crate::model::{HttpNewChannel, PageParameters};
+use crate::model::opml::Opml;
 use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
 use crate::services::rss_detector;
@@ -28,6 +28,25 @@ pub async fn get_channel(
         None => Ok(HttpResponse::new(StatusCode::NOT_FOUND)),
     }
 }
+
+#[get("/channel/{id}/errors")]
+#[tracing::instrument(skip(services))]
+pub async fn get_errors_of_channel(
+    id: web::Path<i32>,
+    services: web::Data<ApplicationServices>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    if !user.is_admin() {
+        return Ok(HttpResponse::Forbidden().finish());
+    }
+
+    let errors = services.channel_service
+        .select_errors_by_chan_id(id.into_inner())
+        .await?;
+
+    Ok(HttpResponse::Ok().json(errors))
+}
+
 
 #[post("/channel/{id}/read")]
 #[tracing::instrument(skip(services))]
@@ -153,5 +172,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(new_channel)
         .service(get_items_of_channel)
         .service(enable_channel)
+        .service(get_errors_of_channel)
         .service(import_opml);
 }

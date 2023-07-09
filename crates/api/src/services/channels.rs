@@ -1,14 +1,16 @@
 use chrono::{DateTime, Utc};
-use sea_orm::sea_query::{Alias, Expr, SimpleExpr};
+use sea_orm::{DbErr, entity::*, query::*};
 use sea_orm::DatabaseConnection;
-use sea_orm::{entity::*, query::*, DbErr};
+use sea_orm::sea_query::{Alias, Expr, SimpleExpr};
 
+use entity::{channel_users, channels, channels_errors, users_items};
 use entity::channels::Entity as Channel;
+use entity::channels_errors::Entity as ChannelUsers;
+use entity::prelude::ChannelsErrors;
 use entity::users_items::Entity as UsersItems;
-use entity::{channel_users, channels, users_items};
 use RssParsingError::NonOkStatus;
 
-use crate::model::{HttpChannel, HttpNewChannel, HttpUserChannel, PagedResult};
+use crate::model::{HttpChannel, HttpChannelError, HttpNewChannel, HttpUserChannel, PagedResult};
 use crate::services::{RssParsingError, ServiceError};
 
 #[derive(Clone)]
@@ -28,7 +30,7 @@ fn user_channel_select_statement() -> Select<Channel> {
                 Into::<SimpleExpr>::into(Expr::col(users_items::Column::Read))
                     .cast_as(Alias::new("integer")),
             )
-            .sum(),
+                .sum(),
             "items_read",
         )
 }
@@ -41,6 +43,18 @@ impl ChannelService {
             .expect("Could not build client");
 
         ChannelService { db, client }
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn select_errors_by_chan_id(
+        &self,
+        chan_id: i32,
+    ) -> Result<Vec<HttpChannelError>, ServiceError> {
+        Ok(ChannelsErrors::find()
+            .filter(channels_errors::Column::ChannelId.eq(chan_id))
+            .into_model::<HttpChannelError>()
+            .all(&self.db)
+            .await?)
     }
 
     #[tracing::instrument(skip(self))]
@@ -232,8 +246,8 @@ async fn check_feed(client: &reqwest::Client, url: &str) -> Result<(), RssParsin
 
 #[cfg(test)]
 mod tests {
-    use wiremock::matchers::method;
     use wiremock::{Mock, MockServer, ResponseTemplate};
+    use wiremock::matchers::method;
 
     use super::*;
 

@@ -262,6 +262,30 @@ paths:
           $ref: '#/components/responses/NoContent'
         default:
           $ref: '#/components/responses/Error'
+  /channel/{id}/errors:
+    get:
+      operationId: get_errors_of_channel
+      tags:
+        - Channels
+      summary: List fetch errors of channel
+      description: Return the list of errors of the given channel. Restricted to admin only
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of a channel
+          required: true
+          example: 1
+          schema:
+            $ref: '#/components/schemas/ChannelID'
+      responses:
+        '200':
+          description: A list of errors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChannelError'
   /channel/{id}/items:
     get:
       operationId: get_items_of_channel
@@ -304,7 +328,7 @@ paths:
         - Authentication
       summary: Create a JWT and a refresh token
       security:
-        - {}
+        - { }
       description: |
         Creates a JWT/refresh token. The generated token is valid for 15 minutes. The refresh token is valid
         for 5 days
@@ -333,7 +357,7 @@ paths:
         - Authentication
       summary: Refresh the JWT
       security:
-        - {}
+        - { }
       description: |
         Creates a JWT/refresh token. The generated JWT is valid for 15 minutes. The refresh token is valid
         for 5 days
@@ -549,6 +573,21 @@ components:
       minimum: 1
       default: 1
       example: 1
+    ChannelError:
+      type: object
+      description: Error occurred when trying to fetch and update a channel
+      properties:
+        id:
+          $ref: '#/components/schemas/ChannelErrorID'
+        channel_id:
+          $ref: '#/components/schemas/ChannelID'
+        error_timestamp:
+          type: string
+          format: datetime
+          description: Timestamp of the error
+        error_reason:
+          type: string
+          description: Reason of the error
     Token:
       type: object
       required:
@@ -559,6 +598,10 @@ components:
           $ref: '#/components/schemas/Jwt'
         refresh_token:
           $ref: '#/components/schemas/RefreshToken'
+    ChannelErrorID:
+      type: integer
+      description: ID of the error
+      minLength: 1
     Jwt:
       type: string
       description: The JWT.
@@ -897,4 +940,3 @@ components:
                 status: 401
                 detail: Full authentication is required to access this resource
                 message: Full authentication is required to access this resource
-    
