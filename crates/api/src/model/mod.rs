@@ -40,6 +40,14 @@ pub struct HttpUserChannel {
     pub disabled: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, FromQueryResult)]
+pub struct HttpChannelError {
+    pub id: i32,
+    pub chan_id: i32,
+    pub error_timestamp: Option<DateTime<Utc>>,
+    pub error_reason: String
+}
+
 /// Serialize an optional i64, defaulting to 0 if its None
 fn ser_with<S: Serializer>(id: &Option<i64>, s: S) -> Result<S::Ok, S::Error> {
     s.serialize_i64(id.unwrap_or(0i64))

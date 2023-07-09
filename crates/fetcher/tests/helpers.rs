@@ -15,6 +15,7 @@ use entity::sea_orm_active_enums::UserRole;
 use entity::users;
 use entity::users::Entity as Users;
 use entity::users_items::Entity as UserItems;
+use entity::channels_errors::Entity as ChannelsError;
 
 pub async fn configure_database(host: String) -> DatabaseConnection {
     let db = Database::connect("sqlite::memory:").await.unwrap();
@@ -25,6 +26,7 @@ pub async fn configure_database(host: String) -> DatabaseConnection {
     let items_stmt: TableCreateStatement = schema.create_table_from_entity(Items);
     let channel_users_stmt: TableCreateStatement = schema.create_table_from_entity(ChannelUsers);
     let user_items_stmt: TableCreateStatement = schema.create_table_from_entity(UserItems);
+    let channel_errors_stmt: TableCreateStatement = schema.create_table_from_entity(ChannelsError);
 
     let txn = db.begin().await.unwrap();
     txn.execute(db.get_database_backend().build(&tables_stmt))
@@ -44,6 +46,10 @@ pub async fn configure_database(host: String) -> DatabaseConnection {
         .unwrap();
 
     txn.execute(db.get_database_backend().build(&user_items_stmt))
+        .await
+        .unwrap();
+
+    txn.execute(db.get_database_backend().build(&channel_errors_stmt))
         .await
         .unwrap();
 
