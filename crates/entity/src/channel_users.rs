@@ -3,72 +3,34 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Default, Debug, DeriveEntity)]
-pub struct Entity;
-
-impl EntityName for Entity {
-    fn table_name(&self) -> &str {
-        "channel_users"
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, DeriveModel, DeriveActiveModel, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
+#[sea_orm(table_name = "channel_users")]
 pub struct Model {
+    #[sea_orm(primary_key, auto_increment = false)]
     pub channel_id: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
     pub user_id: i32,
     pub registration_timestamp: DateTimeWithTimeZone,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
-pub enum Column {
-    ChannelId,
-    UserId,
-    RegistrationTimestamp,
-}
-
-#[derive(Copy, Clone, Debug, EnumIter, DerivePrimaryKey)]
-pub enum PrimaryKey {
-    ChannelId,
-    UserId,
-}
-
-impl PrimaryKeyTrait for PrimaryKey {
-    type ValueType = (i32, i32);
-    fn auto_increment() -> bool {
-        false
-    }
-}
-
-#[derive(Copy, Clone, Debug, EnumIter)]
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::channels::Entity",
+        from = "Column::ChannelId",
+        to = "super::channels::Column::Id",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
     Channels,
+    #[sea_orm(
+        belongs_to = "super::users::Entity",
+        from = "Column::UserId",
+        to = "super::users::Column::Id",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
     Users,
-}
-
-impl ColumnTrait for Column {
-    type EntityName = Entity;
-    fn def(&self) -> ColumnDef {
-        match self {
-            Self::ChannelId => ColumnType::Integer.def(),
-            Self::UserId => ColumnType::Integer.def(),
-            Self::RegistrationTimestamp => ColumnType::TimestampWithTimeZone.def(),
-        }
-    }
-}
-
-impl RelationTrait for Relation {
-    fn def(&self) -> RelationDef {
-        match self {
-            Self::Channels => Entity::belongs_to(super::channels::Entity)
-                .from(Column::ChannelId)
-                .to(super::channels::Column::Id)
-                .into(),
-            Self::Users => Entity::belongs_to(super::users::Entity)
-                .from(Column::UserId)
-                .to(super::users::Column::Id)
-                .into(),
-        }
-    }
 }
 
 impl Related<super::channels::Entity> for Entity {

@@ -3,17 +3,10 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Default, Debug, DeriveEntity)]
-pub struct Entity;
-
-impl EntityName for Entity {
-    fn table_name(&self) -> &str {
-        "channels"
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, DeriveModel, DeriveActiveModel, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
+#[sea_orm(table_name = "channels")]
 pub struct Model {
+    #[sea_orm(primary_key)]
     pub id: i32,
     pub name: String,
     pub url: String,
@@ -23,59 +16,16 @@ pub struct Model {
     pub failure_count: i32,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
-pub enum Column {
-    Id,
-    Name,
-    Url,
-    RegistrationTimestamp,
-    LastUpdate,
-    Disabled,
-    FailureCount,
-}
-
-#[derive(Copy, Clone, Debug, EnumIter, DerivePrimaryKey)]
-pub enum PrimaryKey {
-    Id,
-}
-
-impl PrimaryKeyTrait for PrimaryKey {
-    type ValueType = i32;
-    fn auto_increment() -> bool {
-        true
-    }
-}
-
-#[derive(Copy, Clone, Debug, EnumIter)]
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::channel_users::Entity")]
+    ChannelUsers,
+    #[sea_orm(has_many = "super::channels_errors::Entity")]
     ChannelsErrors,
+    #[sea_orm(has_many = "super::items::Entity")]
     Items,
+    #[sea_orm(has_many = "super::users_items::Entity")]
     UsersItems,
-}
-
-impl ColumnTrait for Column {
-    type EntityName = Entity;
-    fn def(&self) -> ColumnDef {
-        match self {
-            Self::Id => ColumnType::Integer.def(),
-            Self::Name => ColumnType::String(Some(512u32)).def(),
-            Self::Url => ColumnType::String(Some(512u32)).def(),
-            Self::RegistrationTimestamp => ColumnType::TimestampWithTimeZone.def(),
-            Self::LastUpdate => ColumnType::TimestampWithTimeZone.def().null(),
-            Self::Disabled => ColumnType::Boolean.def(),
-            Self::FailureCount => ColumnType::Integer.def(),
-        }
-    }
-}
-
-impl RelationTrait for Relation {
-    fn def(&self) -> RelationDef {
-        match self {
-            Self::ChannelsErrors => Entity::has_many(super::channels_errors::Entity).into(),
-            Self::Items => Entity::has_many(super::items::Entity).into(),
-            Self::UsersItems => Entity::has_many(super::users_items::Entity).into(),
-        }
-    }
 }
 
 impl Related<super::channels_errors::Entity> for Entity {
