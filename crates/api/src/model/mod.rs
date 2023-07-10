@@ -46,7 +46,7 @@ pub struct HttpChannelError {
     pub channel_id: i32,
     pub channel_name: String,
     pub error_timestamp: Option<DateTime<Utc>>,
-    pub error_reason: String
+    pub error_reason: String,
 }
 
 /// Serialize an optional i64, defaulting to 0 if its None

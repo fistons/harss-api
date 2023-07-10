@@ -9,13 +9,13 @@ use sea_orm::{
 use entity::channel_users::Entity as ChannelUsers;
 use entity::channels;
 use entity::channels::Entity as Channels;
+use entity::channels_errors::Entity as ChannelsError;
 use entity::items;
 use entity::items::Entity as Items;
 use entity::sea_orm_active_enums::UserRole;
 use entity::users;
 use entity::users::Entity as Users;
 use entity::users_items::Entity as UserItems;
-use entity::channels_errors::Entity as ChannelsError;
 
 pub async fn configure_database(host: String) -> DatabaseConnection {
     let db = Database::connect("sqlite::memory:").await.unwrap();

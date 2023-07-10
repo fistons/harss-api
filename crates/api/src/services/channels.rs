@@ -1,10 +1,10 @@
 use chrono::{DateTime, Utc};
-use sea_orm::{DbErr, entity::*, query::*};
-use sea_orm::DatabaseConnection;
 use sea_orm::sea_query::{Alias, Expr, SimpleExpr};
+use sea_orm::DatabaseConnection;
+use sea_orm::{entity::*, query::*, DbErr};
 
-use entity::{channel_users, channels, channels_errors, users_items};
 use entity::channels::Entity as Channel;
+use entity::{channel_users, channels, channels_errors, users_items};
 
 use entity::prelude::ChannelsErrors;
 use entity::users_items::Entity as UsersItems;
@@ -30,7 +30,7 @@ fn user_channel_select_statement() -> Select<Channel> {
                 Into::<SimpleExpr>::into(Expr::col(users_items::Column::Read))
                     .cast_as(Alias::new("integer")),
             )
-                .sum(),
+            .sum(),
             "items_read",
         )
 }
@@ -248,8 +248,8 @@ async fn check_feed(client: &reqwest::Client, url: &str) -> Result<(), RssParsin
 
 #[cfg(test)]
 mod tests {
-    use wiremock::{Mock, MockServer, ResponseTemplate};
     use wiremock::matchers::method;
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use super::*;
 

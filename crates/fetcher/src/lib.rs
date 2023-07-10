@@ -14,9 +14,9 @@ use sea_orm::{entity::*, query::*, DeriveColumn, EnumIter};
 use tracing::Instrument;
 
 use entity::channel_users::Entity as ChannelUser;
-use entity::channels_errors;
 use entity::channels;
 use entity::channels::Entity as Channel;
+use entity::channels_errors;
 use entity::items::Entity as Item;
 
 #[derive(thiserror::Error, Debug)]
@@ -134,11 +134,9 @@ impl Fetcher {
         Ok(())
     }
 
-
     /// Update the failure count of the given channel and insert the error in the dedicated table
     #[tracing::instrument(skip(self))]
     async fn fail_channels(&self, channel_id: i32, error_cause: &str) -> Result<(), FetchError> {
-
         let txn = self.pool.begin().await?;
         Channel::update_many()
             .col_expr(
@@ -151,13 +149,13 @@ impl Fetcher {
 
         let channel_error = channels_errors::ActiveModel {
             id: NotSet,
-            channel_id: Set(channel_id), 
+            channel_id: Set(channel_id),
             error_reason: Set(Some(error_cause.to_owned())),
-            error_timestamp: Set(Utc::now().into())
+            error_timestamp: Set(Utc::now().into()),
         };
 
         channel_error.insert(&txn).await?;
-       
+
         txn.commit().await?;
         Ok(())
     }

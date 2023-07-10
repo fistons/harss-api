@@ -1,11 +1,11 @@
-use actix_web::{get, HttpResponse, post, web};
 use actix_web::http::StatusCode;
+use actix_web::{get, post, web, HttpResponse};
 use actix_xml::Xml;
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::model::{HttpNewChannel, PageParameters};
 use crate::model::opml::Opml;
+use crate::model::{HttpNewChannel, PageParameters};
 use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
 use crate::services::rss_detector;
@@ -40,13 +40,13 @@ pub async fn get_errors_of_channel(
         return Ok(HttpResponse::Forbidden().finish());
     }
 
-    let errors = services.channel_service
+    let errors = services
+        .channel_service
         .select_errors_by_chan_id(id.into_inner())
         .await?;
 
     Ok(HttpResponse::Ok().json(errors))
 }
-
 
 #[post("/channel/{id}/read")]
 #[tracing::instrument(skip(services))]

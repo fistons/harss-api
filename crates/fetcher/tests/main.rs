@@ -4,17 +4,16 @@ use sea_orm::{entity::*, query::*};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use entity::channels::Entity as Channel;
+use entity::channels_errors::Entity as ChannelsError;
 use entity::items::Entity as Item;
 use entity::users_items::Entity as UserItem;
-use entity::channels_errors::Entity as ChannelsError;
-use entity::channels::Entity as Channel;
 use helpers::configure_database;
 
 mod helpers;
 
 #[tokio::test]
 async fn test_error_is_filled() {
-
     let mock = MockServer::start().await;
     let db = configure_database(mock.uri()).await;
 
@@ -33,14 +32,23 @@ async fn test_error_is_filled() {
     let errors = ChannelsError::find().all(&db).await.unwrap();
 
     assert_eq!(1, errors.len(), "An error should have been inserted");
-    assert_eq!(1, errors[0].channel_id, "The error should concerne channel_id 1");
+    assert_eq!(
+        1, errors[0].channel_id,
+        "The error should concerne channel_id 1"
+    );
     assert_eq!(1, errors[0].id, "ID of the error should be 1");
-    assert_eq!(Some("HTTP status code error: Upstream feed returned HTTP status code 500".to_owned()), errors[0].error_reason, "Error reason should match");
+    assert_eq!(
+        Some("HTTP status code error: Upstream feed returned HTTP status code 500".to_owned()),
+        errors[0].error_reason,
+        "Error reason should match"
+    );
 
     let channel = Channel::find()
         .filter(entity::channels::Column::Id.eq(1))
         .one(&db)
-        .await.unwrap().unwrap();
+        .await
+        .unwrap()
+        .unwrap();
 
     assert_eq!(1, channel.failure_count, "Failure count has increased");
 }
@@ -117,6 +125,4 @@ async fn happy_path() {
         61,
         "1 pre-existing + 60 newly inserted items should be found"
     );
-
-    
 }
