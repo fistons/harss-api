@@ -11,6 +11,7 @@ use crate::routes;
 
 pub struct AppState {
     pub db: DatabaseConnection,
+    pub redis: Pool,
 }
 
 pub async fn startup(
@@ -18,18 +19,16 @@ pub async fn startup(
     redis: Pool,
     listener: TcpListener,
 ) -> std::io::Result<()> {
-    let application_service = AppState { db: database };
+    let app_state = AppState { db: database, redis };
 
     let governor_conf = build_rate_limiting_conf();
-    let services = Data::new(application_service);
-    let redis = Data::new(redis);
+    let app_state = Data::new(app_state);
 
     HttpServer::new(move || {
         App::new()
             .wrap(tracing_actix_web::TracingLogger::default())
             .wrap(sentry_actix::Sentry::default())
-            .app_data(services.clone())
-            .app_data(redis.clone())
+            .app_data(app_state.clone())
             .service(routes::ping)
             .service(
                 web::scope("/api/v1")

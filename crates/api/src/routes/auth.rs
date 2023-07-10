@@ -1,6 +1,5 @@
 use actix_web::{post, web, HttpResponse};
 use anyhow::{anyhow, Context};
-use deadpool_redis::Pool;
 use redis::AsyncCommands;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
@@ -24,13 +23,14 @@ pub struct RefreshRequest {
 }
 
 #[post("/auth/login")]
-#[tracing::instrument(skip(app_state, redis_pool))]
+#[tracing::instrument(skip(app_state))]
 pub async fn login(
     login: web::Json<LoginRequest>,
     app_state: web::Data<AppState>,
-    redis_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
+    let redis_pool = &app_state.redis;
+
     let access_token = crate::services::auth::get_jwt_from_login_request(
         &login.login,
         login.password.expose_secret(),
@@ -49,15 +49,14 @@ pub async fn login(
 }
 
 #[post("/auth/refresh")]
-#[tracing::instrument(skip(redis_pool, app_state))]
+#[tracing::instrument(skip(app_state))]
 pub async fn refresh_auth(
     refresh_token: web::Json<RefreshRequest>,
     app_state: web::Data<AppState>,
-    redis_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ApiError> {
-    let mut redis = redis_pool.get().await?;
     let connection = &app_state.db;
-
+    let redis_pool = &app_state.redis;
+    let mut redis = redis_pool.get().await?;
     let token = refresh_token.token.expose_secret();
     let token_exists = redis.exists::<_, bool>(token).await?;
 
