@@ -1077,6 +1077,7 @@ dependencies = [
  "entity",
  "fake",
  "feed-rs",
+ "once_cell",
  "reqwest",
  "rss-common",
  "sea-orm",

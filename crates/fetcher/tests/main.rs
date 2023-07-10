@@ -1,5 +1,4 @@
 use chrono::prelude::*;
-use reqwest::Client;
 use sea_orm::{entity::*, query::*};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -8,6 +7,7 @@ use entity::channels::Entity as Channel;
 use entity::channels_errors::Entity as ChannelsError;
 use entity::items::Entity as Item;
 use entity::users_items::Entity as UserItem;
+use fetcher::fetch;
 use helpers::configure_database;
 
 mod helpers;
@@ -24,10 +24,7 @@ async fn test_error_is_filled() {
         .mount(&mock)
         .await;
 
-    fetcher::Fetcher::new(Client::default(), db.clone())
-        .fetch()
-        .await
-        .unwrap();
+    fetch(&db).await.unwrap();
 
     let errors = ChannelsError::find().all(&db).await.unwrap();
 
@@ -70,10 +67,7 @@ async fn happy_path() {
         .await;
 
     // "Fetch" stuff
-    fetcher::Fetcher::new(Client::default(), db.clone())
-        .fetch()
-        .await
-        .unwrap();
+    fetch(&db).await.unwrap();
 
     // Check that stuff have been inserted
     let inserted_items = Item::find()

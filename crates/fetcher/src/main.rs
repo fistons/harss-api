@@ -1,9 +1,9 @@
 use std::time::Duration;
 
 use dotenvy::dotenv;
-use reqwest::Client;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 
+use fetcher::fetch;
 use rss_common::observability;
 
 #[tokio::main]
@@ -15,20 +15,11 @@ async fn main() {
 
     let _sentry_guard = observability::init_sentry();
 
-    let client = build_client().expect("Could not build client");
     let db = build_pool().await;
 
-    let fetcher = fetcher::Fetcher::new(client, db);
-    if let Err(err) = fetcher.fetch().await {
+    if let Err(err) = fetch(&db).await {
         tracing::error!("Ho noes! {err}");
     }
-}
-
-fn build_client() -> reqwest::Result<Client> {
-    reqwest::ClientBuilder::new()
-        .timeout(Duration::from_secs(10))
-        .user_agent("rss-aggregator fetcher (+https://github.com/fistons/rss-aggregator)")
-        .build()
 }
 
 async fn build_pool() -> DatabaseConnection {

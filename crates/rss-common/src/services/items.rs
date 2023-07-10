@@ -10,19 +10,12 @@ use entity::users_items;
 
 use crate::model::{HttpUserItem, PagedResult};
 
-#[derive(Clone)]
-pub struct ItemService {
-    db: DatabaseConnection,
-}
+pub struct ItemService;
 
 impl ItemService {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
-    }
-
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(db))]
     pub async fn get_items_of_channel(
-        &self,
+        db: &DatabaseConnection,
         chan_id: i32,
         user_id: i32,
         page: u64,
@@ -39,7 +32,7 @@ impl ItemService {
             .filter(users_items::Column::UserId.eq(user_id))
             .order_by_desc(items::Column::PublishTimestamp)
             .into_model::<HttpUserItem>()
-            .paginate(&self.db, page_size);
+            .paginate(db, page_size);
 
         let total_items_and_pages = item_paginator.num_items_and_pages().await?;
         let total_pages = total_items_and_pages.number_of_pages;
@@ -56,18 +49,21 @@ impl ItemService {
         })
     }
 
-    #[tracing::instrument(skip(self))]
-    pub async fn get_all_items_of_channel(&self, chan_id: i32) -> Result<Vec<items::Model>, DbErr> {
+    #[tracing::instrument(skip(db))]
+    pub async fn get_all_items_of_channel(
+        db: &DatabaseConnection,
+        chan_id: i32,
+    ) -> Result<Vec<items::Model>, DbErr> {
         Item::find()
             .filter(items::Column::ChannelId.eq(chan_id))
             .order_by_desc(items::Column::PublishTimestamp)
-            .all(&self.db)
+            .all(db)
             .await
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(db))]
     pub async fn get_items_of_user(
-        &self,
+        db: &DatabaseConnection,
         user_id: i32,
         page: u64,
         page_size: u64,
@@ -94,7 +90,7 @@ impl ItemService {
         let item_paginator = query
             .order_by_desc(items::Column::PublishTimestamp)
             .into_model::<HttpUserItem>()
-            .paginate(&self.db, page_size);
+            .paginate(db, page_size);
 
         let total_items_and_pages = item_paginator.num_items_and_pages().await?;
         let total_pages = total_items_and_pages.number_of_pages;
@@ -112,36 +108,34 @@ impl ItemService {
     }
 
     /// Update the read status of an item for a given user
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(db))]
     pub async fn set_item_read(
-        &self,
+        db: &DatabaseConnection,
         user_id: i32,
         ids: Vec<i32>,
         read: bool,
     ) -> Result<(), DbErr> {
-        self.update_column(user_id, ids, users_items::Column::Read, read)
-            .await?;
+        ItemService::update_column(db, user_id, ids, users_items::Column::Read, read).await?;
 
         Ok(())
     }
 
     /// Update the read status of an item for a given user
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(db))]
     pub async fn set_item_starred(
-        &self,
+        db: &DatabaseConnection,
         user_id: i32,
         ids: Vec<i32>,
         starred: bool,
     ) -> Result<(), DbErr> {
-        self.update_column(user_id, ids, users_items::Column::Starred, starred)
-            .await?;
+        ItemService::update_column(db, user_id, ids, users_items::Column::Starred, starred).await?;
 
         Ok(())
     }
 
     /// Update the given column with given value for the given user and items ids.
     async fn update_column(
-        &self,
+        db: &DatabaseConnection,
         user_id: i32,
         ids: Vec<i32>,
         column: users_items::Column,
@@ -151,7 +145,7 @@ impl ItemService {
             .col_expr(column, Expr::value(value))
             .filter(users_items::Column::UserId.eq(user_id))
             .filter(users_items::Column::ItemId.is_in(ids))
-            .exec(&self.db)
+            .exec(db)
             .await?;
         Ok(())
     }

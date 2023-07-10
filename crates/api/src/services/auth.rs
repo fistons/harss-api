@@ -13,6 +13,7 @@ use http_auth_basic::Credentials;
 use jwt::{SignWithKey, VerifyWithKey};
 use once_cell::sync::Lazy;
 use redis::AsyncCommands;
+use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
@@ -20,7 +21,7 @@ use rss_common::services::users::UserService;
 use rss_common::services::AuthenticationError;
 use rss_common::{UserModel, UserRole};
 
-use crate::startup::ApplicationServices;
+use crate::startup::AppState;
 
 static JWT_KEY: Lazy<Hmac<Sha256>> = Lazy::new(|| {
     Hmac::new_from_slice(
@@ -103,15 +104,9 @@ async fn extract_authenticated_user(
             };
             let redis_pool = req.app_data::<Data<Pool>>().unwrap();
 
-            let services = req.app_data::<Data<ApplicationServices>>().unwrap();
-            check_and_get_authed_user(
-                &user,
-                &password,
-                &services.user_service,
-                redis_pool,
-                header_value,
-            )
-            .await
+            let app_state = req.app_data::<Data<AppState>>().unwrap();
+            check_and_get_authed_user(&user, &password, &app_state.db, redis_pool, header_value)
+                .await
         }
 
         (_error, _) => Err(AuthenticationError::UnknownAuthScheme),
@@ -136,12 +131,11 @@ fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, Auth
 
 /// # Retrieve a user and check its credentials
 async fn check_and_get_user(
+    connection: &DatabaseConnection,
     user: &str,
     password: &str,
-    user_service: &UserService,
 ) -> Result<UserModel, AuthenticationError> {
-    let user = match user_service
-        .get_user(user)
+    let user = match UserService::get_user(connection, user)
         .await
         .context("Database error")?
     {
@@ -166,7 +160,7 @@ async fn check_and_get_user(
 async fn check_and_get_authed_user(
     user: &str,
     password: &str,
-    user_service: &UserService,
+    connection: &DatabaseConnection,
     redis_pool: &Pool,
     redis_key: &str,
 ) -> Result<AuthenticatedUser, AuthenticationError> {
@@ -188,7 +182,7 @@ async fn check_and_get_authed_user(
     }
 
     // Nothing? Authenticate dance!
-    let user = check_and_get_user(user, password, user_service).await?;
+    let user = check_and_get_user(connection, user, password).await?;
     let user = AuthenticatedUser::from_user(&user);
 
     // Store it in redis
@@ -217,9 +211,9 @@ fn extract_credentials_from_http_basic(
 pub async fn get_jwt_from_login_request(
     user: &str,
     password: &str,
-    user_service: &UserService,
+    connection: &DatabaseConnection,
 ) -> Result<String, AuthenticationError> {
-    let user = check_and_get_user(user, password, user_service).await?;
+    let user = check_and_get_user(connection, user, password).await?;
 
     get_jwt(&user).await
 }
