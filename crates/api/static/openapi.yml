@@ -581,6 +581,8 @@ components:
           $ref: '#/components/schemas/ChannelErrorID'
         channel_id:
           $ref: '#/components/schemas/ChannelID'
+        channel_name:
+          $ref: '#/components/schemas/ChannelName'
         error_timestamp:
           type: string
           format: datetime
@@ -588,6 +590,7 @@ components:
         error_reason:
           type: string
           description: Reason of the error
+          example: "The server is down or something"
     Token:
       type: object
       required:

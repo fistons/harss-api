@@ -43,7 +43,8 @@ pub struct HttpUserChannel {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, FromQueryResult)]
 pub struct HttpChannelError {
     pub id: i32,
-    pub chan_id: i32,
+    pub channel_id: i32,
+    pub channel_name: String,
     pub error_timestamp: Option<DateTime<Utc>>,
     pub error_reason: String
 }

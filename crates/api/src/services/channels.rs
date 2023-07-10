@@ -51,6 +51,8 @@ impl ChannelService {
         chan_id: i32,
     ) -> Result<Vec<HttpChannelError>, ServiceError> {
         Ok(ChannelsErrors::find()
+            .join(JoinType::Join, channels_errors::Relation::Channels.def())
+            .column_as(channels::Column::Name, "channel_name")
             .filter(channels_errors::Column::ChannelId.eq(chan_id))
             .into_model::<HttpChannelError>()
             .all(&self.db)
