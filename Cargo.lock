@@ -347,7 +347,6 @@ dependencies = [
  "chrono",
  "deadpool-redis",
  "dotenvy",
- "entity",
  "feed-rs",
  "hmac",
  "http-auth-basic",
@@ -2829,15 +2828,33 @@ dependencies = [
 name = "rss-common"
 version = "0.1.0"
 dependencies = [
+ "actix-web",
+ "anyhow",
+ "argon2",
+ "chrono",
+ "entity",
+ "feed-rs",
+ "jwt",
+ "once_cell",
  "opentelemetry",
  "opentelemetry-datadog",
  "opentelemetry-jaeger",
+ "rand_core 0.6.4",
+ "reqwest",
+ "scraper",
+ "sea-orm",
+ "secrecy",
  "sentry",
  "sentry-tracing",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
  "tracing",
  "tracing-log",
  "tracing-opentelemetry",
  "tracing-subscriber",
+ "wiremock",
 ]
 
 [[package]]

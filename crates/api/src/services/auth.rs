@@ -16,11 +16,10 @@ use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
-use entity::sea_orm_active_enums::UserRole;
-use entity::users;
+use rss_common::services::users::UserService;
+use rss_common::services::AuthenticationError;
+use rss_common::{UserModel, UserRole};
 
-use crate::services::users::UserService;
-use crate::services::AuthenticationError;
 use crate::startup::ApplicationServices;
 
 static JWT_KEY: Lazy<Hmac<Sha256>> = Lazy::new(|| {
@@ -42,7 +41,7 @@ pub struct AuthenticatedUser {
 
 impl AuthenticatedUser {
     /// # Build an AuthenticatedUser from a SeoORM's model one.
-    pub fn from_user(user: &users::Model) -> Self {
+    pub fn from_user(user: &UserModel) -> Self {
         AuthenticatedUser {
             id: user.id,
             login: user.username.clone(),
@@ -140,7 +139,7 @@ async fn check_and_get_user(
     user: &str,
     password: &str,
     user_service: &UserService,
-) -> Result<users::Model, AuthenticationError> {
+) -> Result<UserModel, AuthenticationError> {
     let user = match user_service
         .get_user(user)
         .await
@@ -154,7 +153,7 @@ async fn check_and_get_user(
         Some(u) => u,
     };
 
-    if !crate::services::users::match_password(&user, password) {
+    if !rss_common::services::users::match_password(&user, password) {
         return Err(AuthenticationError::Unauthorized(
             "Invalid credentials".into(),
         ));
@@ -226,7 +225,7 @@ pub async fn get_jwt_from_login_request(
 }
 
 /// # Generate a JWT for the given user
-pub async fn get_jwt(user: &users::Model) -> Result<String, AuthenticationError> {
+pub async fn get_jwt(user: &UserModel) -> Result<String, AuthenticationError> {
     let utc: DateTime<Utc> = Utc::now() + Duration::minutes(15);
     let authenticated_user = AuthenticatedUser::from_user(user);
 

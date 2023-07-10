@@ -4,14 +4,14 @@ use actix_web::{get, patch, post, web, HttpResponse};
 use secrecy::ExposeSecret;
 use serde_json::json;
 
-use entity::sea_orm_active_enums::UserRole;
-
-use crate::model::{
+use rss_common::model::{
     HttpNewUser, PageParameters, PagedResult, UpdateOtherPasswordRequest, UpdatePasswordRequest,
 };
+use rss_common::services::AuthenticationError;
+use rss_common::UserRole;
+
 use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
-use crate::services::AuthenticationError;
 use crate::startup::ApplicationServices;
 
 #[post("/users")]

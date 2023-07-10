@@ -1,14 +1,14 @@
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse};
 use actix_xml::Xml;
+use rss_common::model::opml::Opml;
+use rss_common::model::{HttpNewChannel, PageParameters};
+use rss_common::services::rss_detector;
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::model::opml::Opml;
-use crate::model::{HttpNewChannel, PageParameters};
 use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
-use crate::services::rss_detector;
 use crate::startup::ApplicationServices;
 
 #[get("/channel/{id}")]

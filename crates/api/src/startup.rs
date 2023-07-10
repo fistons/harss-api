@@ -4,13 +4,13 @@ use actix_governor::Governor;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 use deadpool_redis::Pool;
+use rss_common::services::channels::ChannelService;
+use rss_common::services::items::ItemService;
+use rss_common::services::users::UserService;
 use sea_orm::DatabaseConnection;
 
 use crate::rate_limiting::build_rate_limiting_conf;
 use crate::routes;
-use crate::services::channels::ChannelService;
-use crate::services::items::ItemService;
-use crate::services::users::UserService;
 
 pub struct ApplicationServices {
     pub item_service: ItemService,
