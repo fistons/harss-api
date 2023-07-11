@@ -11,8 +11,8 @@ use rss_common::services::users::UserService;
 use rss_common::services::AuthenticationError;
 use rss_common::UserRole;
 
+use crate::auth::AuthenticatedUser;
 use crate::routes::ApiError;
-use crate::services::auth::AuthenticatedUser;
 use crate::startup::AppState;
 
 #[post("/users")]

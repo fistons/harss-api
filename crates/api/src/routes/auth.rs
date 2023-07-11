@@ -31,7 +31,7 @@ pub async fn login(
     let connection = &app_state.db;
     let redis_pool = &app_state.redis;
 
-    let access_token = crate::services::auth::get_jwt_from_login_request(
+    let access_token = crate::auth::get_jwt_from_login_request(
         &login.login,
         login.password.expose_secret(),
         connection,
@@ -61,13 +61,13 @@ pub async fn refresh_auth(
     let token_exists = redis.exists::<_, bool>(token).await?;
 
     if token_exists {
-        let user_login = crate::services::auth::extract_login_from_refresh_token(token);
+        let user_login = crate::auth::extract_login_from_refresh_token(token);
         let user = UserService::get_user(connection, user_login)
             .await
             .context("Could not get user")?
             .ok_or_else(|| anyhow!("Unknown user"))?;
         /* Create a new JWT */
-        let access_token = crate::services::auth::get_jwt(&user).await?;
+        let access_token = crate::auth::get_jwt(&user).await?;
 
         Ok(HttpResponse::Ok().json(json!({ "access_token": access_token })))
     } else {

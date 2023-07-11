@@ -1,8 +1,3 @@
-use argon2::{
-    Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-};
-use rand_core::OsRng;
 use sea_orm::{entity::*, query::*};
 use sea_orm::{DatabaseConnection, DbErr};
 use secrecy::{ExposeSecret, Secret};
@@ -12,6 +7,7 @@ use entity::users;
 use entity::users::Entity as User;
 
 use crate::model::{HttpUser, PagedResult};
+use crate::services::password::{encode_password, match_password};
 use crate::services::ServiceError;
 use crate::services::ServiceError::NonMatchingPassword;
 
@@ -19,7 +15,10 @@ pub struct UserService;
 
 impl UserService {
     #[tracing::instrument(skip(db))]
-    pub async fn get_user(db: &DatabaseConnection, wanted_username: &str) -> Result<Option<users::Model>, DbErr> {
+    pub async fn get_user(
+        db: &DatabaseConnection,
+        wanted_username: &str,
+    ) -> Result<Option<users::Model>, DbErr> {
         User::find()
             .filter(users::Column::Username.eq(wanted_username))
             .one(db)
@@ -27,11 +26,11 @@ impl UserService {
     }
 
     #[tracing::instrument(skip(db), level = "debug")]
-    pub async fn get_user_by_id(db: &DatabaseConnection, id: i32) -> Result<Option<users::Model>, DbErr> {
-        User::find()
-            .filter(users::Column::Id.eq(id))
-            .one(db)
-            .await
+    pub async fn get_user_by_id(
+        db: &DatabaseConnection,
+        id: i32,
+    ) -> Result<Option<users::Model>, DbErr> {
+        User::find().filter(users::Column::Id.eq(id)).one(db).await
     }
 
     #[tracing::instrument(skip(db))]
@@ -116,25 +115,4 @@ impl UserService {
 
         Ok(())
     }
-}
-
-#[tracing::instrument(skip(pwd))]
-fn encode_password(pwd: &str) -> String {
-    let argon2 = Argon2::default();
-    let salt = SaltString::generate(&mut OsRng);
-
-    let password_hash = argon2
-        .hash_password(pwd.as_bytes(), &salt)
-        .unwrap()
-        .to_string();
-
-    password_hash
-}
-
-#[tracing::instrument(skip_all)]
-pub fn match_password(user: &users::Model, candidate: &str) -> bool {
-    let parsed_hash = PasswordHash::new(&user.password).unwrap();
-    Argon2::default()
-        .verify_password(candidate.as_bytes(), &parsed_hash)
-        .is_ok()
 }

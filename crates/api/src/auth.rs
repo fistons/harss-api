@@ -147,7 +147,7 @@ async fn check_and_get_user(
         Some(u) => u,
     };
 
-    if !rss_common::services::users::match_password(&user, password) {
+    if !rss_common::services::password::match_password(&user, password) {
         return Err(AuthenticationError::Unauthorized(
             "Invalid credentials".into(),
         ));

@@ -29,7 +29,7 @@ thiserror = "1"
 anyhow = "1"
 reqwest = { version = "0.11", features = ["tokio-rustls", "native-tls-vendored"] }
 feed-rs = "1"
-sea-orm = { version = "^0", features = ["sqlx-sqlite", "sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"] }
+sea-orm = { version = "^0", features = ["sqlx-sqlite", "sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print", "mock"] }
 fake = { version = "2.5", features = ["http", "chrono"] }
 tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter", "fmt", "std", "json"] }

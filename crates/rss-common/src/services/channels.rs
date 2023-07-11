@@ -1,24 +1,16 @@
 use chrono::{DateTime, Utc};
-use once_cell::sync::Lazy;
 use sea_orm::sea_query::{Alias, Expr, SimpleExpr};
 use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DbErr};
 
 use entity::channels::Entity as Channel;
-use entity::{channel_users, channels, channels_errors, users_items};
-
 use entity::prelude::ChannelsErrors;
 use entity::users_items::Entity as UsersItems;
-use RssParsingError::NonOkStatus;
+use entity::{channel_users, channels, channels_errors, users_items};
 
 use crate::model::{HttpChannel, HttpChannelError, HttpNewChannel, HttpUserChannel, PagedResult};
-use crate::services::{RssParsingError, ServiceError};
-
-static CLIENT: Lazy<reqwest::Client> =
-    Lazy::new(|| reqwest::Client::builder()
-        .user_agent("rss-aggregator checker (+https://github.com/fistons/rss-aggregator)")
-        .build()
-        .expect("Could not build client"));
+use crate::services::rss::check_feed;
+use crate::services::ServiceError;
 
 pub struct ChannelService;
 
@@ -39,7 +31,6 @@ fn user_channel_select_statement() -> Select<Channel> {
 }
 
 impl ChannelService {
-
     #[tracing::instrument(skip(db))]
     pub async fn select_errors_by_chan_id(
         db: &DatabaseConnection,
@@ -70,7 +61,11 @@ impl ChannelService {
     }
 
     #[tracing::instrument(skip(db))]
-    pub async fn mark_channel_as_read(db: &DatabaseConnection, chan_id: i32, user_id: i32) -> Result<(), DbErr> {
+    pub async fn mark_channel_as_read(
+        db: &DatabaseConnection,
+        chan_id: i32,
+        user_id: i32,
+    ) -> Result<(), DbErr> {
         UsersItems::update_many()
             .col_expr(users_items::Column::Read, Expr::value(true))
             .filter(users_items::Column::ChannelId.eq(chan_id))
@@ -116,7 +111,9 @@ impl ChannelService {
 
     /// # Select all the channels
     #[tracing::instrument(skip(db))]
-    pub async fn select_all_enabled(db: &DatabaseConnection) -> Result<Vec<HttpChannel>, ServiceError> {
+    pub async fn select_all_enabled(
+        db: &DatabaseConnection,
+    ) -> Result<Vec<HttpChannel>, ServiceError> {
         Ok(Channel::find()
             .filter(channels::Column::Disabled.eq(false))
             .into_model::<HttpChannel>()
@@ -225,92 +222,5 @@ impl ChannelService {
         tracing::debug!("Chanel {} enabled", id);
 
         Ok(())
-    }
-}
-
-/// Check that the feed is correct
-#[tracing::instrument]
-async fn check_feed(url: &str) -> Result<(), RssParsingError> {
-
-    let response = CLIENT.get(url).send().await?;
-    if !response.status().is_success() {
-        return Err(NonOkStatus(response.status().as_u16()));
-    }
-    let feed_content = response.bytes().await?;
-    feed_rs::parser::parse(&feed_content[..])?;
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use wiremock::matchers::method;
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_check_feed_is_ok() {
-        let mock = MockServer::start().await;
-
-        let valid_response = r#"
-        <?xml version="1.0" encoding="UTF-8" ?>
-        <rss version="2.0">
-        <channel>
-          <title>W3Schools Home Page</title>
-          <link>https://www.w3schools.com</link>
-          <description>Free web building tutorials</description>
-          <item>
-            <title>RSS Tutorial</title>
-            <link>https://www.w3schools.com/xml/xml_rss.asp</link>
-            <description>New RSS tutorial on W3Schools</description>
-          </item>
-        </channel>
-        "#;
-
-        let response = ResponseTemplate::new(200).set_body_raw(valid_response, "application/xml");
-
-        Mock::given(method("GET"))
-            .respond_with(response)
-            .expect(1)
-            .mount(&mock)
-            .await;
-
-        assert!(check_feed(&mock.uri()).await.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_check_feed_non_200() {
-        let mock = MockServer::start().await;
-
-        let response = ResponseTemplate::new(404);
-
-        Mock::given(method("GET"))
-            .respond_with(response)
-            .expect(1)
-            .mount(&mock)
-            .await;
-
-        assert!(matches!(
-            check_feed(&mock.uri()).await,
-            Err(RssParsingError::NonOkStatus { .. })
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_check_feed_invalid_rss() {
-        let mock = MockServer::start().await;
-
-        let response = ResponseTemplate::new(200).set_body_raw("rss lol", "application/xml");
-        Mock::given(method("GET"))
-            .respond_with(response)
-            .expect(1)
-            .mount(&mock)
-            .await;
-
-        assert!(matches!(
-            check_feed(&mock.uri()).await,
-            Err(RssParsingError::ParseFeedError { .. })
-        ));
     }
 }

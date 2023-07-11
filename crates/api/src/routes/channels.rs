@@ -8,10 +8,10 @@ use rss_common::model::opml::Opml;
 use rss_common::model::{HttpNewChannel, PageParameters};
 use rss_common::services::channels::ChannelService;
 use rss_common::services::items::ItemService;
-use rss_common::services::rss_detector;
+use rss_common::services::rss;
 
+use crate::auth::AuthenticatedUser;
 use crate::routes::ApiError;
-use crate::services::auth::AuthenticatedUser;
 use crate::startup::AppState;
 
 #[get("/channel/{id}")]
@@ -162,7 +162,7 @@ async fn search_channels(
     _user: AuthenticatedUser,
     query_params: web::Query<QueryParamsUrl>,
 ) -> Result<HttpResponse, ApiError> {
-    let found_channels = rss_detector::download_and_look_for_rss(&query_params.url).await?;
+    let found_channels = rss::download_and_look_for_rss(&query_params.url).await?;
     Ok(HttpResponse::Ok().json(found_channels))
 }
 
