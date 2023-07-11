@@ -1,9 +1,8 @@
 use actix_web::http::StatusCode;
 use actix_web::{get, web, HttpResponse, ResponseError};
 use rand::Rng;
+use rss_common::services::{AuthenticationError, ServiceError};
 use serde_json::json;
-
-use crate::services::{AuthenticationError, ServiceError};
 
 pub mod auth;
 pub mod channels;

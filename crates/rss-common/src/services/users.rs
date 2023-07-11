@@ -1,6 +1,6 @@
 use argon2::{
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
 };
 use rand_core::OsRng;
 use sea_orm::{entity::*, query::*};
@@ -15,41 +15,34 @@ use crate::model::{HttpUser, PagedResult};
 use crate::services::ServiceError;
 use crate::services::ServiceError::NonMatchingPassword;
 
-#[derive(Clone)]
-pub struct UserService {
-    db: DatabaseConnection,
-}
+pub struct UserService;
 
 impl UserService {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
-    }
-
-    #[tracing::instrument(skip(self))]
-    pub async fn get_user(&self, wanted_username: &str) -> Result<Option<users::Model>, DbErr> {
+    #[tracing::instrument(skip(db))]
+    pub async fn get_user(db: &DatabaseConnection, wanted_username: &str) -> Result<Option<users::Model>, DbErr> {
         User::find()
             .filter(users::Column::Username.eq(wanted_username))
-            .one(&self.db)
+            .one(db)
             .await
     }
 
-    #[tracing::instrument(skip(self), level = "debug")]
-    pub async fn get_user_by_id(&self, id: i32) -> Result<Option<users::Model>, DbErr> {
+    #[tracing::instrument(skip(db), level = "debug")]
+    pub async fn get_user_by_id(db: &DatabaseConnection, id: i32) -> Result<Option<users::Model>, DbErr> {
         User::find()
             .filter(users::Column::Id.eq(id))
-            .one(&self.db)
+            .one(db)
             .await
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(db))]
     pub async fn list_users(
-        &self,
+        db: &DatabaseConnection,
         page: u64,
         page_size: u64,
     ) -> Result<PagedResult<HttpUser>, DbErr> {
         let user_paginator = User::find()
             .into_model::<HttpUser>()
-            .paginate(&self.db, page_size);
+            .paginate(db, page_size);
 
         let total_pages = user_paginator.num_pages().await?;
         let total_items = user_paginator.num_items().await?;
@@ -66,9 +59,9 @@ impl UserService {
         })
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(db))]
     pub async fn create_user(
-        &self,
+        db: &DatabaseConnection,
         login: &str,
         pwd: &str,
         user_role: UserRole,
@@ -80,19 +73,18 @@ impl UserService {
             role: Set(user_role),
         };
 
-        new_user.insert(&self.db).await
+        new_user.insert(db).await
     }
 
     //TODO: improve errors
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(db))]
     pub async fn update_password(
-        &self,
+        db: &DatabaseConnection,
         user_id: i32,
         current_password: &Secret<String>,
         new_password: &Secret<String>,
     ) -> Result<(), ServiceError> {
-        let user = self
-            .get_user_by_id(user_id)
+        let user = UserService::get_user_by_id(db, user_id)
             .await?
             .ok_or_else(|| DbErr::RecordNotFound("User not found".to_owned()))?;
 
@@ -102,26 +94,25 @@ impl UserService {
 
         let mut user: users::ActiveModel = user.into();
         user.password = Set(encode_password(new_password.expose_secret()));
-        user.update(&self.db).await?;
+        user.update(db).await?;
 
         Ok(())
     }
 
     //TODO: improve errors
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(db))]
     pub async fn update_other_user_password(
-        &self,
+        db: &DatabaseConnection,
         user_id: i32,
         new_password: &Secret<String>,
     ) -> Result<(), ServiceError> {
-        let user = self
-            .get_user_by_id(user_id)
+        let user = UserService::get_user_by_id(db, user_id)
             .await?
             .ok_or_else(|| DbErr::RecordNotFound("User not found".to_owned()))?;
 
         let mut user: users::ActiveModel = user.into();
         user.password = Set(encode_password(new_password.expose_secret()));
-        user.update(&self.db).await?;
+        user.update(db).await?;
 
         Ok(())
     }

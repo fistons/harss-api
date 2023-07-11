@@ -13,15 +13,15 @@ use http_auth_basic::Credentials;
 use jwt::{SignWithKey, VerifyWithKey};
 use once_cell::sync::Lazy;
 use redis::AsyncCommands;
+use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
-use entity::sea_orm_active_enums::UserRole;
-use entity::users;
+use rss_common::services::users::UserService;
+use rss_common::services::AuthenticationError;
+use rss_common::{UserModel, UserRole};
 
-use crate::services::users::UserService;
-use crate::services::AuthenticationError;
-use crate::startup::ApplicationServices;
+use crate::startup::AppState;
 
 static JWT_KEY: Lazy<Hmac<Sha256>> = Lazy::new(|| {
     Hmac::new_from_slice(
@@ -42,7 +42,7 @@ pub struct AuthenticatedUser {
 
 impl AuthenticatedUser {
     /// # Build an AuthenticatedUser from a SeoORM's model one.
-    pub fn from_user(user: &users::Model) -> Self {
+    pub fn from_user(user: &UserModel) -> Self {
         AuthenticatedUser {
             id: user.id,
             login: user.username.clone(),
@@ -104,15 +104,9 @@ async fn extract_authenticated_user(
             };
             let redis_pool = req.app_data::<Data<Pool>>().unwrap();
 
-            let services = req.app_data::<Data<ApplicationServices>>().unwrap();
-            check_and_get_authed_user(
-                &user,
-                &password,
-                &services.user_service,
-                redis_pool,
-                header_value,
-            )
-            .await
+            let app_state = req.app_data::<Data<AppState>>().unwrap();
+            check_and_get_authed_user(&user, &password, &app_state.db, redis_pool, header_value)
+                .await
         }
 
         (_error, _) => Err(AuthenticationError::UnknownAuthScheme),
@@ -137,12 +131,11 @@ fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, Auth
 
 /// # Retrieve a user and check its credentials
 async fn check_and_get_user(
+    connection: &DatabaseConnection,
     user: &str,
     password: &str,
-    user_service: &UserService,
-) -> Result<users::Model, AuthenticationError> {
-    let user = match user_service
-        .get_user(user)
+) -> Result<UserModel, AuthenticationError> {
+    let user = match UserService::get_user(connection, user)
         .await
         .context("Database error")?
     {
@@ -154,7 +147,7 @@ async fn check_and_get_user(
         Some(u) => u,
     };
 
-    if !crate::services::users::match_password(&user, password) {
+    if !rss_common::services::users::match_password(&user, password) {
         return Err(AuthenticationError::Unauthorized(
             "Invalid credentials".into(),
         ));
@@ -167,7 +160,7 @@ async fn check_and_get_user(
 async fn check_and_get_authed_user(
     user: &str,
     password: &str,
-    user_service: &UserService,
+    connection: &DatabaseConnection,
     redis_pool: &Pool,
     redis_key: &str,
 ) -> Result<AuthenticatedUser, AuthenticationError> {
@@ -189,7 +182,7 @@ async fn check_and_get_authed_user(
     }
 
     // Nothing? Authenticate dance!
-    let user = check_and_get_user(user, password, user_service).await?;
+    let user = check_and_get_user(connection, user, password).await?;
     let user = AuthenticatedUser::from_user(&user);
 
     // Store it in redis
@@ -218,15 +211,15 @@ fn extract_credentials_from_http_basic(
 pub async fn get_jwt_from_login_request(
     user: &str,
     password: &str,
-    user_service: &UserService,
+    connection: &DatabaseConnection,
 ) -> Result<String, AuthenticationError> {
-    let user = check_and_get_user(user, password, user_service).await?;
+    let user = check_and_get_user(connection, user, password).await?;
 
     get_jwt(&user).await
 }
 
 /// # Generate a JWT for the given user
-pub async fn get_jwt(user: &users::Model) -> Result<String, AuthenticationError> {
+pub async fn get_jwt(user: &UserModel) -> Result<String, AuthenticationError> {
     let utc: DateTime<Utc> = Utc::now() + Duration::minutes(15);
     let authenticated_user = AuthenticatedUser::from_user(user);
 

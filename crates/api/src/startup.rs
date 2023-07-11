@@ -8,26 +8,10 @@ use sea_orm::DatabaseConnection;
 
 use crate::rate_limiting::build_rate_limiting_conf;
 use crate::routes;
-use crate::services::channels::ChannelService;
-use crate::services::items::ItemService;
-use crate::services::users::UserService;
 
-pub struct ApplicationServices {
-    pub item_service: ItemService,
-    pub channel_service: ChannelService,
-    pub user_service: UserService,
-}
-
-fn build_services(database: &DatabaseConnection) -> ApplicationServices {
-    let item_service = ItemService::new(database.clone());
-    let channel_service = ChannelService::new(database.clone());
-    let user_service = UserService::new(database.clone());
-
-    ApplicationServices {
-        item_service,
-        channel_service,
-        user_service,
-    }
+pub struct AppState {
+    pub db: DatabaseConnection,
+    pub redis: Pool,
 }
 
 pub async fn startup(
@@ -35,18 +19,16 @@ pub async fn startup(
     redis: Pool,
     listener: TcpListener,
 ) -> std::io::Result<()> {
-    let application_service = build_services(&database);
+    let app_state = AppState { db: database, redis };
 
     let governor_conf = build_rate_limiting_conf();
-    let services = Data::new(application_service);
-    let redis = Data::new(redis);
+    let app_state = Data::new(app_state);
 
     HttpServer::new(move || {
         App::new()
             .wrap(tracing_actix_web::TracingLogger::default())
             .wrap(sentry_actix::Sentry::default())
-            .app_data(services.clone())
-            .app_data(redis.clone())
+            .app_data(app_state.clone())
             .service(routes::ping)
             .service(
                 web::scope("/api/v1")

@@ -4,24 +4,26 @@ use actix_xml::Xml;
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::model::opml::Opml;
-use crate::model::{HttpNewChannel, PageParameters};
+use rss_common::model::opml::Opml;
+use rss_common::model::{HttpNewChannel, PageParameters};
+use rss_common::services::channels::ChannelService;
+use rss_common::services::items::ItemService;
+use rss_common::services::rss_detector;
+
 use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
-use crate::services::rss_detector;
-use crate::startup::ApplicationServices;
+use crate::startup::AppState;
 
 #[get("/channel/{id}")]
-#[tracing::instrument(skip(services))]
+#[tracing::instrument(skip(app_state))]
 pub async fn get_channel(
     id: web::Path<i32>,
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let res = services
-        .channel_service
-        .select_by_id_and_user_id(id.into_inner(), user.id)
-        .await?;
+    let connection = &app_state.db;
+    let res =
+        ChannelService::select_by_id_and_user_id(connection, id.into_inner(), user.id).await?;
 
     match res {
         Some(data) => Ok(HttpResponse::Ok().json(data)),
@@ -30,120 +32,120 @@ pub async fn get_channel(
 }
 
 #[get("/channel/{id}/errors")]
-#[tracing::instrument(skip(services))]
+#[tracing::instrument(skip(app_state))]
 pub async fn get_errors_of_channel(
     id: web::Path<i32>,
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
     if !user.is_admin() {
         return Ok(HttpResponse::Forbidden().finish());
     }
 
-    let errors = services
-        .channel_service
-        .select_errors_by_chan_id(id.into_inner())
-        .await?;
+    let errors = ChannelService::select_errors_by_chan_id(connection, id.into_inner()).await?;
 
     Ok(HttpResponse::Ok().json(errors))
 }
 
 #[post("/channel/{id}/read")]
-#[tracing::instrument(skip(services))]
+#[tracing::instrument(skip(app_state))]
 pub async fn mark_channel_as_read(
     id: web::Path<i32>,
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    services
-        .channel_service
-        .mark_channel_as_read(id.into_inner(), user.id)
-        .await?;
+    let connection = &app_state.db;
+
+    ChannelService::mark_channel_as_read(connection, id.into_inner(), user.id).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
 
 #[get("/channels")]
-#[tracing::instrument(skip(services))]
+#[tracing::instrument(skip(app_state))]
 pub async fn get_channels(
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let channels = services
-        .channel_service
-        .select_page_by_user_id(user.id, page.get_page(), page.get_size())
-        .await?;
+    let connection = &app_state.db;
+
+    let channels = ChannelService::select_page_by_user_id(
+        connection,
+        user.id,
+        page.get_page(),
+        page.get_size(),
+    )
+    .await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
 #[post("/channels")]
-#[tracing::instrument(skip(services))]
+#[tracing::instrument(skip(app_state))]
 async fn new_channel(
     new_channel: web::Json<HttpNewChannel>,
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
     let data = new_channel.into_inner();
-    let channel = services
-        .channel_service
-        .create_or_link_channel(data, user.id)
-        .await?;
+
+    let channel = ChannelService::create_or_link_channel(connection, data, user.id).await?;
 
     Ok(HttpResponse::Created().json(json!({"id": channel.id})))
 }
 
 #[get("/channel/{chan_id}/items")]
-#[tracing::instrument(skip(services))]
+#[tracing::instrument(skip(app_state))]
 async fn get_items_of_channel(
     chan_id: web::Path<i32>,
     page: web::Query<PageParameters>,
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let items = services
-        .item_service
-        .get_items_of_channel(
-            chan_id.into_inner(),
-            auth.id,
-            page.get_page(),
-            page.get_size(),
-        )
-        .await?;
+    let connection = &app_state.db;
+
+    let items = ItemService::get_items_of_channel(
+        connection,
+        chan_id.into_inner(),
+        auth.id,
+        page.get_page(),
+        page.get_size(),
+    )
+    .await?;
 
     Ok(HttpResponse::Ok().json(items))
 }
 
 #[post("/channels/import")]
-#[tracing::instrument(skip(services, opml))]
+#[tracing::instrument(skip(app_state, opml))]
 async fn import_opml(
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     auth: AuthenticatedUser,
     opml: Xml<Opml>,
 ) -> Result<HttpResponse, ApiError> {
     let opml = opml.into_inner();
+    let connection = &app_state.db;
     for channel in opml.body.flatten_outlines() {
-        services
-            .channel_service
-            .create_or_link_channel(channel, auth.id)
-            .await?;
+        ChannelService::create_or_link_channel(connection, channel, auth.id).await?;
     }
 
     Ok(HttpResponse::Created().finish())
 }
 
 #[post("/channel/{id}/enable")]
-#[tracing::instrument(skip(services))]
+#[tracing::instrument(skip(app_state))]
 async fn enable_channel(
     id: web::Path<i32>,
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
     if user.is_admin() {
-        services
-            .channel_service
-            .enable_channel(id.into_inner())
-            .await?;
+        ChannelService::enable_channel(connection, id.into_inner()).await?;
         Ok(HttpResponse::Accepted().finish())
     } else {
         Ok(HttpResponse::Forbidden().finish())

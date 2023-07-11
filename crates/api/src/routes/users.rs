@@ -4,23 +4,26 @@ use actix_web::{get, patch, post, web, HttpResponse};
 use secrecy::ExposeSecret;
 use serde_json::json;
 
-use entity::sea_orm_active_enums::UserRole;
-
-use crate::model::{
+use rss_common::model::{
     HttpNewUser, PageParameters, PagedResult, UpdateOtherPasswordRequest, UpdatePasswordRequest,
 };
+use rss_common::services::users::UserService;
+use rss_common::services::AuthenticationError;
+use rss_common::UserRole;
+
 use crate::routes::ApiError;
 use crate::services::auth::AuthenticatedUser;
-use crate::services::AuthenticationError;
-use crate::startup::ApplicationServices;
+use crate::startup::AppState;
 
 #[post("/users")]
-#[tracing::instrument(skip(services))]
+#[tracing::instrument(skip(app_state))]
 async fn new_user(
     new_user: web::Json<HttpNewUser>,
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     user: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
     let admin = user.map(|x| x.is_admin()).unwrap_or(false);
     let allow_account_creation = env::var("RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION")
         .map(|x| x.parse().unwrap_or_default())
@@ -35,10 +38,13 @@ async fn new_user(
             return Ok(HttpResponse::Unauthorized().finish());
         }
 
-        let user = services
-            .user_service
-            .create_user(&data.username, data.password.expose_secret(), data.role)
-            .await?;
+        let user = UserService::create_user(
+            connection,
+            &data.username,
+            data.password.expose_secret(),
+            data.role,
+        )
+        .await?;
 
         Ok(HttpResponse::Created().json(json!({"id": user.id})))
     } else {
@@ -48,17 +54,17 @@ async fn new_user(
 }
 
 #[get("/users")]
-#[tracing::instrument(skip(services))]
+#[tracing::instrument(skip(app_state))]
 async fn list_users(
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
     if user.is_admin() {
-        let users_page = services
-            .user_service
-            .list_users(page.get_page(), page.get_size())
-            .await?;
+        let users_page =
+            UserService::list_users(connection, page.get_page(), page.get_size()).await?;
         let users = PagedResult {
             content: users_page.content,
             page: users_page.page,
@@ -77,20 +83,25 @@ async fn list_users(
 }
 
 #[patch("/user/update-password")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(app_state), level = "debug")]
 async fn update_password(
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     request: web::Json<UpdatePasswordRequest>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
     if request.new_password.expose_secret() != request.confirm_password.expose_secret() {
         return Err(ApiError::PasswordMismatch);
     }
 
-    if let Err(e) = services
-        .user_service
-        .update_password(user.id, &request.current_password, &request.new_password)
-        .await
+    if let Err(e) = UserService::update_password(
+        connection,
+        user.id,
+        &request.current_password,
+        &request.new_password,
+    )
+    .await
     {
         return Err(ApiError::ServiceError(e));
     }
@@ -99,13 +110,16 @@ async fn update_password(
 }
 
 #[patch("/user/{user_id}/update-password")]
-#[tracing::instrument(skip(services), level = "debug")]
+#[tracing::instrument(skip(app_state), level = "debug")]
+//FIXME Something fishy is in here
 async fn update_other_password(
-    services: web::Data<ApplicationServices>,
+    app_state: web::Data<AppState>,
     user_id: web::Path<i32>,
     request: web::Json<UpdateOtherPasswordRequest>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
     if !user.is_admin() {
         return Err(ApiError::AuthenticationError(
             AuthenticationError::Forbidden("no".into()),
@@ -116,10 +130,8 @@ async fn update_other_password(
         return Err(ApiError::PasswordMismatch);
     }
 
-    if let Err(e) = services
-        .user_service
-        .update_other_user_password(user.id, &request.new_password)
-        .await
+    if let Err(e) =
+        UserService::update_other_user_password(connection, user.id, &request.new_password).await
     {
         return Err(ApiError::ServiceError(e));
     }

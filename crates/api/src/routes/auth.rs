@@ -1,14 +1,15 @@
 use actix_web::{post, web, HttpResponse};
 use anyhow::{anyhow, Context};
-use deadpool_redis::Pool;
 use redis::AsyncCommands;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
+use rss_common::services::users::UserService;
+
 use crate::routes::ApiError;
-use crate::startup::ApplicationServices;
+use crate::startup::AppState;
 
 #[derive(Deserialize, Debug)]
 pub struct LoginRequest {
@@ -22,16 +23,18 @@ pub struct RefreshRequest {
 }
 
 #[post("/auth/login")]
-#[tracing::instrument(skip(services, redis_pool))]
+#[tracing::instrument(skip(app_state))]
 pub async fn login(
     login: web::Json<LoginRequest>,
-    services: web::Data<ApplicationServices>,
-    redis_pool: web::Data<Pool>,
+    app_state: web::Data<AppState>,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    let redis_pool = &app_state.redis;
+
     let access_token = crate::services::auth::get_jwt_from_login_request(
         &login.login,
         login.password.expose_secret(),
-        &services.user_service,
+        connection,
     )
     .await?;
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
@@ -46,22 +49,20 @@ pub async fn login(
 }
 
 #[post("/auth/refresh")]
-#[tracing::instrument(skip(redis_pool, services))]
+#[tracing::instrument(skip(app_state))]
 pub async fn refresh_auth(
     refresh_token: web::Json<RefreshRequest>,
-    services: web::Data<ApplicationServices>,
-    redis_pool: web::Data<Pool>,
+    app_state: web::Data<AppState>,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    let redis_pool = &app_state.redis;
     let mut redis = redis_pool.get().await?;
-
     let token = refresh_token.token.expose_secret();
     let token_exists = redis.exists::<_, bool>(token).await?;
 
     if token_exists {
         let user_login = crate::services::auth::extract_login_from_refresh_token(token);
-        let user = services
-            .user_service
-            .get_user(user_login)
+        let user = UserService::get_user(connection, user_login)
             .await
             .context("Could not get user")?
             .ok_or_else(|| anyhow!("Unknown user"))?;
