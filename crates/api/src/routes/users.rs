@@ -111,7 +111,6 @@ async fn update_password(
 
 #[patch("/user/{user_id}/update-password")]
 #[tracing::instrument(skip(app_state), level = "debug")]
-//FIXME Something fishy is in here
 async fn update_other_password(
     app_state: web::Data<AppState>,
     user_id: web::Path<i32>,
@@ -122,7 +121,7 @@ async fn update_other_password(
 
     if !user.is_admin() {
         return Err(ApiError::AuthenticationError(
-            AuthenticationError::Forbidden("no".into()),
+            AuthenticationError::Forbidden("You need to be an administrator".to_owned()),
         ));
     }
 
@@ -130,12 +129,16 @@ async fn update_other_password(
         return Err(ApiError::PasswordMismatch);
     }
 
-    if let Err(e) =
-        UserService::update_other_user_password(connection, user.id, &request.new_password).await
+    if let Err(e) = UserService::update_other_user_password(
+        connection,
+        user_id.into_inner(),
+        &request.new_password,
+    )
+    .await
     {
         return Err(ApiError::ServiceError(e));
     }
-    //TODO: Invalid token?
+    //TODO: We should probably invalid the current refresh token in redis
     Ok(HttpResponse::NoContent().finish())
 }
 
