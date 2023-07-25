@@ -37,14 +37,17 @@ pub enum FetchError {
     UnexpectedError(#[from] anyhow::Error),
 }
 
+/// Process the whole database update in one single transaction. BALLSY.
 #[tracing::instrument(skip_all)]
-pub async fn fetch(connection: &DatabaseConnection) -> Result<(), anyhow::Error> {
-    let channels = ChannelService::get_all_enabled_channels(connection)
+pub async fn process(connection: &DatabaseConnection) -> Result<(), anyhow::Error> {
+    let txn = connection.begin().await?;
+
+    let channels = ChannelService::get_all_enabled_channels(&txn)
         .await
         .context("Could not get channels to update")?;
 
     for channel in channels {
-        if let Err(error) = update_channel(connection, channel).await {
+        if let Err(error) = update_channel(&txn, channel).await {
             tracing::error!("{:?}", error.source());
         }
     }
@@ -56,17 +59,19 @@ pub async fn fetch(connection: &DatabaseConnection) -> Result<(), anyhow::Error>
     // Disable all the channels where the failed count is a higher than FAILURE_THRESHOLD.
     // If FAILURE_THRESHOLD = 0, don't do anything
     if threshold > 0 {
-        ChannelService::disable_channels(connection, threshold).await?;
+        ChannelService::disable_channels(&txn, threshold).await?;
     }
+
+    txn.commit().await?;
 
     Ok(())
 }
 
 #[tracing::instrument(skip(connection))]
-async fn update_channel(
-    connection: &DatabaseConnection,
-    channel: channels::Model,
-) -> Result<(), FetchError> {
+async fn update_channel<C>(connection: &C, channel: channels::Model) -> Result<(), FetchError>
+where
+    C: ConnectionTrait,
+{
     let feed = match get_and_parse_feed(&channel.url).await {
         Ok(feed) => feed,
         Err(error) => {
@@ -85,18 +90,16 @@ async fn update_channel(
         .collect::<Vec<entity::items::ActiveModel>>();
 
     let user_ids = ChannelService::get_user_ids_of_channel(connection, channel.id).await?;
-    let txn = connection.begin().await?;
     for item in new_items {
-        let item = item.insert(&txn).await?;
+        let item = item.insert(connection).await?;
         for user_id in &user_ids {
             build_user_channels(user_id, &channel.id, &item.id)
-                .insert(&txn)
+                .insert(connection)
                 .await?;
         }
     }
     let now: DateTimeWithTimeZone = Utc::now().into();
-    ChannelService::update_last_fetched(&txn, channel.id, now).await?;
-    txn.commit().await?;
+    ChannelService::update_last_fetched(connection, channel.id, now).await?;
 
     Ok(())
 }
@@ -115,10 +118,13 @@ async fn get_and_parse_feed(channel_url: &str) -> Result<Feed, FetchError> {
 }
 
 /// Returns the list of all the registered item ids of a channel.
-async fn fetch_current_items_id(
-    connection: &DatabaseConnection,
+async fn fetch_current_items_id<C>(
+    connection: &C,
     channel: &channels::Model,
-) -> Result<HashSet<String>, sea_orm::DbErr> {
+) -> Result<HashSet<String>, sea_orm::DbErr>
+where
+    C: ConnectionTrait,
+{
     let items = ItemService::get_all_items_of_channel(connection, channel.id).await?;
 
     Ok(items
