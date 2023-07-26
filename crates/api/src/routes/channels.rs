@@ -1,10 +1,8 @@
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse};
-use actix_xml::Xml;
 use serde::Deserialize;
 use serde_json::json;
 
-use rss_common::model::opml::Opml;
 use rss_common::model::{HttpNewChannel, PageParameters};
 use rss_common::services::channels::ChannelService;
 use rss_common::services::items::ItemService;
@@ -119,22 +117,6 @@ async fn get_items_of_channel(
     Ok(HttpResponse::Ok().json(items))
 }
 
-#[post("/channels/import")]
-#[tracing::instrument(skip(app_state, opml))]
-async fn import_opml(
-    app_state: web::Data<AppState>,
-    auth: AuthenticatedUser,
-    opml: Xml<Opml>,
-) -> Result<HttpResponse, ApiError> {
-    let opml = opml.into_inner();
-    let connection = &app_state.db;
-    for channel in opml.body.flatten_outlines() {
-        ChannelService::create_or_link_channel(connection, channel, auth.id).await?;
-    }
-
-    Ok(HttpResponse::Created().finish())
-}
-
 #[post("/channel/{id}/enable")]
 #[tracing::instrument(skip(app_state))]
 async fn enable_channel(
@@ -174,6 +156,5 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(new_channel)
         .service(get_items_of_channel)
         .service(enable_channel)
-        .service(get_errors_of_channel)
-        .service(import_opml);
+        .service(get_errors_of_channel);
 }

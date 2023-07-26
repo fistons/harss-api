@@ -225,21 +225,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-xml"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7f31675af92ef6d267943f6e50dc08891725f0933bdf8d54470dd0bce8709b4"
-dependencies = [
- "actix-web",
- "futures",
- "log",
- "mime",
- "quick-xml 0.22.0",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -341,7 +326,6 @@ dependencies = [
  "actix-files",
  "actix-governor",
  "actix-web",
- "actix-xml",
  "anyhow",
  "argon2",
  "chrono",
@@ -1058,7 +1042,7 @@ dependencies = [
  "chrono",
  "lazy_static",
  "mime",
- "quick-xml 0.27.1",
+ "quick-xml",
  "regex",
  "serde",
  "serde_json",
@@ -2494,16 +2478,6 @@ dependencies = [
  "wasi 0.10.2+wasi-snapshot-preview1",
  "web-sys",
  "winapi",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8533f14c8382aaad0d592c812ac3b826162128b65662331e1127b45c3d18536b"
-dependencies = [
- "memchr",
- "serde",
 ]
 
 [[package]]
