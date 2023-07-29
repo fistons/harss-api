@@ -1,6 +1,6 @@
 name: Check, test, everything
 
-on: [push, merge-request]
+on: [push, pull_request]
 
 jobs:
   check:
