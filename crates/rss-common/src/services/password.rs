@@ -2,8 +2,6 @@ use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use rand_core::OsRng;
 
-use entity::users;
-
 #[tracing::instrument(skip(pwd))]
 pub fn encode_password(pwd: &str) -> String {
     let argon2 = Argon2::default();
@@ -18,8 +16,8 @@ pub fn encode_password(pwd: &str) -> String {
 }
 
 #[tracing::instrument(skip_all)]
-pub fn match_password(user: &users::Model, candidate: &str) -> bool {
-    let parsed_hash = PasswordHash::new(&user.password).unwrap();
+pub fn match_password(user_password: &str, candidate: &str) -> bool {
+    let parsed_hash = PasswordHash::new(&user_password).unwrap();
     Argon2::default()
         .verify_password(candidate.as_bytes(), &parsed_hash)
         .is_ok()

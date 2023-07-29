@@ -21,7 +21,7 @@ pub enum RssParsingError {
 #[derive(thiserror::Error, Debug)]
 pub enum ServiceError {
     #[error("Database error: {0}")]
-    SqlError(#[from] sea_orm::DbErr),
+    SqlError(#[from] sqlx::Error),
     #[error("Rss parsing error: {0}")]
     RssError(#[from] RssParsingError),
     #[error("Given passwords doesn't match")]

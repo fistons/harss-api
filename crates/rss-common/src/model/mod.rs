@@ -1,11 +1,9 @@
 use std::fmt::Debug;
 
 use chrono::{DateTime, Utc};
-use sea_orm::FromQueryResult;
 use secrecy::Secret;
 use serde::{Deserialize, Serialize, Serializer};
 
-use entity::sea_orm_active_enums::UserRole;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HttpNewChannel {
@@ -14,7 +12,7 @@ pub struct HttpNewChannel {
 }
 
 /// Source of articles, over da web
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, FromQueryResult)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HttpChannel {
     pub id: i32,
     pub name: String,
@@ -24,7 +22,7 @@ pub struct HttpChannel {
     pub disabled: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, FromQueryResult)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HttpUserChannel {
     pub id: i32,
     pub name: String,
@@ -38,7 +36,7 @@ pub struct HttpUserChannel {
     pub disabled: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, FromQueryResult)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HttpChannelError {
     pub id: i32,
     pub channel_id: i32,
@@ -59,7 +57,7 @@ pub struct HttpNewUser {
     pub role: UserRole,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromQueryResult)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HttpUser {
     pub id: i32,
     pub username: String,
@@ -67,7 +65,7 @@ pub struct HttpUser {
 }
 
 /// RSS Item representation, with user related data
-#[derive(Debug, Serialize, Deserialize, Clone, FromQueryResult)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HttpUserItem {
     pub id: i32,
     pub guid: Option<String>,

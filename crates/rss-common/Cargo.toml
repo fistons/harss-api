@@ -19,7 +19,7 @@ sentry-tracing.workspace = true
 sentry.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
-sea-orm.workspace = true
+sqlx.workspace = true
 chrono.workspace = true
 secrecy.workspace = true
 argon2.workspace = true
@@ -32,8 +32,6 @@ serde.workspace = true
 serde_json.workspace = true
 jwt.workspace = true
 actix-web.workspace = true
-
-entity = { path = "../entity" }
 
 [dev-dependencies]
 wiremock.workspace = true

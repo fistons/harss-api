@@ -119,36 +119,6 @@ impl ChannelService {
         })
     }
 
-    /// # Select all the channels
-    #[tracing::instrument(skip(db))]
-    pub async fn select_all_enable<C>(db: &C) -> Result<Vec<HttpChannel>, ServiceError>
-    where
-        C: ConnectionTrait,
-    {
-        Ok(Channel::find()
-            .filter(channels::Column::Disabled.eq(false))
-            .into_model::<HttpChannel>()
-            .all(db)
-            .await?)
-    }
-
-    #[tracing::instrument(skip(db))]
-    pub async fn select_all_enabled_by_user_id<C>(
-        db: &C,
-        user_id: i32,
-    ) -> Result<Vec<HttpChannel>, ServiceError>
-    where
-        C: ConnectionTrait,
-    {
-        Ok(Channel::find()
-            .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
-            .filter(channel_users::Column::UserId.eq(user_id))
-            .filter(channels::Column::Disabled.eq(false))
-            .into_model::<HttpChannel>()
-            .all(db)
-            .await?)
-    }
-
     /// # Create a new channel in the database
     #[tracing::instrument(skip(db))]
     async fn create_new_channel<C>(
