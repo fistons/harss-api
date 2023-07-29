@@ -19,7 +19,10 @@ pub async fn startup(
     redis: Pool,
     listener: TcpListener,
 ) -> std::io::Result<()> {
-    let app_state = AppState { db: database, redis };
+    let app_state = AppState {
+        db: database,
+        redis,
+    };
 
     let governor_conf = build_rate_limiting_conf();
     let app_state = Data::new(app_state);

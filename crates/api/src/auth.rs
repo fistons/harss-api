@@ -102,11 +102,16 @@ async fn extract_authenticated_user(
                 Ok(credentials) => credentials,
                 Err(e) => return Err(e),
             };
-            let redis_pool = req.app_data::<Data<Pool>>().unwrap();
 
             let app_state = req.app_data::<Data<AppState>>().unwrap();
-            check_and_get_authed_user(&user, &password, &app_state.db, redis_pool, header_value)
-                .await
+            check_and_get_authed_user(
+                &user,
+                &password,
+                &app_state.db,
+                &app_state.redis,
+                header_value,
+            )
+            .await
         }
 
         (_error, _) => Err(AuthenticationError::UnknownAuthScheme),
@@ -147,7 +152,7 @@ async fn check_and_get_user(
         Some(u) => u,
     };
 
-    if !rss_common::services::users::match_password(&user, password) {
+    if !rss_common::services::password::match_password(&user, password) {
         return Err(AuthenticationError::Unauthorized(
             "Invalid credentials".into(),
         ));

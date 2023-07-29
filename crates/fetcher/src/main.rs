@@ -3,7 +3,7 @@ use std::time::Duration;
 use dotenvy::dotenv;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 
-use fetcher::fetch;
+use fetcher::process;
 use rss_common::observability;
 
 #[tokio::main]
@@ -17,7 +17,7 @@ async fn main() {
 
     let db = build_pool().await;
 
-    if let Err(err) = fetch(&db).await {
+    if let Err(err) = process(&db).await {
         tracing::error!("Ho noes! {err}");
     }
 }

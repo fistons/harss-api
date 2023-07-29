@@ -4,7 +4,8 @@ use feed_rs::parser::ParseFeedError;
 
 pub mod channels;
 pub mod items;
-pub mod rss_detector;
+pub mod password;
+pub mod rss;
 pub mod users;
 
 #[derive(thiserror::Error, Debug)]

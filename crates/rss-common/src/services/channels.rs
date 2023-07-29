@@ -1,24 +1,18 @@
-use chrono::{DateTime, Utc};
-use once_cell::sync::Lazy;
+use chrono::Utc;
+use sea_orm::prelude::DateTimeWithTimeZone;
 use sea_orm::sea_query::{Alias, Expr, SimpleExpr};
-use sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, DbErr};
+use sea_orm::{DeriveColumn, EnumIter};
 
-use entity::channels::Entity as Channel;
-use entity::{channel_users, channels, channels_errors, users_items};
-
+use entity::channel_users::Entity as ChannelUsers;
+use entity::channels::{Entity as Channel, Model};
 use entity::prelude::ChannelsErrors;
 use entity::users_items::Entity as UsersItems;
-use RssParsingError::NonOkStatus;
+use entity::{channel_users, channels, channels_errors, users_items};
 
 use crate::model::{HttpChannel, HttpChannelError, HttpNewChannel, HttpUserChannel, PagedResult};
-use crate::services::{RssParsingError, ServiceError};
-
-static CLIENT: Lazy<reqwest::Client> =
-    Lazy::new(|| reqwest::Client::builder()
-        .user_agent("rss-aggregator checker (+https://github.com/fistons/rss-aggregator)")
-        .build()
-        .expect("Could not build client"));
+use crate::services::rss::check_feed;
+use crate::services::ServiceError;
 
 pub struct ChannelService;
 
@@ -39,12 +33,14 @@ fn user_channel_select_statement() -> Select<Channel> {
 }
 
 impl ChannelService {
-
     #[tracing::instrument(skip(db))]
-    pub async fn select_errors_by_chan_id(
-        db: &DatabaseConnection,
+    pub async fn select_errors_by_chan_id<C>(
+        db: &C,
         chan_id: i32,
-    ) -> Result<Vec<HttpChannelError>, ServiceError> {
+    ) -> Result<Vec<HttpChannelError>, ServiceError>
+    where
+        C: ConnectionTrait,
+    {
         Ok(ChannelsErrors::find()
             .join(JoinType::Join, channels_errors::Relation::Channels.def())
             .column_as(channels::Column::Name, "channel_name")
@@ -55,11 +51,14 @@ impl ChannelService {
     }
 
     #[tracing::instrument(skip(db))]
-    pub async fn select_by_id_and_user_id(
-        db: &DatabaseConnection,
+    pub async fn select_by_id_and_user_id<C>(
+        db: &C,
         chan_id: i32,
         user_id: i32,
-    ) -> Result<Option<HttpUserChannel>, ServiceError> {
+    ) -> Result<Option<HttpUserChannel>, ServiceError>
+    where
+        C: ConnectionTrait,
+    {
         Ok(user_channel_select_statement()
             .filter(channel_users::Column::UserId.eq(user_id))
             .filter(channel_users::Column::ChannelId.eq(chan_id))
@@ -70,7 +69,10 @@ impl ChannelService {
     }
 
     #[tracing::instrument(skip(db))]
-    pub async fn mark_channel_as_read(db: &DatabaseConnection, chan_id: i32, user_id: i32) -> Result<(), DbErr> {
+    pub async fn mark_channel_as_read<C>(db: &C, chan_id: i32, user_id: i32) -> Result<(), DbErr>
+    where
+        C: ConnectionTrait,
+    {
         UsersItems::update_many()
             .col_expr(users_items::Column::Read, Expr::value(true))
             .filter(users_items::Column::ChannelId.eq(chan_id))
@@ -85,13 +87,16 @@ impl ChannelService {
 
     ///  Select all the channels of a user, along side the total number of items
     #[tracing::instrument(skip(db))]
-    pub async fn select_page_by_user_id(
-        db: &DatabaseConnection,
+    pub async fn select_page_by_user_id<C>(
+        db: &C,
         u_id: i32,
         page: u64,
         page_size: u64,
-    ) -> Result<PagedResult<HttpUserChannel>, ServiceError> {
-        let channel_paginator = user_channel_select_statement()
+    ) -> Result<PagedResult<HttpUserChannel>, ServiceError>
+    where
+        C: ConnectionTrait,
+    {
+        let channel_pagination = user_channel_select_statement()
             .filter(channel_users::Column::UserId.eq(u_id))
             .group_by(channels::Column::Id)
             .group_by(channel_users::Column::RegistrationTimestamp)
@@ -99,9 +104,9 @@ impl ChannelService {
             .into_model::<HttpUserChannel>()
             .paginate(db, page_size);
 
-        let total_items_and_pages = channel_paginator.num_items_and_pages().await?;
+        let total_items_and_pages = channel_pagination.num_items_and_pages().await?;
         let total_pages = total_items_and_pages.number_of_pages;
-        let content = channel_paginator.fetch_page(page - 1).await?;
+        let content = channel_pagination.fetch_page(page - 1).await?;
         let elements_number = content.len();
 
         Ok(PagedResult {
@@ -116,7 +121,10 @@ impl ChannelService {
 
     /// # Select all the channels
     #[tracing::instrument(skip(db))]
-    pub async fn select_all_enabled(db: &DatabaseConnection) -> Result<Vec<HttpChannel>, ServiceError> {
+    pub async fn select_all_enable<C>(db: &C) -> Result<Vec<HttpChannel>, ServiceError>
+    where
+        C: ConnectionTrait,
+    {
         Ok(Channel::find()
             .filter(channels::Column::Disabled.eq(false))
             .into_model::<HttpChannel>()
@@ -125,10 +133,13 @@ impl ChannelService {
     }
 
     #[tracing::instrument(skip(db))]
-    pub async fn select_all_enabled_by_user_id(
-        db: &DatabaseConnection,
+    pub async fn select_all_enabled_by_user_id<C>(
+        db: &C,
         user_id: i32,
-    ) -> Result<Vec<HttpChannel>, ServiceError> {
+    ) -> Result<Vec<HttpChannel>, ServiceError>
+    where
+        C: ConnectionTrait,
+    {
         Ok(Channel::find()
             .join(JoinType::RightJoin, channels::Relation::ChannelUsers.def())
             .filter(channel_users::Column::UserId.eq(user_id))
@@ -140,10 +151,13 @@ impl ChannelService {
 
     /// # Create a new channel in the database
     #[tracing::instrument(skip(db))]
-    async fn create_new_channel(
-        db: &DatabaseConnection,
+    async fn create_new_channel<C>(
+        db: &C,
         new_channel: &HttpNewChannel,
-    ) -> Result<channels::Model, ServiceError> {
+    ) -> Result<Model, ServiceError>
+    where
+        C: ConnectionTrait,
+    {
         // Check that the feed is a parsable RSS feed
         check_feed(&new_channel.url).await?;
 
@@ -162,11 +176,14 @@ impl ChannelService {
 
     /// Create or linked an existing channel to a user
     #[tracing::instrument(skip(db))]
-    pub async fn create_or_link_channel(
-        db: &DatabaseConnection,
+    pub async fn create_or_link_channel<C>(
+        db: &C,
         new_channel: HttpNewChannel,
         other_user_id: i32,
-    ) -> Result<channels::Model, ServiceError> {
+    ) -> Result<Model, ServiceError>
+    where
+        C: ConnectionTrait,
+    {
         let channel = match Channel::find()
             .filter(channels::Column::Url.eq(&*new_channel.url))
             .one(db)
@@ -196,25 +213,12 @@ impl ChannelService {
         }
     }
 
-    /// Update the last fetched timestamp of a channel
-    #[tracing::instrument(skip(db))]
-    pub async fn update_last_fetched(
-        db: &DatabaseConnection,
-        channel_id: i32,
-        date: DateTime<Utc>,
-    ) -> Result<(), ServiceError> {
-        Channel::update_many()
-            .col_expr(channels::Column::LastUpdate, Expr::value(date))
-            .filter(channels::Column::Id.eq(channel_id))
-            .exec(db)
-            .await?;
-
-        Ok(())
-    }
-
     /// Enable a channel and reset it's failure count
     #[tracing::instrument(skip(db))]
-    pub async fn enable_channel(db: &DatabaseConnection, id: i32) -> Result<(), DbErr> {
+    pub async fn enable_channel<C>(db: &C, id: i32) -> Result<(), DbErr>
+    where
+        C: ConnectionTrait,
+    {
         Channel::update_many()
             .col_expr(channels::Column::Disabled, Expr::value(false))
             .col_expr(channels::Column::FailureCount, Expr::value(0))
@@ -226,91 +230,104 @@ impl ChannelService {
 
         Ok(())
     }
+
+    /// Disable channels whom failure count is higher than the given threshold
+    #[tracing::instrument(skip(db))]
+    pub async fn disable_channels<C>(db: &C, threshold: u32) -> Result<(), DbErr>
+    where
+        C: ConnectionTrait,
+    {
+        let disabled_channels: UpdateResult = Channel::update_many()
+            .col_expr(channels::Column::Disabled, Expr::value(true))
+            .filter(channels::Column::FailureCount.eq(threshold))
+            .filter(channels::Column::Disabled.eq(false))
+            .exec(db)
+            .await?;
+
+        tracing::debug!("Disabled {} channels", disabled_channels.rows_affected);
+
+        Ok(())
+    }
+
+    /// Return the list of user IDs of of a given channel
+    #[tracing::instrument(skip(db))]
+    pub async fn get_user_ids_of_channel<C>(db: &C, channel_id: i32) -> Result<Vec<i32>, DbErr>
+    where
+        C: ConnectionTrait,
+    {
+        ChannelUsers::find()
+            .select_only()
+            .column(channel_users::Column::UserId)
+            .filter(channel_users::Column::ChannelId.eq(channel_id))
+            .into_values::<_, QueryAs>()
+            .all(db)
+            .await
+    }
+
+    /// Return the list of all enabled channels
+    #[tracing::instrument(skip(db))]
+    pub async fn get_all_enabled_channels<C>(db: &C) -> Result<Vec<Model>, DbErr>
+    where
+        C: ConnectionTrait,
+    {
+        Channel::find()
+            .filter(channels::Column::Disabled.eq(false))
+            .all(db)
+            .await
+    }
+
+    /// Update the last fetched timestamp of a channel
+    #[tracing::instrument(skip(db))]
+    pub async fn update_last_fetched<C>(
+        db: &C,
+        channel_id: i32,
+        date: DateTimeWithTimeZone,
+    ) -> Result<(), DbErr>
+    where
+        C: ConnectionTrait,
+    {
+        Channel::update_many()
+            .col_expr(channels::Column::LastUpdate, Expr::value(date))
+            .filter(channels::Column::Id.eq(channel_id))
+            .exec(db)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Update the failure count of the given channel and insert the error in the dedicated table
+    #[tracing::instrument(skip(connection))]
+    pub async fn fail_channel<C>(
+        connection: &C,
+        channel_id: i32,
+        error_cause: &str,
+    ) -> Result<(), DbErr>
+    where
+        C: ConnectionTrait,
+    {
+        Channel::update_many()
+            .col_expr(
+                channels::Column::FailureCount,
+                Expr::col(channels::Column::FailureCount).add(1),
+            )
+            .filter(channels::Column::Id.eq(channel_id))
+            .exec(connection)
+            .await?;
+
+        let channel_error = channels_errors::ActiveModel {
+            id: NotSet,
+            channel_id: Set(channel_id),
+            error_reason: Set(Some(error_cause.to_owned())),
+            error_timestamp: Set(Utc::now().into()),
+        };
+
+        channel_error.insert(connection).await?;
+
+        Ok(())
+    }
 }
 
-/// Check that the feed is correct
-#[tracing::instrument]
-async fn check_feed(url: &str) -> Result<(), RssParsingError> {
-
-    let response = CLIENT.get(url).send().await?;
-    if !response.status().is_success() {
-        return Err(NonOkStatus(response.status().as_u16()));
-    }
-    let feed_content = response.bytes().await?;
-    feed_rs::parser::parse(&feed_content[..])?;
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use wiremock::matchers::method;
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_check_feed_is_ok() {
-        let mock = MockServer::start().await;
-
-        let valid_response = r#"
-        <?xml version="1.0" encoding="UTF-8" ?>
-        <rss version="2.0">
-        <channel>
-          <title>W3Schools Home Page</title>
-          <link>https://www.w3schools.com</link>
-          <description>Free web building tutorials</description>
-          <item>
-            <title>RSS Tutorial</title>
-            <link>https://www.w3schools.com/xml/xml_rss.asp</link>
-            <description>New RSS tutorial on W3Schools</description>
-          </item>
-        </channel>
-        "#;
-
-        let response = ResponseTemplate::new(200).set_body_raw(valid_response, "application/xml");
-
-        Mock::given(method("GET"))
-            .respond_with(response)
-            .expect(1)
-            .mount(&mock)
-            .await;
-
-        assert!(check_feed(&mock.uri()).await.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_check_feed_non_200() {
-        let mock = MockServer::start().await;
-
-        let response = ResponseTemplate::new(404);
-
-        Mock::given(method("GET"))
-            .respond_with(response)
-            .expect(1)
-            .mount(&mock)
-            .await;
-
-        assert!(matches!(
-            check_feed(&mock.uri()).await,
-            Err(RssParsingError::NonOkStatus { .. })
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_check_feed_invalid_rss() {
-        let mock = MockServer::start().await;
-
-        let response = ResponseTemplate::new(200).set_body_raw("rss lol", "application/xml");
-        Mock::given(method("GET"))
-            .respond_with(response)
-            .expect(1)
-            .mount(&mock)
-            .await;
-
-        assert!(matches!(
-            check_feed(&mock.uri()).await,
-            Err(RssParsingError::ParseFeedError { .. })
-        ));
-    }
+#[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
+enum QueryAs {
+    UserId,
 }

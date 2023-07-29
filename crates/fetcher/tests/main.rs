@@ -7,7 +7,7 @@ use entity::channels::Entity as Channel;
 use entity::channels_errors::Entity as ChannelsError;
 use entity::items::Entity as Item;
 use entity::users_items::Entity as UserItem;
-use fetcher::fetch;
+use fetcher::process;
 use helpers::configure_database;
 
 mod helpers;
@@ -24,7 +24,7 @@ async fn test_error_is_filled() {
         .mount(&mock)
         .await;
 
-    fetch(&db).await.unwrap();
+    process(&db).await.unwrap();
 
     let errors = ChannelsError::find().all(&db).await.unwrap();
 
@@ -67,7 +67,7 @@ async fn happy_path() {
         .await;
 
     // "Fetch" stuff
-    fetch(&db).await.unwrap();
+    process(&db).await.unwrap();
 
     // Check that stuff have been inserted
     let inserted_items = Item::find()

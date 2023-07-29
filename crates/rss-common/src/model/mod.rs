@@ -7,8 +7,6 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use entity::sea_orm_active_enums::UserRole;
 
-pub mod opml;
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HttpNewChannel {
     pub name: String,

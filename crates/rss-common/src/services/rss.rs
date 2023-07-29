@@ -2,9 +2,18 @@ use once_cell::sync::Lazy;
 use scraper::Selector;
 
 use crate::model::FoundRssChannel;
+use crate::services::RssParsingError;
+use crate::services::RssParsingError::NonOkStatus;
 
 static ALTERNATE_LINK_HEADER: Lazy<Selector> =
     Lazy::new(|| Selector::parse(r#"link[type="application/rss+xml"]"#).unwrap());
+
+static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
+    reqwest::Client::builder()
+        .user_agent("rss-aggregator checker (+https://github.com/fistons/rss-aggregator)")
+        .build()
+        .expect("Could not build client")
+});
 
 #[tracing::instrument]
 async fn download_url(url: &str) -> anyhow::Result<String> {
@@ -39,6 +48,19 @@ pub fn look_for_rss(content: &str) -> Vec<FoundRssChannel> {
 pub async fn download_and_look_for_rss(url: &str) -> anyhow::Result<Vec<FoundRssChannel>> {
     let content = download_url(url).await?;
     Ok(look_for_rss(&content))
+}
+
+/// Check that the feed is correct
+#[tracing::instrument]
+pub async fn check_feed(url: &str) -> Result<(), RssParsingError> {
+    let response = CLIENT.get(url).send().await?;
+    if !response.status().is_success() {
+        return Err(NonOkStatus(response.status().as_u16()));
+    }
+    let feed_content = response.bytes().await?;
+    feed_rs::parser::parse(&feed_content[..])?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -116,5 +138,70 @@ mod tests {
         let url = format!("{}/coucou", mock.uri());
 
         assert!(matches!(download_and_look_for_rss(&url).await, Err(_)));
+    }
+
+    #[tokio::test]
+    async fn test_check_feed_is_ok() {
+        let mock = MockServer::start().await;
+
+        let valid_response = r#"
+        <?xml version="1.0" encoding="UTF-8" ?>
+        <rss version="2.0">
+        <channel>
+          <title>W3Schools Home Page</title>
+          <link>https://www.w3schools.com</link>
+          <description>Free web building tutorials</description>
+          <item>
+            <title>RSS Tutorial</title>
+            <link>https://www.w3schools.com/xml/xml_rss.asp</link>
+            <description>New RSS tutorial on W3Schools</description>
+          </item>
+        </channel>
+        "#;
+
+        let response = ResponseTemplate::new(200).set_body_raw(valid_response, "application/xml");
+
+        Mock::given(method("GET"))
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock)
+            .await;
+
+        assert!(check_feed(&mock.uri()).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_check_feed_non_200() {
+        let mock = MockServer::start().await;
+
+        let response = ResponseTemplate::new(404);
+
+        Mock::given(method("GET"))
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock)
+            .await;
+
+        assert!(matches!(
+            check_feed(&mock.uri()).await,
+            Err(RssParsingError::NonOkStatus { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_check_feed_invalid_rss() {
+        let mock = MockServer::start().await;
+
+        let response = ResponseTemplate::new(200).set_body_raw("rss lol", "application/xml");
+        Mock::given(method("GET"))
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock)
+            .await;
+
+        assert!(matches!(
+            check_feed(&mock.uri()).await,
+            Err(RssParsingError::ParseFeedError { .. })
+        ));
     }
 }

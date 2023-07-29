@@ -3,8 +3,8 @@ use actix_web::{get, post, web, HttpResponse};
 use rss_common::model::{IdListParameter, PageParameters, ReadStarredParameters};
 use rss_common::services::items::ItemService;
 
+use crate::auth::AuthenticatedUser;
 use crate::routes::ApiError;
-use crate::services::auth::AuthenticatedUser;
 use crate::startup::AppState;
 
 #[get("/items")]
