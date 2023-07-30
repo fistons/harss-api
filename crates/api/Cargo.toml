@@ -43,7 +43,7 @@ scraper.workspace = true
 once_cell.workspace = true
 rand.workspace = true
 
-rss-common = { path = "../rss-common" }
+common = { path = "../common" }
 
 [dev-dependencies]
 wiremock.workspace = true

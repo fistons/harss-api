@@ -215,12 +215,12 @@ pub async fn disable_channel(db: &Pool, channel_id: i32) -> Result<()> {
 
 /// Disable channels whom failure count is higher than the given threshold
 #[tracing::instrument(skip(db))]
-pub async fn disable_channels(db: &Pool, threshold: i32) -> Result<()> {
+pub async fn disable_channels(db: &Pool, threshold: u32) -> Result<()> {
     let disabled_channels = sqlx::query!(
         r#"
         UPDATE channels SET disabled = true WHERE disabled = false AND failure_count >= $1
         "#,
-        threshold
+        threshold as i32
     )
     .execute(db)
     .await?;

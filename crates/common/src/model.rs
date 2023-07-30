@@ -32,6 +32,22 @@ pub struct UsersChannel {
     pub disabled: bool,
 }
 
+/// A HaRss user
+#[derive(Debug, Clone)]
+pub struct User {
+    pub id: i32,
+    pub username: String,
+    pub password: String,
+    pub role: UserRole,
+}
+
+#[derive(sqlx::Type, Debug, Clone)]
+#[sqlx(type_name = "user_role", rename_all = "lowercase")]
+pub enum UserRole {
+    Admin,
+    User,
+}
+
 /// A channel with a user's metadata
 #[derive(Debug)]
 pub struct Channel {

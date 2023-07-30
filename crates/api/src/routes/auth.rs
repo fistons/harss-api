@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
-use rss_common::services::users::UserService;
+use common::users::get_user_by_username;
 
 use crate::routes::ApiError;
 use crate::startup::AppState;
@@ -62,7 +62,7 @@ pub async fn refresh_auth(
 
     if token_exists {
         let user_login = crate::auth::extract_login_from_refresh_token(token);
-        let user = UserService::get_user(connection, user_login)
+        let user = get_user_by_username(connection, user_login)
             .await
             .context("Could not get user")?
             .ok_or_else(|| anyhow!("Unknown user"))?;

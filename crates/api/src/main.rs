@@ -8,8 +8,8 @@ async fn main() -> std::io::Result<()> {
     // Init dotenv
     dotenvy::dotenv().ok();
 
-    let subscriber = rss_common::observability::get_subscriber("rss_aggregator", "info");
-    rss_common::observability::init_subscriber(subscriber);
+    let subscriber = common::observability::get_subscriber("rss_aggregator", "info");
+    common::observability::init_subscriber(subscriber);
 
     let postgres_connection = init_postgres_connection().await;
     let redis_pool = init_redis_connection();
@@ -18,7 +18,7 @@ async fn main() -> std::io::Result<()> {
         env::var("RSS_AGGREGATOR_LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")),
     )?;
 
-    let _sentry_guard = rss_common::observability::init_sentry();
+    let _sentry_guard = common::observability::init_sentry();
 
     startup::startup(postgres_connection, redis_pool, listener).await
 }

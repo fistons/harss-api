@@ -5,16 +5,14 @@ use std::error::Error;
 
 use anyhow::Context;
 use chrono::Utc;
+use common::Pool;
 use feed_rs::model::{Entry, Feed};
 use once_cell::sync::Lazy;
 use reqwest::Client;
-use sea_orm::prelude::DateTimeWithTimeZone;
-use sea_orm::DatabaseConnection;
-use sea_orm::{entity::*, query::*};
 
-use entity::channels;
-use rss_common::services::channels::ChannelService;
-use rss_common::services::items::ItemService;
+use common::channels::{disable_channels, fail_channel, get_all_enabled_channels};
+use common::items;
+use common::model::Channel;
 
 static CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()
@@ -26,7 +24,7 @@ static CLIENT: Lazy<Client> = Lazy::new(|| {
 #[derive(thiserror::Error, Debug)]
 pub enum FetchError {
     #[error("Database error: {0}")]
-    SqlError(#[from] sea_orm::DbErr),
+    SqlError(#[from] sqlx::Error),
     #[error("Parsing error: {0}")]
     ParseError(#[from] feed_rs::parser::ParseFeedError),
     #[error("Could not fetch the feed: {0}")]
@@ -39,15 +37,13 @@ pub enum FetchError {
 
 /// Process the whole database update in one single transaction. BALLSY.
 #[tracing::instrument(skip_all)]
-pub async fn process(connection: &DatabaseConnection) -> Result<(), anyhow::Error> {
-    let txn = connection.begin().await?;
-
-    let channels = ChannelService::get_all_enabled_channels(&txn)
+pub async fn process(connection: &Pool) -> Result<(), anyhow::Error> {
+    let channels = get_all_enabled_channels(&connection)
         .await
         .context("Could not get channels to update")?;
 
     for channel in channels {
-        if let Err(error) = update_channel(&txn, channel).await {
+        if let Err(error) = update_channel(&connection, channel).await {
             tracing::error!("{:?}", error.source());
         }
     }
@@ -59,23 +55,18 @@ pub async fn process(connection: &DatabaseConnection) -> Result<(), anyhow::Erro
     // Disable all the channels where the failed count is a higher than FAILURE_THRESHOLD.
     // If FAILURE_THRESHOLD = 0, don't do anything
     if threshold > 0 {
-        ChannelService::disable_channels(&txn, threshold).await?;
+        disable_channels(&connection, threshold).await?;
     }
-
-    txn.commit().await?;
 
     Ok(())
 }
 
 #[tracing::instrument(skip(connection))]
-async fn update_channel<C>(connection: &C, channel: channels::Model) -> Result<(), FetchError>
-where
-    C: ConnectionTrait,
-{
+async fn update_channel(connection: &Pool, channel: Channel) -> Result<(), FetchError> {
     let feed = match get_and_parse_feed(&channel.url).await {
         Ok(feed) => feed,
         Err(error) => {
-            ChannelService::fail_channel(connection, channel.id, &error.to_string()).await?;
+            fail_channel(connection, channel.id, &error.to_string()).await?;
             return Err(error);
         }
     };

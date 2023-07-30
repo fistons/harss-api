@@ -24,7 +24,7 @@ thiserror.workspace = true
 anyhow.workspace = true
 once_cell.workspace = true
 
-rss-common = { path = "../rss-common" }
+common = { path = "../common" }
 
 [dev-dependencies]
 wiremock.workspace = true

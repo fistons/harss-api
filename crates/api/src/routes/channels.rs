@@ -3,10 +3,10 @@ use actix_web::{get, post, web, HttpResponse};
 use serde::Deserialize;
 use serde_json::json;
 
-use rss_common::model::{HttpNewChannel, PageParameters};
-use rss_common::services::channels::ChannelService;
-use rss_common::services::items::ItemService;
-use rss_common::services::rss;
+use common::model::{NewChannel, PageParameters};
+use common::channels::ChannelService;
+use common::items::ItemService;
+use common::rss;
 
 use crate::auth::AuthenticatedUser;
 use crate::routes::ApiError;

@@ -1,16 +1,16 @@
-use std::time::Duration;
-
 use deadpool_redis::{Config, Pool, Runtime};
 use sqlx::postgres::PgPoolOptions;
-use tracing::log::LevelFilter::Trace;
 
-pub async fn init_postgres_connection() -> DatabaseConnection {
+use common::Pool as DbPool;
+
+pub async fn init_postgres_connection() -> DbPool {
     let connection_spec =
         std::env::var("DATABASE_URL").expect("DATABASE_URL env variable should be set");
 
     PgPoolOptions::new()
         .max_connections(5)
-        .connect(&connection_spec).await
+        .connect(&connection_spec)
+        .await
         .expect("Could not connect to postgres")
 }
 
