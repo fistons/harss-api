@@ -16,7 +16,6 @@ name = "fetcher"
 reqwest.workspace = true
 tokio.workspace = true
 dotenvy.workspace = true
-sqlx.workspace = true
 chrono.workspace = true
 tracing.workspace = true
 feed-rs.workspace = true
@@ -29,3 +28,4 @@ common = { path = "../common" }
 [dev-dependencies]
 wiremock.workspace = true
 fake.workspace = true
+sqlx.workspace = true

@@ -5,14 +5,14 @@ use std::error::Error;
 
 use anyhow::Context;
 use chrono::Utc;
-use common::Pool;
 use feed_rs::model::{Entry, Feed};
 use once_cell::sync::Lazy;
 use reqwest::Client;
 
-use common::channels::{disable_channels, fail_channel, get_all_enabled_channels};
-use common::items;
-use common::model::Channel;
+use common::channels::*;
+use common::items::*;
+use common::model::{Channel, NewItem};
+use common::{DbError, Pool};
 
 static CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()
@@ -24,7 +24,7 @@ static CLIENT: Lazy<Client> = Lazy::new(|| {
 #[derive(thiserror::Error, Debug)]
 pub enum FetchError {
     #[error("Database error: {0}")]
-    SqlError(#[from] sqlx::Error),
+    SqlError(#[from] DbError),
     #[error("Parsing error: {0}")]
     ParseError(#[from] feed_rs::parser::ParseFeedError),
     #[error("Could not fetch the feed: {0}")]
@@ -38,12 +38,12 @@ pub enum FetchError {
 /// Process the whole database update in one single transaction. BALLSY.
 #[tracing::instrument(skip_all)]
 pub async fn process(connection: &Pool) -> Result<(), anyhow::Error> {
-    let channels = get_all_enabled_channels(&connection)
+    let channels = get_all_enabled_channels(connection)
         .await
         .context("Could not get channels to update")?;
 
     for channel in channels {
-        if let Err(error) = update_channel(&connection, channel).await {
+        if let Err(error) = update_channel(connection, channel).await {
             tracing::error!("{:?}", error.source());
         }
     }
@@ -55,7 +55,7 @@ pub async fn process(connection: &Pool) -> Result<(), anyhow::Error> {
     // Disable all the channels where the failed count is a higher than FAILURE_THRESHOLD.
     // If FAILURE_THRESHOLD = 0, don't do anything
     if threshold > 0 {
-        disable_channels(&connection, threshold).await?;
+        disable_channels(connection, threshold).await?;
     }
 
     Ok(())
@@ -73,24 +73,23 @@ async fn update_channel(connection: &Pool, channel: Channel) -> Result<(), Fetch
 
     let current_item_ids = fetch_current_items_id(connection, &channel).await?;
 
+    // Retrieve all the items not already retrieved in precedent run
     let new_items = feed
         .entries
         .into_iter()
         .filter(|item| !current_item_ids.contains(&item.id))
         .map(|entry| item_from_rss_entry(entry, channel.id))
-        .collect::<Vec<entity::items::ActiveModel>>();
+        .collect::<Vec<NewItem>>();
 
-    let user_ids = ChannelService::get_user_ids_of_channel(connection, channel.id).await?;
+    // Retrieve all the users that have subscribe to the channel
+    let user_ids = get_user_ids_of_channel(connection, channel.id).await?;
+
+    // For each new item, create the entry in the database, and add it to each user
     for item in new_items {
-        let item = item.insert(connection).await?;
-        for user_id in &user_ids {
-            build_user_channels(user_id, &channel.id, &item.id)
-                .insert(connection)
-                .await?;
-        }
+        insert_item_for_user(connection, &item, &user_ids).await?;
     }
-    let now: DateTimeWithTimeZone = Utc::now().into();
-    ChannelService::update_last_fetched(connection, channel.id, now).await?;
+
+    update_last_fetched(connection, channel.id, Utc::now()).await?;
 
     Ok(())
 }
@@ -109,50 +108,33 @@ async fn get_and_parse_feed(channel_url: &str) -> Result<Feed, FetchError> {
 }
 
 /// Returns the list of all the registered item ids of a channel.
-async fn fetch_current_items_id<C>(
-    connection: &C,
-    channel: &channels::Model,
-) -> Result<HashSet<String>, sea_orm::DbErr>
+async fn fetch_current_items_id(
+    connection: &Pool,
+    channel: &Channel,
+) -> Result<HashSet<String>, DbError>
 where
-    C: ConnectionTrait,
 {
-    let items = ItemService::get_all_items_of_channel(connection, channel.id).await?;
+    let items = get_all_items_guid_of_channel(connection, channel.id).await?;
 
-    Ok(items
-        .into_iter()
-        .filter_map(|x| x.guid)
-        .collect::<HashSet<String>>())
-}
-
-fn build_user_channels(
-    user_id: &i32,
-    chan_id: &i32,
-    item_id: &i32,
-) -> entity::users_items::ActiveModel {
-    entity::users_items::ActiveModel {
-        user_id: Set(*user_id),
-        channel_id: Set(*chan_id),
-        item_id: Set(*item_id),
-        read: Set(false),
-        starred: Set(false),
-    }
+    Ok(items.into_iter().flatten().collect::<HashSet<String>>())
 }
 
 /// Create an Item Entity from an RSS entry
-fn item_from_rss_entry(entry: Entry, channel_id: i32) -> entity::items::ActiveModel {
+fn item_from_rss_entry(entry: Entry, channel_id: i32) -> NewItem {
     let title = entry.title.map(|x| x.content);
     let guid = Some(entry.id);
     let url = entry.links.get(0).map(|x| String::from(&x.href[..]));
     let content = entry.summary.map(|x| x.content);
-    let now: DateTimeWithTimeZone = Utc::now().into();
-    entity::items::ActiveModel {
-        id: NotSet,
-        guid: Set(guid),
-        title: Set(title),
-        url: Set(url),
-        content: Set(content),
-        fetch_timestamp: Set(now),
-        publish_timestamp: Set(entry.published.map(|x| x.into()).or(Some(now))),
-        channel_id: Set(channel_id),
+    let now = Utc::now();
+    let publish_timestamp = entry.published.or(Some(now));
+
+    NewItem {
+        guid,
+        title,
+        url,
+        content,
+        fetch_timestamp: now,
+        publish_timestamp,
+        channel_id,
     }
 }

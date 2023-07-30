@@ -1,12 +1,7 @@
 use chrono::prelude::*;
-use sea_orm::{entity::*, query::*};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use entity::channels::Entity as Channel;
-use entity::channels_errors::Entity as ChannelsError;
-use entity::items::Entity as Item;
-use entity::users_items::Entity as UserItem;
 use fetcher::process;
 use helpers::configure_database;
 
