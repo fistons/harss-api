@@ -63,6 +63,7 @@ pub async fn process(connection: &Pool) -> Result<(), anyhow::Error> {
 
 #[tracing::instrument(skip(connection))]
 async fn update_channel(connection: &Pool, channel: Channel) -> Result<(), FetchError> {
+    tracing::info!("Updating {} ({})", channel.name, channel.url);
     let feed = match get_and_parse_feed(&channel.url).await {
         Ok(feed) => feed,
         Err(error) => {

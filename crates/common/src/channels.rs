@@ -1,25 +1,33 @@
 use chrono::{DateTime, Utc};
 use sqlx::Result;
 
-use crate::model::{Channel, ChannelError, NewChannel, PagedResult, UsersChannel};
-use crate::Pool;
+use crate::model::{Channel, ChannelError, PagedResult, UsersChannel};
+use crate::rss::check_feed;
+use crate::{DbError, Pool};
 
 /// Returns the whole list of errors associated to the given channel id.
 #[tracing::instrument(skip(db))]
-pub async fn select_errors_by_chan_id(db: &Pool, channel_id: i32) -> Result<Vec<ChannelError>> {
+pub async fn select_errors_by_chan_id(
+    db: &Pool,
+    channel_id: i32,
+    user_id: i32,
+) -> Result<Vec<ChannelError>> {
     let result = sqlx::query_as!(
         ChannelError,
         r#"
-        SELECT  "channels_errors"."id",
-                "channels_errors"."channel_id",
-                "channels_errors"."error_timestamp",
-                "channels_errors"."error_reason",
-                "channels"."name" AS "channel_name"
-        FROM    "channels_errors"
-                JOIN "channels" ON "channels_errors"."channel_id" = "channels"."id"
-        WHERE   "channels_errors"."channel_id" = $1
+        SELECT  channels_errors.id,
+                channels_errors.channel_id,
+                channels_errors.error_timestamp,
+                channels_errors.error_reason,
+                channels.name AS channel_name
+        FROM    channels_errors
+                JOIN channels ON channels_errors.channel_id = channels.id
+                JOIN channel_users ON channels_errors.channel_id = channel_users.channel_id
+        WHERE   channels_errors.channel_id = $1
+        AND     channel_users.user_id = $2
         "#,
-        channel_id
+        channel_id,
+        user_id
     )
     .fetch_all(db)
     .await?;
@@ -76,7 +84,7 @@ pub async fn mark_channel_as_unread(db: &Pool, channel_id: i32, user_id: i32) ->
 
 ///  Select all the channels of a user, along side the total number of items
 #[tracing::instrument(skip(db))]
-pub async fn select_page_by_user_id<C>(
+pub async fn select_page_by_user_id(
     db: &Pool,
     user_id: i32,
     page_number: u64,
@@ -149,23 +157,19 @@ pub async fn select_page_by_user_id<C>(
 
 /// Create or linked an existing channel to a user, returning the channel id
 #[tracing::instrument(skip(db))]
-pub async fn create_or_link_channel(
-    db: &Pool,
-    new_channel: &NewChannel,
-    user_id: i32,
-) -> Result<()> {
+pub async fn create_or_link_channel(db: &Pool, url: &str, user_id: i32) -> Result<i32> {
     // Retrieve or create the channel
     let channel_id = match sqlx::query_scalar!(
         r#"
         SELECT id FROM channels WHERE url = $1
         "#,
-        new_channel.url
+        url
     )
     .fetch_optional(db)
     .await?
     {
         Some(id) => id,
-        None => create_new_channel(db, new_channel).await?,
+        None => create_new_channel(db, url).await?,
     };
 
     // Insert the channel in the users registered channel
@@ -181,7 +185,9 @@ pub async fn create_or_link_channel(
     .execute(db)
     .await?;
 
-    Ok(())
+    //TODO: Copy all the items to the new user
+
+    Ok(channel_id)
 }
 
 /// Enable a channel and reset it's failure count
@@ -189,7 +195,7 @@ pub async fn create_or_link_channel(
 pub async fn enable_channel(db: &Pool, channel_id: i32) -> Result<()> {
     sqlx::query!(
         r#"
-         UPDATE channels SET disabled = false, failure_count =0 WHERE channels.id = $1
+         UPDATE channels SET disabled = false, failure_count = 0 WHERE channels.id = $1
         "#,
         channel_id
     )
@@ -303,17 +309,17 @@ pub async fn fail_channel(db: &Pool, channel_id: i32, error_cause: &str) -> Resu
 
 /// # Create a new channel in the database, returning the created channel id
 #[tracing::instrument(skip(db))]
-async fn create_new_channel(db: &Pool, new_channel: &NewChannel) -> Result<i32> {
-    // Check that the feed is a parsable RSS feed
-    // check_feed(&new_channel.url).await?;
-    //TODO don't forget this
+async fn create_new_channel(db: &Pool, channel_url: &str) -> Result<i32> {
+    let feed = check_feed(channel_url)
+        .await
+        .map_err(|_| DbError::RowNotFound)?; //TODO: Bad error type
 
     let result = sqlx::query!(
         r#"
         INSERT INTO channels (name, url) VALUES ($1, $2) RETURNING id
         "#,
-        new_channel.name,
-        new_channel.url
+        feed.title.map(|x| x.content).unwrap_or(channel_url.into()),
+        channel_url
     )
     .fetch_one(db)
     .await?;
@@ -324,7 +330,7 @@ async fn create_new_channel(db: &Pool, new_channel: &NewChannel) -> Result<i32> 
 async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> Result<()> {
     sqlx::query!(
         r#"
-        UPDATE "users_items" SET "read" = $3 WHERE "users_items"."channel_id" = $1 AND "users_items"."user_id" = $2
+        UPDATE users_items SET read = $3 WHERE users_items.channel_id = $1 AND users_items.user_id = $2
         "#,
         channel_id,
         user_id,

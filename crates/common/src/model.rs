@@ -1,15 +1,9 @@
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-/// Model for a new channel
-#[derive(Debug)]
-pub struct NewChannel {
-    pub name: String,
-    pub url: String,
-}
-
 /// Error associated to a channel
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct ChannelError {
     pub id: i32,
     pub channel_id: i32,
@@ -19,7 +13,7 @@ pub struct ChannelError {
 }
 
 /// A channel with a user's metadata
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct UsersChannel {
     pub id: i32,
     pub name: String,
@@ -33,15 +27,16 @@ pub struct UsersChannel {
 }
 
 /// A HaRss user
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct User {
     pub id: i32,
     pub username: String,
+    #[serde(skip)] // Never ever serialize this field
     pub password: String,
     pub role: UserRole,
 }
 
-#[derive(sqlx::Type, Debug, Clone)]
+#[derive(sqlx::Type, Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[sqlx(type_name = "user_role", rename_all = "lowercase")]
 pub enum UserRole {
     Admin,
@@ -49,7 +44,7 @@ pub enum UserRole {
 }
 
 /// A channel with a user's metadata
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Channel {
     pub id: i32,
     pub name: String,
@@ -61,7 +56,7 @@ pub struct Channel {
 }
 
 /// Page of elements
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct PagedResult<T> {
     /// Actual content.
     pub content: Vec<T>,
@@ -78,7 +73,7 @@ pub struct PagedResult<T> {
 }
 
 /// RSS Item representation, with user related data
-#[derive(Debug, FromRow)]
+#[derive(Debug, FromRow, Serialize)]
 pub struct UserItem {
     pub id: i32,
     pub guid: Option<String>,
@@ -94,7 +89,7 @@ pub struct UserItem {
 }
 
 /// RSS Item representation to be inserted in the database
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct NewItem {
     pub guid: Option<String>,
     pub title: Option<String>,
@@ -105,7 +100,7 @@ pub struct NewItem {
     pub channel_id: i32,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct FoundRssChannel {
     url: String,
     title: String,

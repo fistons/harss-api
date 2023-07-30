@@ -19,9 +19,9 @@ pub fn encode_password(password: &Secret<String>) -> String {
 
 /// Check if the candidate match the hashed user password
 #[tracing::instrument(skip_all)]
-pub fn verify_password(user_password: &str, candidate: &str) -> bool {
+pub fn verify_password(user_password: &str, candidate: &Secret<String>) -> bool {
     let parsed_hash = PasswordHash::new(user_password).unwrap();
     Argon2::default()
-        .verify_password(candidate.as_bytes(), &parsed_hash)
+        .verify_password(candidate.expose_secret().as_bytes(), &parsed_hash)
         .is_ok()
 }

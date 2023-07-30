@@ -44,7 +44,7 @@ pub async fn list_users(db: &Pool, page_number: u64, page_size: u64) -> Result<P
         LIMIT $1 OFFSET $2
         "#,
         page_size as i64,
-        page_number as i64
+        (page_number as i64 - 1) * page_size as i64
     )
     .fetch_all(db)
     .await?;
@@ -110,6 +110,7 @@ pub async fn update_user_password(
     .execute(db)
     .await?;
 
+    //TODO: Must return a dedicated error
     if result.rows_affected() == 0 {
         return Err(sqlx::Error::RowNotFound);
     }

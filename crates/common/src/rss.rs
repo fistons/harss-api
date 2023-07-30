@@ -1,5 +1,6 @@
 use crate::errors::RssParsingError;
 use crate::errors::RssParsingError::NonOkStatus;
+use feed_rs::model::Feed;
 use once_cell::sync::Lazy;
 use scraper::Selector;
 
@@ -52,15 +53,13 @@ pub async fn download_and_look_for_rss(url: &str) -> anyhow::Result<Vec<FoundRss
 
 /// Check that the feed is correct
 #[tracing::instrument]
-pub async fn check_feed(url: &str) -> Result<(), RssParsingError> {
+pub async fn check_feed(url: &str) -> Result<Feed, RssParsingError> {
     let response = CLIENT.get(url).send().await?;
     if !response.status().is_success() {
         return Err(NonOkStatus(response.status().as_u16()));
     }
     let feed_content = response.bytes().await?;
-    feed_rs::parser::parse(&feed_content[..])?;
-
-    Ok(())
+    Ok(feed_rs::parser::parse(&feed_content[..])?)
 }
 
 #[cfg(test)]
