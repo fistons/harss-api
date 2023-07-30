@@ -1,5 +1,6 @@
-use api::databases::{init_postgres_connection, init_redis_connection};
+use api::databases::init_redis_connection;
 use api::startup;
+use common::init_postgres_connection;
 use std::env;
 use std::net::TcpListener;
 

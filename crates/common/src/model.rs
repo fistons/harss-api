@@ -93,6 +93,18 @@ pub struct UserItem {
     pub channel_name: String,
 }
 
+/// RSS Item representation to be inserted in the database
+#[derive(Debug)]
+pub struct NewItem {
+    pub guid: Option<String>,
+    pub title: Option<String>,
+    pub url: Option<String>,
+    pub content: Option<String>,
+    pub fetch_timestamp: DateTime<Utc>,
+    pub publish_timestamp: Option<DateTime<Utc>>,
+    pub channel_id: i32,
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct FoundRssChannel {
     url: String,

@@ -1,6 +1,6 @@
 use sqlx::{Postgres, QueryBuilder, Result};
 
-use crate::model::{PagedResult, UserItem};
+use crate::model::{NewItem, PagedResult, UserItem};
 use crate::Pool;
 
 /// Return a page of items of a given channel for a given user.
@@ -151,6 +151,42 @@ pub async fn set_item_starred<C>(
         .execute(db)
         .await?;
     }
+
+    Ok(())
+}
+
+/// Insert an item in the database and associate it to all given users
+#[tracing::instrument(skip(db))]
+pub async fn insert_item_for_user(db: &Pool, item: &NewItem, user_ids: &[i32]) -> Result<()> {
+    let item_id = insert_item(db, item).await?;
+
+    for user_id in user_ids {
+        insert_item_user(db, item_id, item.channel_id, user_id).await?;
+    }
+
+    Ok(())
+}
+
+/// Insert an item in the database
+#[tracing::instrument(skip(db))]
+async fn insert_item(db: &Pool, item: &NewItem) -> Result<i32> {
+    sqlx::query_scalar!(
+        r#"
+        INSERT INTO items (guid, title, url, content, fetch_timestamp, publish_timestamp, channel_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+        "#,
+        item.guid, item.title, item.url, item.content, item.fetch_timestamp, item.publish_timestamp, item.channel_id)
+        .fetch_one(db).await
+}
+
+/// Insert an item in the database
+#[tracing::instrument(skip(db))]
+async fn insert_item_user(db: &Pool, item_id: i32, channel_id: i32, user_id: &i32) -> Result<()> {
+    sqlx::query!(
+        r#"
+        INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES ($1, $2, $3, false, false)
+        "#,
+        user_id, item_id, channel_id)
+        .execute(db).await?;
 
     Ok(())
 }

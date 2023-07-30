@@ -1,4 +1,4 @@
-use secrecy::{ExposeSecret, Secret};
+use secrecy::Secret;
 use sqlx::Result;
 
 use crate::model::{PagedResult, User, UserRole};

@@ -336,7 +336,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "sqlx",
  "thiserror",
  "tokio",
  "tracing",

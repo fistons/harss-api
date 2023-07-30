@@ -29,7 +29,6 @@ chrono.workspace = true
 uuid.workspace = true
 redis.workspace = true
 deadpool-redis.workspace = true
-sqlx.workspace = true
 tokio.workspace = true
 secrecy.workspace = true
 sentry-actix.workspace = true
