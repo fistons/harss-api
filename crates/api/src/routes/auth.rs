@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use common::users::get_user_by_username;
 
-use crate::routes::ApiError;
+use crate::routes::errors::ApiError;
 use crate::startup::AppState;
 
 #[derive(Deserialize, Debug)]
@@ -31,12 +31,8 @@ pub async fn login(
     let connection = &app_state.db;
     let redis_pool = &app_state.redis;
 
-    let access_token = crate::auth::get_jwt_from_login_request(
-        &login.login,
-        login.password.expose_secret(),
-        connection,
-    )
-    .await?;
+    let access_token =
+        crate::auth::get_jwt_from_login_request(&login.login, &login.password, connection).await?;
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
 
     let mut redis = redis_pool.get().await?;

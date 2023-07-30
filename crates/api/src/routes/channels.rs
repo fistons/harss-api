@@ -3,13 +3,13 @@ use actix_web::{get, post, web, HttpResponse};
 use serde::Deserialize;
 use serde_json::json;
 
-use common::model::{NewChannel, PageParameters};
-use common::channels::ChannelService;
-use common::items::ItemService;
+use common::channels;
+use common::items;
 use common::rss;
 
 use crate::auth::AuthenticatedUser;
-use crate::routes::ApiError;
+use crate::model::{PageParameters, RegisterChannelRequest};
+use crate::routes::errors::ApiError;
 use crate::startup::AppState;
 
 #[get("/channel/{id}")]
@@ -20,8 +20,7 @@ pub async fn get_channel(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
-    let res =
-        ChannelService::select_by_id_and_user_id(connection, id.into_inner(), user.id).await?;
+    let res = channels::select_by_id_and_user_id(connection, id.into_inner(), user.id).await?;
 
     match res {
         Some(data) => Ok(HttpResponse::Ok().json(data)),
@@ -42,7 +41,7 @@ pub async fn get_errors_of_channel(
         return Ok(HttpResponse::Forbidden().finish());
     }
 
-    let errors = ChannelService::select_errors_by_chan_id(connection, id.into_inner()).await?;
+    let errors = channels::select_errors_by_chan_id(connection, id.into_inner(), user.id).await?;
 
     Ok(HttpResponse::Ok().json(errors))
 }
@@ -56,7 +55,7 @@ pub async fn mark_channel_as_read(
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
 
-    ChannelService::mark_channel_as_read(connection, id.into_inner(), user.id).await?;
+    channels::mark_channel_as_read(connection, id.into_inner(), user.id).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -70,29 +69,25 @@ pub async fn get_channels(
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
 
-    let channels = ChannelService::select_page_by_user_id(
-        connection,
-        user.id,
-        page.get_page(),
-        page.get_size(),
-    )
-    .await?;
+    let channels =
+        channels::select_page_by_user_id(connection, user.id, page.get_page(), page.get_size())
+            .await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
 #[post("/channels")]
 #[tracing::instrument(skip(app_state))]
 async fn new_channel(
-    new_channel: web::Json<HttpNewChannel>,
+    new_channel: web::Json<RegisterChannelRequest>,
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
     let data = new_channel.into_inner();
 
-    let channel = ChannelService::create_or_link_channel(connection, data, user.id).await?;
+    let channel_id = channels::create_or_link_channel(connection, &data.url, user.id).await?;
 
-    Ok(HttpResponse::Created().json(json!({"id": channel.id})))
+    Ok(HttpResponse::Created().json(json!({"id": channel_id})))
 }
 
 #[get("/channel/{chan_id}/items")]
@@ -105,9 +100,11 @@ async fn get_items_of_channel(
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
 
-    let items = ItemService::get_items_of_channel(
+    let items = items::get_items_of_user(
         connection,
-        chan_id.into_inner(),
+        Some(chan_id.into_inner()),
+        None,
+        None,
         auth.id,
         page.get_page(),
         page.get_size(),
@@ -127,7 +124,7 @@ async fn enable_channel(
     let connection = &app_state.db;
 
     if user.is_admin() {
-        ChannelService::enable_channel(connection, id.into_inner()).await?;
+        channels::enable_channel(connection, id.into_inner()).await?;
         Ok(HttpResponse::Accepted().finish())
     } else {
         Ok(HttpResponse::Forbidden().finish())

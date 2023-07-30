@@ -1,10 +1,10 @@
 use actix_web::{get, post, web, HttpResponse};
 
-use rss_common::model::{IdListParameter, PageParameters, ReadStarredParameters};
-use rss_common::services::items::ItemService;
+use common::items::*;
 
 use crate::auth::AuthenticatedUser;
-use crate::routes::ApiError;
+use crate::model::{IdListParameter, PageParameters, ReadStarredParameters};
+use crate::routes::errors::ApiError;
 use crate::startup::AppState;
 
 #[get("/items")]
@@ -17,13 +17,14 @@ pub async fn get_all_items(
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
 
-    let items = ItemService::get_items_of_user(
+    let items = get_items_of_user(
         connection,
+        None,
+        read_starred.starred,
+        read_starred.read,
         user.id,
         page.get_page(),
         page.get_size(),
-        read_starred.read,
-        read_starred.starred,
     )
     .await?;
     Ok(HttpResponse::Ok().json(items))
@@ -37,7 +38,7 @@ pub async fn star_items(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
-    ItemService::set_item_starred(connection, user.id, ids.into_inner().ids, true).await?;
+    set_item_starred(connection, user.id, ids.into_inner().ids, true).await?;
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -50,7 +51,7 @@ pub async fn unstar_items(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
-    ItemService::set_item_starred(connection, user.id, ids.into_inner().ids, false).await?;
+    set_item_starred(connection, user.id, ids.into_inner().ids, false).await?;
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -63,7 +64,7 @@ pub async fn read_item(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
-    ItemService::set_item_read(connection, user.id, ids.into_inner().ids, true).await?;
+    set_item_read(connection, user.id, ids.into_inner().ids, true).await?;
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -76,7 +77,7 @@ pub async fn unread_item(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
-    ItemService::set_item_read(connection, user.id, ids.into_inner().ids, false).await?;
+    set_item_read(connection, user.id, ids.into_inner().ids, false).await?;
 
     Ok(HttpResponse::Accepted().finish())
 }

@@ -1,23 +1,19 @@
 use std::net::TcpListener;
 
+use crate::rate_limiting::build_rate_limiting_conf;
+use crate::routes;
 use actix_governor::Governor;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
-use deadpool_redis::Pool;
 use common::Pool as DbPool;
-use crate::rate_limiting::build_rate_limiting_conf;
-use crate::routes;
+use deadpool_redis::Pool;
 
 pub struct AppState {
     pub db: DbPool,
     pub redis: Pool,
 }
 
-pub async fn startup(
-    database: DbPool,
-    redis: Pool,
-    listener: TcpListener,
-) -> std::io::Result<()> {
+pub async fn startup(database: DbPool, redis: Pool, listener: TcpListener) -> std::io::Result<()> {
     let app_state = AppState {
         db: database,
         redis,

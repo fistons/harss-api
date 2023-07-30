@@ -4,7 +4,6 @@ use chrono::{DateTime, Utc};
 use secrecy::Secret;
 use serde::{Deserialize, Serialize, Serializer};
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HttpNewChannel {
     pub name: String,
@@ -80,42 +79,6 @@ pub struct HttpUserItem {
     pub channel_name: String,
 }
 
-/// Filter parameters on read/starred items' status
-#[derive(Debug, Deserialize)]
-pub struct ReadStarredParameters {
-    pub read: Option<bool>,
-    pub starred: Option<bool>,
-}
-
-/// Represent a list of IDs (could be item, channel, etc)
-#[derive(Debug, Deserialize)]
-pub struct IdListParameter {
-    pub ids: Vec<i32>,
-}
-
-/// # Paging parameters
-#[derive(Debug, Deserialize)]
-pub struct PageParameters {
-    /// * The `page` field should be superior or equals to 1
-    page: Option<u64>,
-    /// * The `size` field should be between 1 and 20
-    size: Option<u64>,
-}
-
-impl PageParameters {
-    /// Return the given page, or 1 if not provided.
-    /// If the given page is 0, return 1.
-    pub fn get_page(&self) -> u64 {
-        self.page.unwrap_or(1).max(1)
-    }
-
-    /// Return the given size of the page, or 20 if not provided.
-    /// The result is clamped between 1 and 200.
-    pub fn get_size(&self) -> u64 {
-        self.size.unwrap_or(20u64).clamp(1, 200)
-    }
-}
-
 /// # Paged result
 ///
 /// Return the elements matching the request in page, alongside the page context.
@@ -151,17 +114,4 @@ impl FoundRssChannel {
             title: title.to_owned(),
         }
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UpdatePasswordRequest {
-    pub current_password: Secret<String>,
-    pub new_password: Secret<String>,
-    pub confirm_password: Secret<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UpdateOtherPasswordRequest {
-    pub new_password: Secret<String>,
-    pub confirm_password: Secret<String>,
 }

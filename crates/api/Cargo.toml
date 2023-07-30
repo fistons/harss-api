@@ -3,6 +3,7 @@ name = "api"
 version = "0.1.0"
 authors = ["Eric <Fistons> <eric@pedr0.net>"]
 edition = "2021"
+default-run = "rss-aggregator"
 
 [lib]
 path = "src/lib.rs"
