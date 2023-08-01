@@ -1,11 +1,12 @@
 name: Check, test, everything
 
-on: [push, pull_request]
+on: pull_request
 
 jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -20,6 +21,27 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres
+        # Provide the password for postgres
+        env:
+          POSTGRES_PASSWORD: harss
+          POSTGRES_DB: harss
+          POSTGRES_USER: harss
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      SQLX_OFFLINE: true
+      DATABASE_URL: "postgres://harss:harss@localhost/harss"
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
