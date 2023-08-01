@@ -199,17 +199,18 @@ mod tests {
     use sqlx::Pool;
 
     use super::*;
+    use speculoos::prelude::*;
 
     #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
     async fn basic_test(pool: Pool<Postgres>) -> Result<()> {
         let page = get_items_of_user(&pool, None, None, None, 1, 1, 20).await?;
 
-        assert_eq!(page.page_number, 1);
-        assert_eq!(page.page_size, 20);
-        assert_eq!(page.content.len(), 20);
-        assert_eq!(page.total_pages, 3);
-        assert_eq!(page.total_items, 60);
-        assert_eq!(page.elements_number, 20);
+        assert_that!(page.page_size).is_equal_to(20);
+        assert_that!(page.total_pages).is_equal_to(3);
+        assert_that!(page.total_items).is_equal_to(60);
+        assert_that!(page.elements_number).is_equal_to(20);
+        assert_that!(page.page_number).is_equal_to(1);
+        assert_that!(page.content).has_length(20);
 
         Ok(())
     }

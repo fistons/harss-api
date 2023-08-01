@@ -34,3 +34,4 @@ actix-web.workspace = true
 [dev-dependencies]
 wiremock.workspace = true
 tokio.workspace = true
+speculoos.workspace = true
