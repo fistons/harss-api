@@ -191,21 +191,94 @@ fn add_filters(
 
 #[cfg(test)]
 mod tests {
-    use sqlx::Pool;
-
-    use super::*;
     use speculoos::prelude::*;
 
+    use super::*;
+
     #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
-    async fn basic_test(pool: Pool<Postgres>) -> Result<()> {
+    async fn basic_without_filter(pool: Pool) -> Result<()> {
         let page = get_items_of_user(&pool, None, None, None, 1, 1, 20).await?;
 
-        assert_that!(page.page_size).is_equal_to(20);
-        assert_that!(page.total_pages).is_equal_to(3);
-        assert_that!(page.total_items).is_equal_to(60);
-        assert_that!(page.elements_number).is_equal_to(20);
-        assert_that!(page.page_number).is_equal_to(1);
-        assert_that!(page.content).has_length(20);
+        assert_that!(page.page_size()).is_equal_to(&20);
+        assert_that!(page.total_pages()).is_equal_to(&4);
+        assert_that!(page.total_items()).is_equal_to(&78);
+        assert_that!(page.elements_number()).is_equal_to(&20);
+        assert_that!(page.page_number()).is_equal_to(&1);
+        assert_that!(page.content()).has_length(20);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    async fn basic_channel_filter(pool: Pool) -> Result<()> {
+        let page = get_items_of_user(&pool, Some(1), None, None, 1, 1, 20).await?;
+
+        assert_that!(page.page_size()).is_equal_to(&20);
+        assert_that!(page.total_pages()).is_equal_to(&3);
+        assert_that!(page.total_items()).is_equal_to(&60);
+        assert_that!(page.elements_number()).is_equal_to(&20);
+        assert_that!(page.page_number()).is_equal_to(&1);
+        assert_that!(page.content()).has_length(20);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    async fn basic_read_filter(pool: Pool) -> Result<()> {
+        let page = get_items_of_user(&pool, None, Some(true), None, 1, 1, 20).await?;
+
+        assert_that!(page.page_size()).is_equal_to(&20);
+        assert_that!(page.total_pages()).is_equal_to(&4);
+        assert_that!(page.total_items()).is_equal_to(&62);
+        assert_that!(page.elements_number()).is_equal_to(&20);
+        assert_that!(page.page_number()).is_equal_to(&1);
+        assert_that!(page.content()).has_length(20);
+
+        let page = get_items_of_user(&pool, None, Some(false), None, 1, 1, 20).await?;
+
+        assert_that!(page.page_size()).is_equal_to(&20);
+        assert_that!(page.total_pages()).is_equal_to(&1);
+        assert_that!(page.total_items()).is_equal_to(&16);
+        assert_that!(page.elements_number()).is_equal_to(&16);
+        assert_that!(page.page_number()).is_equal_to(&1);
+        assert_that!(page.content()).has_length(16);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    async fn basic_starred_filter(pool: Pool) -> Result<()> {
+        let page = get_items_of_user(&pool, None, None, Some(true), 1, 1, 20).await?;
+
+        assert_that!(page.page_size()).is_equal_to(&20);
+        assert_that!(page.total_pages()).is_equal_to(&1);
+        assert_that!(page.total_items()).is_equal_to(&3);
+        assert_that!(page.elements_number()).is_equal_to(&3);
+        assert_that!(page.page_number()).is_equal_to(&1);
+        assert_that!(page.content()).has_length(3);
+
+        let page = get_items_of_user(&pool, None, None, Some(false), 1, 1, 20).await?;
+
+        assert_that!(page.page_size()).is_equal_to(&20);
+        assert_that!(page.total_pages()).is_equal_to(&4);
+        assert_that!(page.total_items()).is_equal_to(&75);
+        assert_that!(page.elements_number()).is_equal_to(&20);
+        assert_that!(page.page_number()).is_equal_to(&1);
+        assert_that!(page.content()).has_length(20);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    async fn basic_all_filters(pool: Pool) -> Result<()> {
+        let page = get_items_of_user(&pool, Some(1), Some(true), Some(true), 1, 1, 20).await?;
+
+        assert_that!(page.page_size()).is_equal_to(&20);
+        assert_that!(page.total_pages()).is_equal_to(&1);
+        assert_that!(page.total_items()).is_equal_to(&2);
+        assert_that!(page.elements_number()).is_equal_to(&2);
+        assert_that!(page.page_number()).is_equal_to(&1);
+        assert_that!(page.content()).has_length(2);
 
         Ok(())
     }

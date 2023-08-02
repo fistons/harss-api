@@ -83,6 +83,9 @@ INSERT INTO items (id, guid, title, url, content, fetch_timestamp, publish_times
 INSERT INTO items (id, guid, title, url, content, fetch_timestamp, publish_timestamp, channel_id) VALUES (80, 'https://www.lemonde.fr/planete/live/2023/07/30/canicule-en-direct-dans-le-var-place-en-alerte-rouge-feux-de-forets-huit-massifs-forestiers-interdits-d-acces-dimanche_6183301_3244.html', 'Canicule, en direct : dans le Var, placé en alerte rouge feux de forêts, huit massifs forestiers interdits d’accès dimanche', 'https://www.lemonde.fr/planete/live/2023/07/30/canicule-en-direct-dans-le-var-place-en-alerte-rouge-feux-de-forets-huit-massifs-forestiers-interdits-d-acces-dimanche_6183301_3244.html', 'Dans les Bouches-du-Rhône, placées en alerte orange incendie face au risque « élevé » d’incendie, ce sont sept massifs qui sont interdits d’accès dimanche.', '2023-07-30 22:45:28.233897 +00:00', '2023-07-30 14:02:58.000000 +00:00', 2);
 INSERT INTO items (id, guid, title, url, content, fetch_timestamp, publish_timestamp, channel_id) VALUES (81, 'https://www.lemonde.fr/les-decodeurs/article/2023/05/08/le-guide-critique-des-arguments-et-intox-climatosceptiques_6172472_4355770.html', 'Le guide critique des arguments et intox climatosceptiques', 'https://www.lemonde.fr/les-decodeurs/article/2023/05/08/le-guide-critique-des-arguments-et-intox-climatosceptiques_6172472_4355770.html', 'Confusions entre météo et climat, réécriture de l’histoire… Derrière des apparences parfois savantes, ceux qui nient la réalité du dérèglement climatique multiplient les assertions trompeuses, voire les biais souvent grossiers.', '2023-07-30 22:45:28.233899 +00:00', '2023-05-08 04:00:04.000000 +00:00', 2);
 
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 79, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 78, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 77, 2, false, false);
 INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 4, 1, true, false);
 INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 5, 1, true, false);
 INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 6, 1, true, false);
@@ -143,3 +146,18 @@ INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1,
 INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 15, 1, true, true);
 INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 13, 1, true, false);
 INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 14, 1, true, true);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 68, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 76, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 69, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 70, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 66, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 75, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 64, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 73, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 81, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 80, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 74, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 72, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 71, 2, false, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 65, 2, true, false);
+INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 67, 2, true, true);
