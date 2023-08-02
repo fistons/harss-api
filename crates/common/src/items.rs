@@ -66,17 +66,12 @@ pub async fn get_items_of_user(
         .await?
         .unwrap_or(0i64) as u64;
 
-    let total_pages = total_items / page_size;
-    let elements_number = content.len();
-
-    Ok(PagedResult {
+    Ok(PagedResult::new(
         content,
-        page_number,
-        page_size,
-        total_pages,
-        elements_number,
         total_items,
-    })
+        page_size,
+        page_number,
+    ))
 }
 
 /// Get all the item's GUID of a given channel.
