@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO channel_users\n        (channel_id, user_id)\n        VALUES (1, 1)\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "cd26926334ae779a2574e39dd9cab55db00a2959c23b5d51391656bb81092ab0"
+}
