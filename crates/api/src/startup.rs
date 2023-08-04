@@ -1,12 +1,14 @@
 use std::net::TcpListener;
 
-use crate::rate_limiting::build_rate_limiting_conf;
-use crate::routes;
 use actix_governor::Governor;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
-use common::Pool as DbPool;
 use deadpool_redis::Pool;
+
+use common::Pool as DbPool;
+
+use crate::rate_limiting::build_rate_limiting_conf;
+use crate::routes;
 
 pub struct AppState {
     pub db: DbPool,

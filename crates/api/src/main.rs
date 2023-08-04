@@ -3,6 +3,7 @@ use api::startup;
 use common::init_postgres_connection;
 use std::env;
 use std::net::TcpListener;
+use tracing::error;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -21,5 +22,20 @@ async fn main() -> std::io::Result<()> {
 
     let _sentry_guard = common::observability::init_sentry();
 
+    if !check_configuration() {
+        panic!()
+    }
+
     startup::startup(postgres_connection, redis_pool, listener).await
+}
+
+/// Check that the configuration is OK
+fn check_configuration() -> bool {
+    if env::var("JWT_SECRET").is_err() {
+        error!("JWT_SECRET environment variable is mandatory");
+
+        return false;
+    }
+
+    true
 }
