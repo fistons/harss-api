@@ -1,14 +1,11 @@
 FROM rust:latest AS chef
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 RUN cargo install cargo-chef
 RUN update-ca-certificates
 
 WORKDIR /app
 
 FROM chef AS planner
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
-COPY crates/entity/Cargo.toml ./crates/entity/Cargo.toml
-COPY crates/rss-common/Cargo.toml ./crates/rss-common/Cargo.toml
+COPY crates/common/Cargo.toml ./crates/common/Cargo.toml
 COPY crates/fetcher/Cargo.toml ./crates/fetcher/Cargo.toml
 COPY crates/api/Cargo.toml ./crates/api/Cargo.toml
 COPY Cargo.* ./
@@ -16,17 +13,17 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 
 FROM chef AS builder
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 COPY --from=planner /app/recipe.json recipe.json
 RUN apt-get install libssl-dev -y
 # Build dependencies - this is the caching Docker layer!
 RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
-COPY crates/rss-common/src crates/rss-common/src
-COPY crates/entity/src crates/entity/src
+COPY .sqlx .sqlx
+COPY crates/common/src crates/common/src
 COPY crates/fetcher/src crates/fetcher/src
 COPY crates/api/src/ crates/api/src/
 RUN touch crates/api/src/main.rs
+ENV SQLX_OFFLINE=true
 RUN cargo build --release --all
 
 FROM debian:12-slim AS api
