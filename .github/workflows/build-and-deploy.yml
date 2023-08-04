@@ -26,7 +26,7 @@ jobs:
         with:
           push: true
           context: ./migrations/
-          #platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-migrations:latest
       -
         name: Build and push API
@@ -34,7 +34,7 @@ jobs:
         with:
           push: true
           target: api
-         # platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
       -
         name: Build and push fetcher
@@ -42,5 +42,5 @@ jobs:
         with:
           push: true
           target: fetcher
-          #platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
