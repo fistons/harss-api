@@ -24,6 +24,8 @@ services:
       DD_ENABLED: true
     restart: unless-stopped
     depends_on:
+      migrations:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -43,8 +45,9 @@ services:
       RUST_LOG: info
       DD_AGENT: http://host.docker.internal:8126
       DD_ENABLED: true
-    restart: unless-stopped
     depends_on:
+      migrations:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
   redis:
@@ -65,16 +68,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  migration:
-    image: jameshiew/diesel-cli
-    command: diesel migration run
+  migrations:
+    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-migrations:latest
+    command: sqlx migrate run
     volumes:
      - "$PWD:/volume"
     links:
       - postgres
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
-      restart: unless-stopped
     working_dir: /volume
     depends_on:
       postgres:
