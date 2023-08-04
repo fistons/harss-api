@@ -6,6 +6,8 @@ jobs:
   docker:
     runs-on: self-hosted
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -19,6 +21,13 @@ jobs:
           registry: rg.nl-ams.scw.cloud/pedr0
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push migrations
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          context: ./migrations/
+          #platforms: linux/amd64,linux/arm64
+          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-migrations:latest
       -
         name: Build and push API
         uses: docker/build-push-action@v3
@@ -35,11 +44,3 @@ jobs:
           target: fetcher
           #platforms: linux/amd64,linux/arm64
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
-      - name: Build and push migrations
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          context: migrations
-          #platforms: linux/amd64,linux/arm64
-          tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-migrations:latest
-          
