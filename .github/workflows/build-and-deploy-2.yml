@@ -1,13 +1,16 @@
-name: Build and deploy
+name: Build
 
-on: [pull_request]
+on:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   amd64:
-    name: Linux AMD64
+    name: Build Linux AMD64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -17,11 +20,17 @@ jobs:
         with:
           command: build
           args: --release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: amd64
+          path: |
+            target/release/rss-aggregator
+            target/release/fetcher
   arm64:
-    name: Linux ARM64
+    name: Build Linux ARM64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -34,3 +43,32 @@ jobs:
           use-cross: true
           command: build
           args: --release --target aarch64-unknown-linux-gnu
+      - uses: actions/upload-artifact@v3
+        with:
+          name: arm64
+          path: |
+            target/aarch64-unknown-linux-gnu/release/rss-aggregator
+            target/aarch64-unknown-linux-gnu/release/fetcher
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [amd64, arm64]
+    steps:
+      - uses: actions/download-artifact@v3
+      - name: Display structure of downloaded files
+        run: ls -R
+      - name: Rename files
+        run: |
+          mv amd64/fetcher fetcher-amd64
+          mv amd64/rss-aggregator rss-aggregator-amd64
+          mv arm64/fetcher fetcher-arm64
+          mv arm64/rss-aggregator rss-aggregator-arm64
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            fetcher-amd64
+            rss-aggregator-amd64
+            fetcher-arm64
+            rss-aggregator-arm64
