@@ -33,7 +33,7 @@ impl KeyExtractor for UserToken {
 pub fn build_rate_limiting_conf() -> GovernorConfig<UserToken, StateInformationMiddleware> {
     GovernorConfigBuilder::default()
         .per_second(
-            var("RATE_LIMITING_BUCKET_SIZE")
+            var("RATE_LIMITING_FILL_RATE")
                 .unwrap_or_else(|_| "10".to_owned())
                 .parse()
                 .unwrap(),
