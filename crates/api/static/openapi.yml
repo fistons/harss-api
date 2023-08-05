@@ -30,6 +30,7 @@ paths:
   /ping:
     get:
       operationId: ping
+      security: []
       tags:
         - Miscellaneous
       summary: Check if the API is up
@@ -398,6 +399,7 @@ paths:
     post:
       operationId: read_items
       summary: Set items as read
+      description: Set the item as read for the current user
       tags:
         - Items
       requestBody:
@@ -414,6 +416,7 @@ paths:
     post:
       operationId: unread_items
       summary: Set items as unread
+      description: Set the item as unread for the current user
       tags:
         - Items
       requestBody:
@@ -430,6 +433,7 @@ paths:
     post:
       operationId: star_items
       summary: Set items as starred
+      description: Set the item as starred for the current user
       tags:
         - Items
       requestBody:
@@ -446,6 +450,7 @@ paths:
     post:
       operationId: unstar_items
       summary: Set items as un-starred
+      description: Set the item as un-starred for the current user
       tags:
         - Items
       requestBody:
