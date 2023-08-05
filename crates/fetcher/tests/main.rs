@@ -74,8 +74,8 @@ async fn happy_path(pool: Pool) {
     // Check that stuff have been inserted
     let inserted_items = sqlx::query!(
         r#"
-        SELECT * from items ORDER BY fetch_timestamp DESC
-    "#
+        SELECT * from items ORDER BY fetch_timestamp DESC, id desc
+        "#
     )
     .fetch_all(&pool)
     .await
