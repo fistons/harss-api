@@ -43,7 +43,7 @@ jobs:
       SQLX_OFFLINE: true
       DATABASE_URL: "postgres://harss:harss@localhost/harss"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
          profile: minimal
@@ -70,3 +70,14 @@ jobs:
           command: clippy
           args: -- -D warnings
 
+  spectral:
+    name: Run Spectral
+    runs-on: ubuntu-latest
+    steps:
+      # Check out the repository
+      - uses: actions/checkout@v3
+
+      # Run Spectral
+      - uses: stoplightio/spectral-action@latest
+        with:
+          file_glob: 'crates/api/static/openapi.yaml'
