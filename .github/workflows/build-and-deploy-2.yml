@@ -1,0 +1,19 @@
+name: Build and deploy
+
+on: [pull_request]
+
+jobs:
+  amd64:
+    name: Linux AMD64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        env:
+          SQLX_OFFLINE: true
+        with:
+          command: build
+          args: --release
