@@ -1,3 +1,5 @@
+[![Check, test, everything](https://github.com/fistons/rss-aggregator/actions/workflows/test.yml/badge.svg?branch=devel)](https://github.com/fistons/rss-aggregator/actions/workflows/test.yml)
+
 # RSS Aggregator
 
 RSS, but in rust
