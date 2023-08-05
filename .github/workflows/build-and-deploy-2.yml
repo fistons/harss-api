@@ -18,13 +18,13 @@ jobs:
           SQLX_OFFLINE: true
         with:
           command: build
-          args: --release
+          args: --release --target x86_64-unknown-linux-gnu
       - uses: actions/upload-artifact@v3
         with:
           name: amd64
           path: |
-            target/release/rss-aggregator
-            target/release/fetcher
+            target/x86_64-unknown-linux-gnu/release/rss-aggregator
+            target/x86_64-unknown-linux-gnu/release/fetcher
   arm64:
     name: Build Linux ARM64
     runs-on: ubuntu-latest
@@ -48,39 +48,37 @@ jobs:
           path: |
             target/aarch64-unknown-linux-gnu/release/rss-aggregator
             target/aarch64-unknown-linux-gnu/release/fetcher
-#  release:
-#    name: Release
-#    runs-on: ubuntu-latest
-#    needs: [amd64, arm64]
-#    steps:
-#      - uses: actions/download-artifact@v3
-#      - name: Display structure of downloaded files
-#        run: ls -R
-#      - name: Rename files
-#        run: |
-#          mv amd64/fetcher fetcher-amd64
-#          mv amd64/rss-aggregator rss-aggregator-amd64
-#          mv arm64/fetcher fetcher-arm64
-#          mv arm64/rss-aggregator rss-aggregator-arm64
-#      - name: Release
-#        uses: softprops/action-gh-release@v1
-#        with:
-#          token: ${{ secrets.GITHUB_TOKEN }}
-#          draft: true
-#          files: |
-#            fetcher-amd64
-#            rss-aggregator-amd64
-#            fetcher-arm64
-#            rss-aggregator-arm64
+  #  release:
+  #    name: Release
+  #    runs-on: ubuntu-latest
+  #    needs: [amd64, arm64]
+  #    steps:
+  #      - uses: actions/download-artifact@v3
+  #      - name: Display structure of downloaded files
+  #        run: ls -R
+  #      - name: Rename files
+  #        run: |
+  #          mv amd64/fetcher fetcher-amd64
+  #          mv amd64/rss-aggregator rss-aggregator-amd64
+  #          mv arm64/fetcher fetcher-arm64
+  #          mv arm64/rss-aggregator rss-aggregator-arm64
+  #      - name: Release
+  #        uses: softprops/action-gh-release@v1
+  #        with:
+  #          token: ${{ secrets.GITHUB_TOKEN }}
+  #          draft: true
+  #          files: |
+  #            fetcher-amd64
+  #            rss-aggregator-amd64
+  #            fetcher-arm64
+  #            rss-aggregator-arm64
   docker:
-    name: Build docker image
+    name: Build docker images
     runs-on: ubuntu-latest
-    needs: [amd64, arm64]
+    needs: [ amd64, arm64 ]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/download-artifact@v3
-      - name: Display structure of downloaded files
-        run: ls -R
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -91,8 +89,7 @@ jobs:
           registry: rg.nl-ams.scw.cloud/pedr0
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build and push API docker image
+      - name: Build and push API docker image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -100,8 +97,7 @@ jobs:
           target: api
           platforms: linux/amd64,linux/arm64
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
-      -
-        name: Build and push fetcher docker image
+      - name: Build and push fetcher docker image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -109,3 +105,48 @@ jobs:
           target: fetcher
           platforms: linux/amd64,linux/arm64
           tags: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
+
+  sqlx-arm64:
+    name: Build sqlx-cli arm64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-unknown-linux-gnu
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: install
+          args: sqlx-cli --no-default-features --features openssl-vendored,postgres --target x86_64-unknown-linux-gnu
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlx-arm64
+          path: |
+            /home/runner/.cargo/bin/sqlx
+  sqlx-aarch64:
+    name: Build sqlx-cli aarch64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libssl
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo apt-get install -y libssl-dev:arm64
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-unknown-linux-gnu
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: install
+          args: sqlx-cli --no-default-features --features openssl-vendored,postgres --target aarch64-unknown-linux-gnu
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlx-aarch64
+          path: |
+            .cargo/bin/sqlx
