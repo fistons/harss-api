@@ -43,7 +43,7 @@ jobs:
       SQLX_OFFLINE: true
       DATABASE_URL: "postgres://harss:harss@localhost/harss"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
          profile: minimal
