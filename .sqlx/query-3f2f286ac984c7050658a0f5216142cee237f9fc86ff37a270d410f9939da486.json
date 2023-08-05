@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT * from items ORDER BY fetch_timestamp DESC\n    ",
+  "query": "\n        SELECT * from items ORDER BY fetch_timestamp DESC, id desc\n        ",
   "describe": {
     "columns": [
       {
@@ -58,5 +58,5 @@
       false
     ]
   },
-  "hash": "7630ad6d3dee9658c852df6ed60788bd1e982e32245390803991e6958098bdc9"
+  "hash": "3f2f286ac984c7050658a0f5216142cee237f9fc86ff37a270d410f9939da486"
 }
