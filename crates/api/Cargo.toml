@@ -3,6 +3,7 @@ name = "api"
 version = "0.1.0"
 authors = ["Eric <Fistons> <eric@pedr0.net>"]
 edition = "2021"
+default-run = "rss-aggregator"
 
 [lib]
 path = "src/lib.rs"
@@ -29,7 +30,6 @@ chrono.workspace = true
 uuid.workspace = true
 redis.workspace = true
 deadpool-redis.workspace = true
-sea-orm.workspace = true
 tokio.workspace = true
 secrecy.workspace = true
 sentry-actix.workspace = true
@@ -43,7 +43,7 @@ scraper.workspace = true
 once_cell.workspace = true
 rand.workspace = true
 
-rss-common = { path = "../rss-common" }
+common = { path = "../common" }
 
 [dev-dependencies]
 wiremock.workspace = true

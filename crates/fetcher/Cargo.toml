@@ -16,7 +16,6 @@ name = "fetcher"
 reqwest.workspace = true
 tokio.workspace = true
 dotenvy.workspace = true
-sea-orm.workspace = true
 chrono.workspace = true
 tracing.workspace = true
 feed-rs.workspace = true
@@ -24,9 +23,9 @@ thiserror.workspace = true
 anyhow.workspace = true
 once_cell.workspace = true
 
-entity = { path = "../entity" }
-rss-common = { path = "../rss-common" }
+common = { path = "../common" }
 
 [dev-dependencies]
 wiremock.workspace = true
 fake.workspace = true
+sqlx.workspace = true

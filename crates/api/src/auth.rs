@@ -7,19 +7,20 @@ use actix_web::{dev, FromRequest, HttpRequest};
 use anyhow::Context;
 use chrono::LocalResult::Single;
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use common::Pool as DbPool;
 use deadpool_redis::Pool;
 use hmac::{Hmac, Mac};
 use http_auth_basic::Credentials;
 use jwt::{SignWithKey, VerifyWithKey};
 use once_cell::sync::Lazy;
 use redis::AsyncCommands;
-use sea_orm::DatabaseConnection;
+use secrecy::Secret;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
-use rss_common::services::users::UserService;
-use rss_common::services::AuthenticationError;
-use rss_common::{UserModel, UserRole};
+use crate::errors::AuthenticationError;
+use common::model::{User, UserRole};
+use common::users::*;
 
 use crate::startup::AppState;
 
@@ -42,7 +43,7 @@ pub struct AuthenticatedUser {
 
 impl AuthenticatedUser {
     /// # Build an AuthenticatedUser from a SeoORM's model one.
-    pub fn from_user(user: &UserModel) -> Self {
+    pub fn from_user(user: &User) -> Self {
         AuthenticatedUser {
             id: user.id,
             login: user.username.clone(),
@@ -136,11 +137,11 @@ fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, Auth
 
 /// # Retrieve a user and check its credentials
 async fn check_and_get_user(
-    connection: &DatabaseConnection,
-    user: &str,
-    password: &str,
-) -> Result<UserModel, AuthenticationError> {
-    let user = match UserService::get_user(connection, user)
+    connection: &DbPool,
+    username: &str,
+    password: &Secret<String>,
+) -> Result<User, AuthenticationError> {
+    let user = match get_user_by_username(connection, username)
         .await
         .context("Database error")?
     {
@@ -152,7 +153,7 @@ async fn check_and_get_user(
         Some(u) => u,
     };
 
-    if !rss_common::services::password::match_password(&user, password) {
+    if !common::password::verify_password(&user.password, password) {
         return Err(AuthenticationError::Unauthorized(
             "Invalid credentials".into(),
         ));
@@ -164,8 +165,8 @@ async fn check_and_get_user(
 /// # Retrieve a user and check its credentials
 async fn check_and_get_authed_user(
     user: &str,
-    password: &str,
-    connection: &DatabaseConnection,
+    password: &Secret<String>,
+    connection: &DbPool,
     redis_pool: &Pool,
     redis_key: &str,
 ) -> Result<AuthenticatedUser, AuthenticationError> {
@@ -207,16 +208,16 @@ async fn check_and_get_authed_user(
 /// # Return user and password from basic auth value
 fn extract_credentials_from_http_basic(
     token: &str,
-) -> Result<(String, String), AuthenticationError> {
+) -> Result<(String, Secret<String>), AuthenticationError> {
     let credentials = Credentials::from_header(token.into()).unwrap();
-    Ok((credentials.user_id, credentials.password))
+    Ok((credentials.user_id, Secret::new(credentials.password)))
 }
 
 /// # Generate a JWT for the given user password
 pub async fn get_jwt_from_login_request(
     user: &str,
-    password: &str,
-    connection: &DatabaseConnection,
+    password: &Secret<String>,
+    connection: &DbPool,
 ) -> Result<String, AuthenticationError> {
     let user = check_and_get_user(connection, user, password).await?;
 
@@ -224,7 +225,7 @@ pub async fn get_jwt_from_login_request(
 }
 
 /// # Generate a JWT for the given user
-pub async fn get_jwt(user: &UserModel) -> Result<String, AuthenticationError> {
+pub async fn get_jwt(user: &User) -> Result<String, AuthenticationError> {
     let utc: DateTime<Utc> = Utc::now() + Duration::minutes(15);
     let authenticated_user = AuthenticatedUser::from_user(user);
 

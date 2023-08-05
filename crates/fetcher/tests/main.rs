@@ -1,21 +1,14 @@
-use chrono::prelude::*;
-use sea_orm::{entity::*, query::*};
+use chrono::{TimeZone, Utc};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use entity::channels::Entity as Channel;
-use entity::channels_errors::Entity as ChannelsError;
-use entity::items::Entity as Item;
-use entity::users_items::Entity as UserItem;
+use common::Pool;
 use fetcher::process;
-use helpers::configure_database;
 
-mod helpers;
-
-#[tokio::test]
-async fn test_error_is_filled() {
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_errors_are_filled(pool: Pool) {
     let mock = MockServer::start().await;
-    let db = configure_database(mock.uri()).await;
+    build_and_link_channel(&mock.uri(), &pool).await;
 
     Mock::given(method("GET"))
         .and(path("/coucou"))
@@ -24,9 +17,16 @@ async fn test_error_is_filled() {
         .mount(&mock)
         .await;
 
-    process(&db).await.unwrap();
+    process(&pool).await.unwrap();
 
-    let errors = ChannelsError::find().all(&db).await.unwrap();
+    let errors = sqlx::query!(
+        r#"
+        SELECT * FROM channels_errors;
+        "#
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
 
     assert_eq!(1, errors.len(), "An error should have been inserted");
     assert_eq!(
@@ -40,21 +40,23 @@ async fn test_error_is_filled() {
         "Error reason should match"
     );
 
-    let channel = Channel::find()
-        .filter(entity::channels::Column::Id.eq(1))
-        .one(&db)
-        .await
-        .unwrap()
-        .unwrap();
+    let channel = sqlx::query!(
+        r#"
+        SELECT failure_count FROM channels WHERE id=1;
+        "#
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
 
     assert_eq!(1, channel.failure_count, "Failure count has increased");
 }
 
-#[tokio::test]
-async fn happy_path() {
+#[sqlx::test(migrations = "../../migrations")]
+async fn happy_path(pool: Pool) {
     // Create DB and webserver
     let mock = MockServer::start().await;
-    let db = configure_database(mock.uri()).await;
+    build_and_link_channel(&mock.uri(), &pool).await;
 
     // Prepare the web server
     let bytes = include_bytes!("feed.xml").to_vec();
@@ -67,19 +69,22 @@ async fn happy_path() {
         .await;
 
     // "Fetch" stuff
-    process(&db).await.unwrap();
+    process(&pool).await.unwrap();
 
     // Check that stuff have been inserted
-    let inserted_items = Item::find()
-        .order_by_desc(entity::items::Column::FetchTimestamp)
-        .all(&db)
-        .await
-        .unwrap();
+    let inserted_items = sqlx::query!(
+        r#"
+        SELECT * from items ORDER BY fetch_timestamp DESC
+    "#
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
 
     assert_eq!(
         inserted_items.len(),
-        61,
-        "1 pre-existing + 60 newly inserted items should be found"
+        60,
+        "60 newly inserted items should be found"
     );
 
     assert_eq!(
@@ -108,15 +113,47 @@ async fn happy_path() {
 
     assert_eq!(
         inserted_items[0].publish_timestamp,
-        Some(Utc.with_ymd_and_hms(2022, 8, 3, 12, 0, 17).unwrap().into()),
+        Some(Utc.with_ymd_and_hms(2022, 8, 3, 12, 0, 17).unwrap()),
         "Publish timestamp should match"
     );
 
     // Check that the link with the user is done
-    let inserted_user_items = UserItem::find().all(&db).await.unwrap();
+    let inserted_user_items = sqlx::query!(
+        r#"
+        SELECT * from users_items
+    "#
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
     assert_eq!(
         inserted_user_items.len(),
-        61,
-        "1 pre-existing + 60 newly inserted items should be found"
+        60,
+        "60 newly inserted items should be found"
     );
+}
+
+async fn build_and_link_channel(host: &str, pool: &Pool) {
+    sqlx::query!(
+        r#"
+        INSERT INTO channels
+        (id, name, url, registration_timestamp, last_update, disabled, failure_count)
+        VALUES (1, 'Dummy', $1, now(), now(), false, 0)
+    "#,
+        format!("{}/coucou", host)
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO channel_users
+        (channel_id, user_id)
+        VALUES (1, 1)
+    "#
+    )
+    .execute(pool)
+    .await
+    .unwrap();
 }

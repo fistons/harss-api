@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO channels\n        (id, name, url, registration_timestamp, last_update, disabled, failure_count)\n        VALUES (1, 'Dummy', $1, now(), now(), false, 0)\n    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f8c41407adf27e0b2f7f625cc2298445c95b607ef1563928e1d7b643dd104044"
+}

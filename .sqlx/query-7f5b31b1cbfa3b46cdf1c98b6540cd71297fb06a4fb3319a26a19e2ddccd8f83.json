@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES ($1, $2, $3, false, false)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7f5b31b1cbfa3b46cdf1c98b6540cd71297fb06a4fb3319a26a19e2ddccd8f83"
+}

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT COUNT(*) AS num_items\n            FROM (SELECT \"channels\".\"id\",\n             \"channels\".\"name\",\n             \"channels\".\"url\",\n             \"channels\".\"registration_timestamp\",\n             \"channels\".\"last_update\",\n             \"channels\".\"disabled\",\n             \"channels\".\"failure_count\",\n             COUNT(\"users_items\".\"item_id\") AS \"items_count\",\n             SUM(CAST(\"read\" AS integer))   AS \"items_read\"\n        FROM \"channels\"\n             RIGHT JOIN \"channel_users\" ON \"channels\".\"id\" = \"channel_users\".\"channel_id\"\n             LEFT JOIN \"users_items\" ON \"channels\".\"id\" = \"users_items\".\"channel_id\"\n        WHERE \"channel_users\".\"user_id\" = $1\n        GROUP BY \"channels\".\"id\", \"channel_users\".\"registration_timestamp\"\n        ORDER BY \"channel_users\".\"registration_timestamp\" DESC) AS \"sub_query\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "num_items",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "865288bc40af9e104dd912984cfb5a7f25084f37daf6a7be23f53dfd24f99225"
+}

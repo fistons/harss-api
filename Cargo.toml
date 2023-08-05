@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/api", "crates/entity", "crates/fetcher", "crates/rss-common"]
+members = ["crates/api", "crates/fetcher", "crates/common"]
 
 [workspace.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
@@ -15,7 +15,8 @@ http-auth-basic = "0.3"
 jwt = "0.16"
 hmac = "0.12"
 sha2 = "0.10"
-chrono = "0.4"
+chrono = {version = "0.4", features = ["serde"]}
+time = "0.3"
 uuid = { version = "1.1", features = ["v4"] }
 redis = { version = "0.23", features = ["r2d2", "tokio-comp", "connection-manager"] }
 deadpool-redis = "0.12"
@@ -28,7 +29,7 @@ thiserror = "1"
 anyhow = "1"
 reqwest = { version = "0.11", features = ["tokio-rustls", "native-tls-vendored"] }
 feed-rs = "1"
-sea-orm = { version = "^0", features = ["sqlx-sqlite", "sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print", "mock"] }
+sqlx = { version = "0.7", features = [ "runtime-tokio", "tls-native-tls", "uuid", "macros", "postgres", "chrono", "migrate"] }
 fake = { version = "2.5", features = ["http", "chrono"] }
 tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter", "fmt", "std", "json"] }
@@ -42,6 +43,7 @@ wiremock = "0.5"
 scraper = "0.17"
 once_cell = "1"
 rand = "0.8.5"
+speculoos = "0.11.0"
 
 
 [profile.release]
@@ -49,3 +51,6 @@ strip = true
 opt-level = "s"
 lto = true
 codegen-units = 1
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3

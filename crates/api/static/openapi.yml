@@ -94,16 +94,8 @@ paths:
         
         List all registered users. 
       parameters:
-        - name: size
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/PageSize'
-        - name: page
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/PageNumber'
+        - $ref: '#/components/parameters/PageSizeParameter'
+        - $ref: '#/components/parameters/PageNumberParameter'
       responses:
         '200':
           description: A list of registered users
@@ -167,16 +159,8 @@ paths:
       summary: Returns a list of registered channels.
       description: List all the rss channels registered.
       parameters:
-        - name: size
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/PageSize'
-        - name: page
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/PageNumber'
+        - $ref: '#/components/parameters/PageSizeParameter'
+        - $ref: '#/components/parameters/PageNumberParameter'
       responses:
         '200':
           description: A list of channels
@@ -190,15 +174,15 @@ paths:
       operationId: new_channel
       tags:
         - Channels
-      summary: Create a new channel.
-      description: Create a new RSS channel to be polled frequently.
+      summary: Register to a new channel.
+      description: Register to a new channel.
       requestBody:
         required: true
-        description: Channel creation request.
+        description: Channel registration request.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateChannelRequest'
+              $ref: '#/components/schemas/RegisterChannelRequest'
       responses:
         '201':
           $ref: '#/components/responses/ObjectCreatedResponse'
@@ -301,6 +285,8 @@ paths:
       summary: Returns items
       description: Returns the list of items of the given channel
       parameters:
+        - $ref: '#/components/parameters/PageSizeParameter'
+        - $ref: '#/components/parameters/PageNumberParameter'
         - name: id
           in: path
           description: Unique ID of a channel
@@ -308,16 +294,6 @@ paths:
           example: 1
           schema:
             $ref: '#/components/schemas/ChannelID'
-        - name: size
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/PageSize'
-        - name: page
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/PageNumber'
       responses:
         '200':
           description: A list of item
@@ -395,16 +371,8 @@ paths:
       summary: Return the last RSS items of the user
       description: Return the last RSS items of the user
       parameters:
-        - name: size
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/PageSize'
-        - name: page
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/PageNumber'
+        - $ref: '#/components/parameters/PageSizeParameter'
+        - $ref: '#/components/parameters/PageNumberParameter'
         - name: read
           in: query
           required: false
@@ -491,6 +459,21 @@ paths:
         '202':
           $ref: '#/components/responses/Accepted'
 components:
+  parameters:
+    PageSizeParameter:
+      in: query
+      name: size
+      required: false
+      schema:
+        $ref: '#/components/schemas/PageSize'
+      description: Size of the page to return. Default to 20.
+    PageNumberParameter:
+      in: query
+      name: number
+      required: false
+      schema:
+        $ref: '#/components/schemas/PageNumber'
+      description: Number of the page to return. Default to 1.
   securitySchemes:
     basicAuth:
       type: http
@@ -547,7 +530,7 @@ components:
     Page:
       type: object
       required:
-        - page
+        - page_number
         - page_size
         - total_items
         - total_pages
@@ -710,15 +693,12 @@ components:
       description: The user's name.
       minLength: 1
       nullable: false
-    CreateChannelRequest:
+    RegisterChannelRequest:
       type: object
       description: A RSS Channel creation request.
       required:
-        - name
         - url
       properties:
-        name:
-          $ref: '#/components/schemas/ChannelName'
         url:
           $ref: '#/components/schemas/ChannelURL'
     FoundChannel:

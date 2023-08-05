@@ -1,38 +1,42 @@
-use actix_web::http::StatusCode;
-use actix_web::{get, web, HttpResponse, ResponseError};
+use actix_web::{get, web, HttpResponse};
 use rand::Rng;
-use rss_common::services::{AuthenticationError, ServiceError};
-use serde_json::json;
 
 pub mod auth;
 pub mod channels;
 pub mod items;
 pub mod users;
 
-#[derive(thiserror::Error, Debug)]
-pub enum ApiError {
-    #[error("Object not found")]
-    NotFound(String, i32),
-    #[error("Authentication error {0:?}")]
-    AuthenticationError(#[from] AuthenticationError),
-    #[error("Redis Error: {0}")]
-    RedisError(#[from] redis::RedisError),
-    #[error("Redis pool Error: {0}")]
-    RedisPoolError(#[from] deadpool_redis::PoolError),
-    #[error("Database error: {0}")]
-    DatabaseError(#[from] sea_orm::DbErr),
-    #[error("{0}")]
-    ServiceError(#[from] ServiceError),
-    #[error("Password mismatch")]
-    PasswordMismatch,
-    #[error(transparent)]
-    Unexpected(#[from] anyhow::Error),
-}
+mod errors {
+    use actix_web::http::StatusCode;
+    use actix_web::{HttpResponse, ResponseError};
+    use serde_json::json;
 
-//TODO: Improve error translation, this sucks ass. I should probably remove a layer here
-impl ResponseError for ApiError {
-    fn error_response(&self) -> HttpResponse {
-        match self {
+    use common::DbError;
+
+    use crate::errors::AuthenticationError;
+
+    #[derive(thiserror::Error, Debug)]
+    pub enum ApiError {
+        #[error("Object not found")]
+        NotFound(String, i32),
+        #[error("Authentication error {0:?}")]
+        AuthenticationError(#[from] AuthenticationError),
+        #[error("Redis Error: {0}")]
+        RedisError(#[from] redis::RedisError),
+        #[error("Redis pool Error: {0}")]
+        RedisPoolError(#[from] deadpool_redis::PoolError),
+        #[error("Database error: {0}")]
+        DatabaseError(#[from] DbError),
+        #[error("Password mismatch")]
+        PasswordMismatch,
+        #[error(transparent)]
+        Unexpected(#[from] anyhow::Error),
+    }
+
+    //TODO: Improve error translation, this sucks ass. I should probably remove a layer here
+    impl ResponseError for ApiError {
+        fn error_response(&self) -> HttpResponse {
+            match self {
             ApiError::AuthenticationError(error) =>  error.error_response(),
             ApiError::NotFound(object_type, id) => HttpResponse::NotFound()
                 .json(json!({"type":"/problem/not-found",
@@ -46,6 +50,7 @@ impl ResponseError for ApiError {
                     "detail": "Unexpected error with the database"})),
             ApiError::PasswordMismatch => HttpResponse::BadRequest().json(json!({"type":"/problem/password-mismatch", "title": "Passwords does not match", "status": 400, "title": "Passwords does not match"})),
             _ => HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR).finish(),
+        }
         }
     }
 }

@@ -6,9 +6,9 @@ use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
-use rss_common::services::users::UserService;
+use common::users::get_user_by_username;
 
-use crate::routes::ApiError;
+use crate::routes::errors::ApiError;
 use crate::startup::AppState;
 
 #[derive(Deserialize, Debug)]
@@ -31,12 +31,8 @@ pub async fn login(
     let connection = &app_state.db;
     let redis_pool = &app_state.redis;
 
-    let access_token = crate::auth::get_jwt_from_login_request(
-        &login.login,
-        login.password.expose_secret(),
-        connection,
-    )
-    .await?;
+    let access_token =
+        crate::auth::get_jwt_from_login_request(&login.login, &login.password, connection).await?;
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
 
     let mut redis = redis_pool.get().await?;
@@ -62,7 +58,7 @@ pub async fn refresh_auth(
 
     if token_exists {
         let user_login = crate::auth::extract_login_from_refresh_token(token);
-        let user = UserService::get_user(connection, user_login)
+        let user = get_user_by_username(connection, user_login)
             .await
             .context("Could not get user")?
             .ok_or_else(|| anyhow!("Unknown user"))?;
