@@ -1,9 +1,9 @@
 [package]
 name = "api"
-version = "0.1.0"
-authors = ["Eric <Fistons> <eric@pedr0.net>"]
-edition = "2021"
 default-run = "rss-aggregator"
+version.workspace = true
+edition = "2021"
+authors = ["Eric <Fistons> <eric@pedr0.net>"]
 
 [lib]
 path = "src/lib.rs"

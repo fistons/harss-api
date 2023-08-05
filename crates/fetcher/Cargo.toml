@@ -1,8 +1,8 @@
 [package]
 name = "fetcher"
-version = "0.1.0"
-authors = ["Eric <Fistons> <eric@pedr0.net>"]
+version.workspace = true
 edition = "2021"
+authors = ["Eric <Fistons> <eric@pedr0.net>"]
 
 [[bin]]
 name = "fetcher"

@@ -1,7 +1,8 @@
 [package]
 name = "common"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
+authors = ["Eric <Fistons> <eric@pedr0.net>"]
 
 [lib]
 path = "src/lib.rs"
