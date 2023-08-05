@@ -67,6 +67,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
           files: |
             fetcher-amd64
             rss-aggregator-amd64
