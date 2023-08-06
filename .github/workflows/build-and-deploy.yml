@@ -7,6 +7,7 @@ on:
 
 jobs:
   set-vars:
+    name: Build docker tag
     runs-on: ubuntu-latest
     outputs:
       version_dashed: ${{ steps.vars.outputs.version_dashed }}
@@ -62,8 +63,6 @@ jobs:
     name: Build docker images
     runs-on: ubuntu-latest
     needs: [ amd64, arm64, set-vars ]
-    env:
-      version_dashed: "${{ needs.set-vars.outputs.version_dashed }}"
     steps:
       - uses: actions/checkout@v3
       - uses: actions/download-artifact@v3
@@ -86,7 +85,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
-            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:${version_dashed}
+            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:${{ needs.set-vars.outputs.version_dashed }}
       - name: Build and push fetcher docker image
         uses: docker/build-push-action@v4
         with:
@@ -96,7 +95,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
-            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:${version_dashed}
+            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:${{ needs.set-vars.outputs.version_dashed }}
   release:
     name: Release
     runs-on: ubuntu-latest
