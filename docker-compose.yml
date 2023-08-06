@@ -69,7 +69,8 @@ services:
       timeout: 5s
       retries: 5
   migrations:
-    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-migrations:latest
+    build:
+      context: migrations
     command: sqlx migrate run
     volumes:
      - "$PWD:/volume"
