@@ -49,28 +49,6 @@ jobs:
           path: |
             target/aarch64-unknown-linux-gnu/release/rss-aggregator
             target/aarch64-unknown-linux-gnu/release/fetcher
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    needs: [amd64, arm64]
-    steps:
-      - uses: actions/download-artifact@v3
-      - name: Rename files
-        run: |
-          mv amd64/fetcher fetcher-amd64
-          mv amd64/rss-aggregator rss-aggregator-amd64
-          mv arm64/fetcher fetcher-arm64
-          mv arm64/rss-aggregator rss-aggregator-arm64
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: true
-          files: |
-            fetcher-amd64
-            rss-aggregator-amd64
-            fetcher-arm64
-            rss-aggregator-arm64
   docker:
     name: Build docker images
     runs-on: ubuntu-latest
