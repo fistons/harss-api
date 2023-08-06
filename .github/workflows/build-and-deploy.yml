@@ -77,7 +77,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
-            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:${docker_tag}
+            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:${{ docker_tag }}
       - name: Build and push fetcher docker image
         uses: docker/build-push-action@v4
         with:
@@ -87,7 +87,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
-            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:${docker_tag}
+            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:${{ docker_tag }}
   release:
     name: Release
     runs-on: ubuntu-latest
