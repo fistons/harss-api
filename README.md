@@ -57,11 +57,31 @@ All the configuration must be pass through environment variables.
 docker compose up
 ```
 
-This will create the databases (postgres + redis), do the necessary migrations and launch the jaeger burrito
+This will create the databases (postgres + redis), do the necessary migrations. You can uncomment all the jaeger related
+command if you want to enable it.
 
 ## How to init/migrate database
 
-Requires rust and cargo
+## Using `docker-compose`
+
+If you use docker compose, the database migrations image will be build automatically and applied when you `up` the whole
+compose.
+
+But if you don't want to use the entire docker compose. you can still build the image and use it for your own database.
+
+```shell
+docker compose build migrations # ☕
+
+# Run the migration against a containered database
+docker run --link containered-postgres --rm -e DATABASE_URL=postgres://harss:harss@containered-postgres/harss rss-aggregator-migrations:latest sqlx migrate run
+
+# Run the migration against the host's postgres
+docker run --net host --rm -e DATABASE_URL=postgres://harss:harss@localhost/harss rss-aggregator-migrations:latest sqlx migrate run
+```
+
+## Using `sqlx-cli` itself
+
+Requires a rust toolchain
 
 ```shell
 cargo install sqlx-cli --no-default-features --features native-tls,postgres
