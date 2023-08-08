@@ -180,7 +180,20 @@ pub async fn create_or_link_channel(db: &Pool, url: &str, user_id: i32) -> Resul
     .execute(db)
     .await?;
 
-    //TODO: Copy all the items to the new user
+    // Link all the existing items of the channel to the user
+    sqlx::query_scalar!(
+        r#"
+        INSERT INTO users_items (user_id, item_id, channel_id, read, starred)
+        SELECT $2, id, $1, false, false
+        from items
+        where channel_id = $1
+        ON CONFLICT DO NOTHING
+        "#,
+        channel_id,
+        user_id
+    )
+    .execute(db)
+    .await?;
 
     Ok(channel_id)
 }
