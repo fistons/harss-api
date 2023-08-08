@@ -1,5 +1,6 @@
 INSERT INTO channels (id, name, url, registration_timestamp, last_update, disabled, failure_count) VALUES (1, 'Canard PC', 'https://www.canardpc.com/feed', '2023-07-30 19:51:59.125724 +00:00', '2023-07-30 22:46:54.506650 +00:00', false, 0);
 INSERT INTO channels (id, name, url, registration_timestamp, last_update, disabled, failure_count) VALUES (2, 'Le monde', 'https://www.lemonde.fr/rss/une.xml', '2023-07-30 22:44:48.513419 +00:00', '2023-07-30 22:46:54.605712 +00:00', false, 0);
+INSERT INTO channels (id, name, url, registration_timestamp, last_update, disabled, failure_count) VALUES (3, 'Slashdot', 'https://rss.slashdot.org/Slashdot/slashdotMain', '2023-07-30 22:44:48.513419 +00:00', '2023-07-30 22:46:54.605712 +00:00', false, 0);
 
 INSERT INTO channel_users (channel_id, user_id, registration_timestamp) VALUES (1, 1, '2023-07-30 19:52:17.557439 +00:00');
 INSERT INTO channel_users (channel_id, user_id, registration_timestamp) VALUES (2, 1, '2023-07-30 23:00:31.251762 +00:00');
@@ -161,3 +162,6 @@ INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1,
 INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 71, 2, false, false);
 INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 65, 2, true, false);
 INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES (1, 67, 2, true, true);
+
+-- New user, without channels
+INSERT INTO users (id, username, password, role) VALUES (2, 'john_doe', 'no', 'basic');

@@ -349,3 +349,57 @@ async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> R
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::items::get_items_of_user;
+    use speculoos::prelude::*;
+
+    use super::*;
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    async fn test_no_conflict_on_existing_channel_insertion(pool: Pool) -> Result<()> {
+        let channel_id = create_or_link_channel(&pool, "https://www.canardpc.com/feed", 1) // 1 is root
+            .await
+            .unwrap();
+
+        assert_that!(channel_id).is_equal_to(1);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    async fn test_user_get_items_on_registration(pool: Pool) -> Result<()> {
+        let channel_id = create_or_link_channel(&pool, "https://www.canardpc.com/feed", 2) // 2 is john_doe
+            .await
+            .unwrap();
+
+        assert_that!(channel_id).is_equal_to(1);
+        let items = get_items_of_user(&pool, Some(1), None, None, 2, 1, 400)
+            .await
+            .unwrap();
+        asserting!("John doe now has the 60 items of channel 1")
+            .that(items.content())
+            .has_length(60);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    async fn test_user_registration_on_empty_channel(pool: Pool) -> Result<()> {
+        let channel_id =
+            create_or_link_channel(&pool, "https://rss.slashdot.org/Slashdot/slashdotMain", 1) // 1 is root
+                .await
+                .unwrap();
+
+        assert_that!(channel_id).is_equal_to(3);
+        let items = get_items_of_user(&pool, Some(3), None, None, 1, 1, 400) // Channel 3 is empty
+            .await
+            .unwrap();
+        asserting!("List of items is empty")
+            .that(items.content())
+            .is_empty();
+
+        Ok(())
+    }
+}
