@@ -171,7 +171,7 @@ pub async fn create_or_link_channel(db: &Pool, url: &str, user_id: i32) -> Resul
     sqlx::query!(
         r#"
         INSERT INTO channel_users (channel_id, user_id, registration_timestamp) 
-        VALUES ($1, $2, $3)
+        VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
         "#,
         channel_id,
         user_id,
