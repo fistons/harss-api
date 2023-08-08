@@ -5,9 +5,13 @@ use std::error::Error;
 
 use anyhow::Context;
 use chrono::Utc;
+use deadpool_redis::{Pool as Redis, PoolError};
 use feed_rs::model::{Entry, Feed};
 use once_cell::sync::Lazy;
+use redis::aio::Connection;
+use redis::{AsyncCommands, ExistenceCheck, RedisError, RedisResult, SetExpiry, SetOptions};
 use reqwest::Client;
+use uuid::Uuid;
 
 use common::channels::*;
 use common::items::*;
@@ -23,6 +27,10 @@ static CLIENT: Lazy<Client> = Lazy::new(|| {
 
 #[derive(thiserror::Error, Debug)]
 pub enum FetchError {
+    #[error("Redis error: {0}")]
+    RedisError(#[from] RedisError),
+    #[error("Redis Pool error: {0}")]
+    PoolError(#[from] PoolError),
     #[error("Database error: {0}")]
     SqlError(#[from] DbError),
     #[error("Parsing error: {0}")]
@@ -37,13 +45,13 @@ pub enum FetchError {
 
 /// Process the whole database update in one single transaction. BALLSY.
 #[tracing::instrument(skip_all)]
-pub async fn process(connection: &Pool) -> Result<(), anyhow::Error> {
+pub async fn process(connection: &Pool, redis: &Redis) -> Result<(), anyhow::Error> {
     let channels = get_all_enabled_channels(connection)
         .await
         .context("Could not get channels to update")?;
 
     for channel in channels {
-        if let Err(error) = update_channel(connection, channel).await {
+        if let Err(error) = update_channel(connection, redis, channel).await {
             tracing::error!("{:?}", error.source());
         }
     }
@@ -61,9 +69,55 @@ pub async fn process(connection: &Pool) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-#[tracing::instrument(skip(connection))]
-async fn update_channel(connection: &Pool, channel: Channel) -> Result<(), FetchError> {
+async fn acquire_lock(
+    redis: &mut Connection,
+    channel_id: i32,
+) -> (String, String, RedisResult<Option<String>>) {
+    let value = Uuid::new_v4().to_string();
+    let key = format!("lock.channel.{}", channel_id);
+
+    let options = SetOptions::default()
+        .conditional_set(ExistenceCheck::NX)
+        .with_expiration(SetExpiry::EX(60));
+
+    let redis_result = redis.set_options(&key, &value, options).await;
+
+    (key, value, redis_result)
+}
+
+async fn release_lock(redis: &mut Connection, key: &str, value: &str) -> RedisResult<()> {
+    let redis_value = redis.get::<&str, Option<String>>(key).await?;
+    eprintln!("Lock {:?} deleted", redis_value);
+
+    if redis_value.unwrap() == value {
+        redis.del(key).await?;
+        eprintln!("Lock {} deleted", key);
+    }
+
+    Ok(())
+}
+
+#[tracing::instrument(skip(connection, redis))]
+async fn update_channel(
+    connection: &Pool,
+    redis: &Redis,
+    channel: Channel,
+) -> Result<(), FetchError> {
+    let mut redis = redis.get().await?;
+
+    let (key, value, response) = acquire_lock(&mut redis, channel.id).await;
+
+    if response?.is_none() {
+        tracing::error!(
+            "Lock for channel {} already acquired. Giving up for now",
+            channel.name
+        );
+
+        return Ok(());
+    }
+
     tracing::info!("Updating {} ({})", channel.name, channel.url);
+
     let feed = match get_and_parse_feed(&channel.url).await {
         Ok(feed) => feed,
         Err(error) => {
@@ -86,12 +140,15 @@ async fn update_channel(connection: &Pool, channel: Channel) -> Result<(), Fetch
     let user_ids = get_user_ids_of_channel(connection, channel.id).await?;
 
     // For each new item, create the entry in the database, and add it to each user
+    //FIXME Insert the delta only, not only the new articles
     for item in new_items {
         insert_item_for_user(connection, &item, &user_ids).await?;
     }
 
     update_last_fetched(connection, channel.id, Utc::now()).await?;
 
+    // Remove the lock on the channel.
+    release_lock(&mut redis, &key, &value).await?;
     Ok(())
 }
 

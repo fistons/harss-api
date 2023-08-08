@@ -22,7 +22,9 @@ feed-rs.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
 once_cell.workspace = true
-
+deadpool-redis.workspace = true
+redis.workspace = true
+uuid.workspace = true
 common = { path = "../common" }
 
 [dev-dependencies]

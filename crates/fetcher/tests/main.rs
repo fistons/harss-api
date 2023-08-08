@@ -2,13 +2,14 @@ use chrono::{TimeZone, Utc};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use common::Pool;
+use common::{init_redis_connection, Pool};
 use fetcher::process;
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_errors_are_filled(pool: Pool) {
     let mock = MockServer::start().await;
     build_and_link_channel(&mock.uri(), &pool).await;
+    let redis_pool = init_redis_connection();
 
     Mock::given(method("GET"))
         .and(path("/coucou"))
@@ -17,7 +18,7 @@ async fn test_errors_are_filled(pool: Pool) {
         .mount(&mock)
         .await;
 
-    process(&pool).await.unwrap();
+    process(&pool, &redis_pool).await.unwrap();
 
     let errors = sqlx::query!(
         r#"
@@ -56,6 +57,8 @@ async fn test_errors_are_filled(pool: Pool) {
 async fn happy_path(pool: Pool) {
     // Create DB and webserver
     let mock = MockServer::start().await;
+    let redis_pool = init_redis_connection();
+
     build_and_link_channel(&mock.uri(), &pool).await;
 
     // Prepare the web server
@@ -69,7 +72,7 @@ async fn happy_path(pool: Pool) {
         .await;
 
     // "Fetch" stuff
-    process(&pool).await.unwrap();
+    process(&pool, &redis_pool).await.unwrap();
 
     // Check that stuff have been inserted
     let inserted_items = sqlx::query!(
