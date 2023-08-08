@@ -1,9 +1,11 @@
-use api::databases::init_redis_connection;
-use api::startup;
-use common::init_postgres_connection;
 use std::env;
 use std::net::TcpListener;
+
 use tracing::error;
+
+use api::startup;
+use common::init_postgres_connection;
+use common::init_redis_connection;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {

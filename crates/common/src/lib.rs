@@ -1,3 +1,4 @@
+use deadpool_redis::{Config, Pool as Redis, Runtime};
 use sqlx::postgres::PgPoolOptions;
 pub use sqlx::Error as DbError;
 pub use sqlx::PgPool as Pool;
@@ -21,4 +22,11 @@ pub async fn init_postgres_connection() -> Pool {
         .connect(&connection_spec)
         .await
         .expect("Could not connect to postgres")
+}
+
+pub fn init_redis_connection() -> Redis {
+    let url = std::env::var("REDIS_URL").unwrap_or_else(|_| String::from("redis://127.0.0.1"));
+    let cfg = Config::from_url(url);
+    cfg.create_pool(Some(Runtime::Tokio1))
+        .expect("Could not connect to redis")
 }

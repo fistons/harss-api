@@ -1,5 +1,4 @@
 pub mod auth;
-pub mod databases;
 pub mod model;
 pub mod rate_limiting;
 pub mod routes;
