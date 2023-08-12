@@ -22,16 +22,16 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     services:
-      # Label used to access the service container
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
       postgres:
-        # Docker Hub image
         image: postgres
-        # Provide the password for postgres
         env:
           POSTGRES_PASSWORD: harss
           POSTGRES_DB: harss
           POSTGRES_USER: harss
-        # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
