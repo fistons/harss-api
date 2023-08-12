@@ -28,6 +28,7 @@ uuid.workspace = true
 common = { path = "../common" }
 
 [dev-dependencies]
+serial_test = "*"
 wiremock.workspace = true
 fake.workspace = true
 sqlx.workspace = true

@@ -1,4 +1,5 @@
 use chrono::{TimeZone, Utc};
+use serial_test::serial;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -6,6 +7,7 @@ use common::{init_redis_connection, Pool};
 use fetcher::process;
 
 #[sqlx::test(migrations = "../../migrations")]
+#[serial]
 async fn test_errors_are_filled(pool: Pool) {
     let mock = MockServer::start().await;
     build_and_link_channel(&mock.uri(), &pool).await;
@@ -51,9 +53,22 @@ async fn test_errors_are_filled(pool: Pool) {
     .unwrap();
 
     assert_eq!(1, channel.failure_count, "Failure count has increased");
+
+    let items_count = sqlx::query_scalar!(
+        r#"
+        SELECT count(*) FROM items WHERE channel_id=1;
+        "#
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap()
+    .unwrap();
+
+    assert_eq!(0, items_count, "items count is still 0");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+#[serial]
 async fn happy_path(pool: Pool) {
     // Create DB and webserver
     let mock = MockServer::start().await;
