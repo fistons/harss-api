@@ -49,11 +49,24 @@ pub async fn process(connection: &Pool, redis: &Redis) -> Result<(), anyhow::Err
     let channels = get_all_enabled_channels(connection)
         .await
         .context("Could not get channels to update")?;
+    let mut redis = redis.get().await?;
 
     for channel in channels {
-        if let Err(error) = update_channel(connection, redis, channel).await {
+        let (key, value, response) = acquire_lock(&mut redis, channel.id).await;
+        if response?.is_none() {
+            tracing::error!(
+                "Lock for channel {} already acquired. Giving up for now",
+                channel.name
+            );
+            continue;
+        }
+
+        if let Err(error) = update_channel(connection, channel).await {
             tracing::error!("{:?}", error.source());
         }
+
+        // Remove the lock on the channel.
+        release_lock(&mut redis, &key, &value).await?;
     }
 
     let threshold = std::env::var("FAILURE_THRESHOLD")
@@ -97,25 +110,8 @@ async fn release_lock(redis: &mut Connection, key: &str, value: &str) -> RedisRe
     Ok(())
 }
 
-#[tracing::instrument(skip(connection, redis))]
-async fn update_channel(
-    connection: &Pool,
-    redis: &Redis,
-    channel: Channel,
-) -> Result<(), FetchError> {
-    let mut redis = redis.get().await?;
-
-    let (key, value, response) = acquire_lock(&mut redis, channel.id).await;
-
-    if response?.is_none() {
-        tracing::error!(
-            "Lock for channel {} already acquired. Giving up for now",
-            channel.name
-        );
-
-        return Ok(());
-    }
-
+#[tracing::instrument(skip(connection))]
+async fn update_channel(connection: &Pool, channel: Channel) -> Result<(), FetchError> {
     tracing::info!("Updating {} ({})", channel.name, channel.url);
 
     let feed = match get_and_parse_feed(&channel.url).await {
@@ -147,8 +143,6 @@ async fn update_channel(
 
     update_last_fetched(connection, channel.id, Utc::now()).await?;
 
-    // Remove the lock on the channel.
-    release_lock(&mut redis, &key, &value).await?;
     Ok(())
 }
 
