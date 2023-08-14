@@ -100,11 +100,8 @@ async fn acquire_lock(
 
 async fn release_lock(redis: &mut Connection, key: &str, value: &str) -> RedisResult<()> {
     let redis_value = redis.get::<&str, Option<String>>(key).await?;
-    eprintln!("Lock {:?} deleted", redis_value);
-
     if redis_value.unwrap() == value {
         redis.del(key).await?;
-        eprintln!("Lock {} deleted", key);
     }
 
     Ok(())
