@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/api", "crates/fetcher", "crates/common"]
-package = { version = "0.2.0" }
+package = { version = "0.3.0" }
 
 [workspace.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
