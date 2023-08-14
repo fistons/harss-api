@@ -149,15 +149,37 @@ pub async fn insert_items_delta_for_all_registered_users(
     Ok(())
 }
 
-/// Insert an item in the database
+/// Insert items in the database
 #[tracing::instrument(skip(db))]
-pub async fn insert_item(db: &Pool, item: &NewItem) -> Result<i32> {
+pub async fn insert_items(db: &Pool, items: &Vec<NewItem>) -> Result<Vec<i32>> {
+    let mut guids: Vec<Option<String>> = vec![];
+    let mut titles: Vec<Option<String>> = vec![];
+    let mut urls: Vec<Option<String>> = vec![];
+    let mut contents: Vec<Option<String>> = vec![];
+    let mut fetch_timestamps: Vec<DateTime<Utc>> = vec![];
+    let mut publish_timestamps: Vec<Option<DateTime<Utc>>> = vec![];
+    let mut channel_ids: Vec<i32> = vec![];
+
+    for item in items {
+        guids.push(item.guid.clone());
+        titles.push(item.title.clone());
+        urls.push(item.url.clone());
+        contents.push(item.content.clone());
+        fetch_timestamps.push(item.fetch_timestamp);
+        publish_timestamps.push(item.publish_timestamp);
+        channel_ids.push(item.channel_id);
+    }
+
+    // Postgres magic: https://github.com/launchbadge/sqlx/blob/main/FAQ.md#how-can-i-bind-an-array-to-a-values-clause-how-can-i-do-bulk-inserts
+    // Also, sqlx magic: https://github.com/launchbadge/sqlx/issues/571#issuecomment-664910255
     sqlx::query_scalar!(
         r#"
-        INSERT INTO items (guid, title, url, content, fetch_timestamp, publish_timestamp, channel_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+        INSERT INTO items (guid, title, url, content, fetch_timestamp, publish_timestamp, channel_id)
+        SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::timestamptz[], $6::timestamptz[], $7::int[])
+        RETURNING id
         "#,
-        item.guid, item.title, item.url, item.content, item.fetch_timestamp, item.publish_timestamp, item.channel_id)
-        .fetch_one(db).await
+        &guids[..] as _, &titles[..] as _, &urls[..] as _, &contents[..] as _, &fetch_timestamps[..], &publish_timestamps[..] as _, &channel_ids[..])
+        .fetch_all(db).await
 }
 
 /// Insert the delta of the missing user's items for a given channel

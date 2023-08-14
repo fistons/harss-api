@@ -3,7 +3,7 @@ use serial_test::serial;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use common::items::{get_items_of_user, insert_item, insert_items_delta_for_all_registered_users};
+use common::items::{get_items_of_user, insert_items, insert_items_delta_for_all_registered_users};
 use common::model::NewItem;
 use common::{init_redis_connection, Pool};
 use fetcher::process;
@@ -37,9 +37,9 @@ async fn test_delta_is_loaded(pool: Pool) {
             channel_id: 1,
         })
         .collect();
-    for item in items {
-        insert_item(&pool, &item).await.unwrap();
-    }
+
+    let ids = insert_items(&pool, &items).await.unwrap();
+    assert_eq!(vec![1, 2, 3, 4, 5], ids); // Let's hope my ids are predictable here. They should.
 
     // Link them to the user
     insert_items_delta_for_all_registered_users(&pool, 1, &Utc::now())
