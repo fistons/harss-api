@@ -136,14 +136,14 @@ pub async fn set_item_starred(db: &Pool, user_id: i32, ids: Vec<i32>, starred: b
 pub async fn insert_items_delta_for_all_registered_users(
     db: &Pool,
     channel_id: i32,
-    timestamp: DateTime<Utc>,
+    fetch_timestamp: &DateTime<Utc>,
 ) -> Result<()> {
     //TODO: transactional
 
     let user_ids = get_user_ids_of_channel(db, channel_id).await?;
 
     for user_id in user_ids {
-        insert_item_user(db, &channel_id, &user_id, &timestamp).await?;
+        insert_item_user(db, &channel_id, &user_id, fetch_timestamp).await?;
     }
 
     Ok(())

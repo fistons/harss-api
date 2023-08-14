@@ -134,8 +134,8 @@ async fn update_channel(connection: &Pool, channel: Channel) -> Result<(), Fetch
         insert_item(connection, &item).await?;
     }
 
-    insert_items_delta_for_all_registered_users(connection, channel.id, now).await?;
-    update_last_fetched(connection, channel.id, now).await?;
+    insert_items_delta_for_all_registered_users(connection, channel.id, &now).await?;
+    update_last_fetched(connection, channel.id, &now).await?;
 
     Ok(())
 }

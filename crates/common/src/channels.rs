@@ -272,7 +272,7 @@ pub async fn get_all_enabled_channels(db: &Pool) -> Result<Vec<Channel>> {
 
 /// Update the last fetched timestamp of a channel
 #[tracing::instrument(skip(db))]
-pub async fn update_last_fetched(db: &Pool, channel_id: i32, date: DateTime<Utc>) -> Result<()> {
+pub async fn update_last_fetched(db: &Pool, channel_id: i32, date: &DateTime<Utc>) -> Result<()> {
     sqlx::query!(
         r#"
         UPDATE channels SET last_update = $2 WHERE id = $1
