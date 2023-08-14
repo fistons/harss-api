@@ -159,14 +159,14 @@ fn item_from_rss_entry(entry: Entry, channel_id: i32, timestamp: &DateTime<Utc>)
     let guid = Some(entry.id);
     let url = entry.links.get(0).map(|x| String::from(&x.href[..]));
     let content = entry.summary.map(|x| x.content);
-    let publish_timestamp = entry.published.or(Some(timestamp.clone()));
+    let publish_timestamp = entry.published.or(Some(*timestamp));
 
     NewItem {
         guid,
         title,
         url,
         content,
-        fetch_timestamp: timestamp.clone(),
+        fetch_timestamp: *timestamp,
         publish_timestamp,
         channel_id,
     }
