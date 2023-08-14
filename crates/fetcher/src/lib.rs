@@ -1,10 +1,9 @@
 extern crate core;
 
-use std::collections::HashSet;
 use std::error::Error;
 
 use anyhow::Context;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use deadpool_redis::{Pool as Redis, PoolError};
 use feed_rs::model::{Entry, Feed};
 use once_cell::sync::Lazy;
@@ -119,26 +118,24 @@ async fn update_channel(connection: &Pool, channel: Channel) -> Result<(), Fetch
         }
     };
 
-    let current_item_ids = fetch_current_items_id(connection, &channel).await?;
+    let now = Utc::now();
+    let last_update = get_last_update(connection, &channel.id).await?;
 
     // Retrieve all the items not already retrieved in precedent run
     let new_items = feed
         .entries
         .into_iter()
-        .filter(|item| !current_item_ids.contains(&item.id))
-        .map(|entry| item_from_rss_entry(entry, channel.id))
+        .map(|entry| item_from_rss_entry(entry, channel.id, &now))
+        .filter(|item| item.fetch_timestamp > last_update)
         .collect::<Vec<NewItem>>();
 
-    // Retrieve all the users that have subscribe to the channel
-    let user_ids = get_user_ids_of_channel(connection, channel.id).await?;
-
-    // For each new item, create the entry in the database, and add it to each user
-    //FIXME Insert the delta only, not only the new articles
+    // Add each new item to the database
     for item in new_items {
-        insert_item_for_user(connection, &item, &user_ids).await?;
+        insert_item(connection, &item).await?;
     }
 
-    update_last_fetched(connection, channel.id, Utc::now()).await?;
+    insert_items_delta_for_all_registered_users(connection, channel.id, now).await?;
+    update_last_fetched(connection, channel.id, now).await?;
 
     Ok(())
 }
@@ -156,33 +153,20 @@ async fn get_and_parse_feed(channel_url: &str) -> Result<Feed, FetchError> {
     Ok(feed_rs::parser::parse(&data[..])?)
 }
 
-/// Returns the list of all the registered item ids of a channel.
-async fn fetch_current_items_id(
-    connection: &Pool,
-    channel: &Channel,
-) -> Result<HashSet<String>, DbError>
-where
-{
-    let items = get_all_items_guid_of_channel(connection, channel.id).await?;
-
-    Ok(items.into_iter().flatten().collect::<HashSet<String>>())
-}
-
 /// Create an Item Entity from an RSS entry
-fn item_from_rss_entry(entry: Entry, channel_id: i32) -> NewItem {
+fn item_from_rss_entry(entry: Entry, channel_id: i32, timestamp: &DateTime<Utc>) -> NewItem {
     let title = entry.title.map(|x| x.content);
     let guid = Some(entry.id);
     let url = entry.links.get(0).map(|x| String::from(&x.href[..]));
     let content = entry.summary.map(|x| x.content);
-    let now = Utc::now();
-    let publish_timestamp = entry.published.or(Some(now));
+    let publish_timestamp = entry.published.or(Some(timestamp.clone()));
 
     NewItem {
         guid,
         title,
         url,
         content,
-        fetch_timestamp: now,
+        fetch_timestamp: timestamp.clone(),
         publish_timestamp,
         channel_id,
     }

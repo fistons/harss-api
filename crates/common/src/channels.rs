@@ -286,6 +286,22 @@ pub async fn update_last_fetched(db: &Pool, channel_id: i32, date: DateTime<Utc>
     Ok(())
 }
 
+/// Retrieve the last update of channel
+pub async fn get_last_update(db: &Pool, channel_id: &i32) -> Result<DateTime<Utc>> {
+    let last_update = sqlx::query!(
+        r#"
+        SELECT last_update FROM channels WHERE id = $1
+        "#,
+        channel_id
+    )
+    .fetch_one(db)
+    .await?;
+
+    last_update
+        .last_update
+        .ok_or(sqlx::error::Error::RowNotFound)
+}
+
 /// Update the failure count of the given channel and insert the error in the dedicated table
 /// TODO: Transaction
 #[tracing::instrument(skip(db))]

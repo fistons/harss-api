@@ -1,5 +1,7 @@
+use chrono::{DateTime, Utc};
 use sqlx::{Postgres, QueryBuilder, Result};
 
+use crate::channels::get_user_ids_of_channel;
 use crate::model::{NewItem, PagedResult, UserItem};
 use crate::Pool;
 
@@ -131,13 +133,17 @@ pub async fn set_item_starred(db: &Pool, user_id: i32, ids: Vec<i32>, starred: b
 
 /// Insert an item in the database and associate it to all given users
 #[tracing::instrument(skip(db))]
-pub async fn insert_item_for_user(db: &Pool, item: &NewItem, user_ids: &[i32]) -> Result<()> {
+pub async fn insert_items_delta_for_all_registered_users(
+    db: &Pool,
+    channel_id: i32,
+    timestamp: DateTime<Utc>,
+) -> Result<()> {
     //TODO: transactional
 
-    let item_id = insert_item(db, item).await?;
+    let user_ids = get_user_ids_of_channel(db, channel_id).await?;
 
     for user_id in user_ids {
-        insert_item_user(db, item_id, item.channel_id, user_id).await?;
+        insert_item_user(db, &channel_id, &user_id, &timestamp).await?;
     }
 
     Ok(())
@@ -145,7 +151,7 @@ pub async fn insert_item_for_user(db: &Pool, item: &NewItem, user_ids: &[i32]) -
 
 /// Insert an item in the database
 #[tracing::instrument(skip(db))]
-async fn insert_item(db: &Pool, item: &NewItem) -> Result<i32> {
+pub async fn insert_item(db: &Pool, item: &NewItem) -> Result<i32> {
     sqlx::query_scalar!(
         r#"
         INSERT INTO items (guid, title, url, content, fetch_timestamp, publish_timestamp, channel_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
@@ -154,15 +160,25 @@ async fn insert_item(db: &Pool, item: &NewItem) -> Result<i32> {
         .fetch_one(db).await
 }
 
-/// Insert an item in the database
+/// Insert the delta of the missing user's items for a given channel
 #[tracing::instrument(skip(db))]
-async fn insert_item_user(db: &Pool, item_id: i32, channel_id: i32, user_id: &i32) -> Result<()> {
+async fn insert_item_user(
+    db: &Pool,
+    channel_id: &i32,
+    user_id: &i32,
+    timestamp: &DateTime<Utc>,
+) -> Result<()> {
     sqlx::query!(
         r#"
-        INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES ($1, $2, $3, false, false)
+        INSERT INTO users_items (user_id, item_id, channel_id, read, starred, added_timestamp)
+        SELECT  $1, id, $2, false, false, $3
+        FROM    items
+        WHERE   channel_id = $2
+        AND     fetch_timestamp > COALESCE((SELECT MAX(added_timestamp) FROM users_items WHERE user_id = $1 AND channel_id = $2), TO_TIMESTAMP(0));
         "#,
-        user_id, item_id, channel_id)
-        .execute(db).await?;
+        user_id, channel_id, timestamp)
+        .execute(db)
+        .await?;
 
     Ok(())
 }
