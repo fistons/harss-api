@@ -24,6 +24,8 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: ${{ matrix.arch }}
+          override: true
       - uses: actions-rs/cargo@v1
         env:
           SQLX_OFFLINE: true
