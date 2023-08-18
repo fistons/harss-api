@@ -30,6 +30,7 @@ jobs:
         env:
           SQLX_OFFLINE: true
         with:
+          use-cross: true
           command: build
           args: --release --target ${{ matrix.arch }}
       - uses: actions/upload-artifact@v3
