@@ -21,6 +21,8 @@ jobs:
             docker-arch: "amd64"
           - arch: "aarch64-unknown-linux-gnu"
             docker-arch: "arm64"
+          - arch: "armv7-unknown-linux-gnueabihf"
+            docker-arch: "armv7"
     name: Build binary
     runs-on: ubuntu-latest
     steps:
