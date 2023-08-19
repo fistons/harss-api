@@ -88,21 +88,16 @@ jobs:
       - uses: actions/download-artifact@v3
       - name: Rename files
         run: |
-          mv amd64/fetcher fetcher-amd64
-          mv amd64/rss-aggregator rss-aggregator-amd64
-          mv arm64/fetcher fetcher-arm64
-          mv arm64/rss-aggregator rss-aggregator-arm64
-          mv arm/fetcher fetcher-armv7
-          mv arm/rss-aggregator rss-aggregator-armv7
+          for i in $(ls -d */)
+          do
+            mv $i/fetcher fetcher-$i
+            mv $i/rss-aggregator rss-aggregator-$i
+          done
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           files: |
-            fetcher-amd64
-            rss-aggregator-amd64
-            fetcher-arm64
-            rss-aggregator-arm64
-            fetcher-armv7
-            rss-aggregator-armv7
+            fetcher-*
+            rss-aggregator-*
