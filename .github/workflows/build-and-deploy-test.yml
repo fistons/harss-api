@@ -22,7 +22,7 @@ jobs:
           - arch: "aarch64-unknown-linux-gnu"
             docker-arch: "arm64"
           - arch: "armv7-unknown-linux-gnueabihf"
-            docker-arch: "armv7"
+            docker-arch: "arm"
     name: Build binary
     runs-on: ubuntu-latest
     steps:
@@ -68,7 +68,7 @@ jobs:
           context: .
           push: true
           target: api
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: |
             rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
       - name: Build and push fetcher docker image
