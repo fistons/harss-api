@@ -996,7 +996,6 @@ dependencies = [
  "fake",
  "feed-rs",
  "once_cell",
- "openssl",
  "redis",
  "reqwest",
  "serial_test",

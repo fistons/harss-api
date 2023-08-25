@@ -14,7 +14,6 @@ name = "fetcher"
 
 [dependencies]
 reqwest.workspace = true
-openssl.workspace = true
 tokio.workspace = true
 dotenvy.workspace = true
 chrono.workspace = true
