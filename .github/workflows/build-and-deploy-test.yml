@@ -5,7 +5,7 @@ on: workflow_dispatch
 jobs:
   set-vars:
     name: Build docker tag
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     outputs:
       version_dashed: ${{ steps.vars.outputs.version_dashed }}
     steps:
@@ -24,7 +24,7 @@ jobs:
           - arch: "armv7-unknown-linux-gnueabihf"
             docker-arch: "arm"
     name: Build binary
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -47,7 +47,7 @@ jobs:
             target/${{ matrix.arch }}/release/fetcher
   docker:
     name: Build docker images
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     needs: [ build, set-vars ]
     steps:
       - uses: actions/checkout@v3
@@ -82,7 +82,7 @@ jobs:
             rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
   release:
     name: Release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     needs: docker
     steps:
       - uses: actions/download-artifact@v3
