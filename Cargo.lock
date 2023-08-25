@@ -309,7 +309,7 @@ checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
 name = "api"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "actix-files",
  "actix-governor",
@@ -577,7 +577,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "actix-web",
  "anyhow",
@@ -986,7 +986,7 @@ dependencies = [
 
 [[package]]
 name = "fetcher"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -996,6 +996,7 @@ dependencies = [
  "fake",
  "feed-rs",
  "once_cell",
+ "openssl",
  "redis",
  "reqwest",
  "serial_test",
