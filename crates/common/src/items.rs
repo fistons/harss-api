@@ -1,5 +1,7 @@
+use chrono::{DateTime, Utc};
 use sqlx::{Postgres, QueryBuilder, Result};
 
+use crate::channels::get_user_ids_of_channel;
 use crate::model::{NewItem, PagedResult, UserItem};
 use crate::Pool;
 
@@ -131,38 +133,74 @@ pub async fn set_item_starred(db: &Pool, user_id: i32, ids: Vec<i32>, starred: b
 
 /// Insert an item in the database and associate it to all given users
 #[tracing::instrument(skip(db))]
-pub async fn insert_item_for_user(db: &Pool, item: &NewItem, user_ids: &[i32]) -> Result<()> {
+pub async fn insert_items_delta_for_all_registered_users(
+    db: &Pool,
+    channel_id: i32,
+    fetch_timestamp: &DateTime<Utc>,
+) -> Result<()> {
     //TODO: transactional
 
-    let item_id = insert_item(db, item).await?;
+    let user_ids = get_user_ids_of_channel(db, channel_id).await?;
 
     for user_id in user_ids {
-        insert_item_user(db, item_id, item.channel_id, user_id).await?;
+        insert_item_user(db, &channel_id, &user_id, fetch_timestamp).await?;
     }
 
     Ok(())
 }
 
-/// Insert an item in the database
+/// Insert items in the database
 #[tracing::instrument(skip(db))]
-async fn insert_item(db: &Pool, item: &NewItem) -> Result<i32> {
+pub async fn insert_items(db: &Pool, items: &Vec<NewItem>) -> Result<Vec<i32>> {
+    let mut guids: Vec<Option<String>> = vec![];
+    let mut titles: Vec<Option<String>> = vec![];
+    let mut urls: Vec<Option<String>> = vec![];
+    let mut contents: Vec<Option<String>> = vec![];
+    let mut fetch_timestamps: Vec<DateTime<Utc>> = vec![];
+    let mut publish_timestamps: Vec<Option<DateTime<Utc>>> = vec![];
+    let mut channel_ids: Vec<i32> = vec![];
+
+    for item in items {
+        guids.push(item.guid.clone());
+        titles.push(item.title.clone());
+        urls.push(item.url.clone());
+        contents.push(item.content.clone());
+        fetch_timestamps.push(item.fetch_timestamp);
+        publish_timestamps.push(item.publish_timestamp);
+        channel_ids.push(item.channel_id);
+    }
+
+    // Postgres magic: https://github.com/launchbadge/sqlx/blob/main/FAQ.md#how-can-i-bind-an-array-to-a-values-clause-how-can-i-do-bulk-inserts
+    // Also, sqlx magic: https://github.com/launchbadge/sqlx/issues/571#issuecomment-664910255
     sqlx::query_scalar!(
         r#"
-        INSERT INTO items (guid, title, url, content, fetch_timestamp, publish_timestamp, channel_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+        INSERT INTO items (guid, title, url, content, fetch_timestamp, publish_timestamp, channel_id)
+        SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::timestamptz[], $6::timestamptz[], $7::int[])
+        RETURNING id
         "#,
-        item.guid, item.title, item.url, item.content, item.fetch_timestamp, item.publish_timestamp, item.channel_id)
-        .fetch_one(db).await
+        &guids[..] as _, &titles[..] as _, &urls[..] as _, &contents[..] as _, &fetch_timestamps[..], &publish_timestamps[..] as _, &channel_ids[..])
+        .fetch_all(db).await
 }
 
-/// Insert an item in the database
+/// Insert the delta of the missing user's items for a given channel
 #[tracing::instrument(skip(db))]
-async fn insert_item_user(db: &Pool, item_id: i32, channel_id: i32, user_id: &i32) -> Result<()> {
+async fn insert_item_user(
+    db: &Pool,
+    channel_id: &i32,
+    user_id: &i32,
+    timestamp: &DateTime<Utc>,
+) -> Result<()> {
     sqlx::query!(
         r#"
-        INSERT INTO users_items (user_id, item_id, channel_id, read, starred) VALUES ($1, $2, $3, false, false)
+        INSERT INTO users_items (user_id, item_id, channel_id, read, starred, added_timestamp)
+        SELECT  $1, id, $2, false, false, $3
+        FROM    items
+        WHERE   channel_id = $2
+        AND     fetch_timestamp > COALESCE((SELECT MAX(added_timestamp) FROM users_items WHERE user_id = $1 AND channel_id = $2), TO_TIMESTAMP(0));
         "#,
-        user_id, item_id, channel_id)
-        .execute(db).await?;
+        user_id, channel_id, timestamp)
+        .execute(db)
+        .await?;
 
     Ok(())
 }

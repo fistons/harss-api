@@ -27,12 +27,18 @@
         "ordinal": 4,
         "name": "starred",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "added_timestamp",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": []
     },
     "nullable": [
+      false,
       false,
       false,
       false,

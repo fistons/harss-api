@@ -3,8 +3,68 @@ use serial_test::serial;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use common::items::{get_items_of_user, insert_items, insert_items_delta_for_all_registered_users};
+use common::model::NewItem;
 use common::{init_redis_connection, Pool};
 use fetcher::process;
+
+#[sqlx::test(migrations = "../../migrations")]
+#[serial]
+async fn test_delta_is_loaded(pool: Pool) {
+    let mock = MockServer::start().await;
+    build_and_link_channel(&mock.uri(), &pool).await;
+    let redis_pool = init_redis_connection();
+
+    // Prepare the web server
+    let bytes = include_bytes!("feed.xml").to_vec();
+    let response = ResponseTemplate::new(200).set_body_raw(bytes, "application/xml");
+    Mock::given(method("GET"))
+        .and(path("/coucou"))
+        .respond_with(response)
+        .expect(1)
+        .mount(&mock)
+        .await;
+
+    // First, let's load some bogus articles for the chan
+    let items: Vec<NewItem> = (1..=5)
+        .map(|id| NewItem {
+            guid: Some(id.to_string()),
+            title: Some(format!("Article {id}")),
+            url: Some("url".to_owned()),
+            content: Some("content".to_owned()),
+            fetch_timestamp: Utc.with_ymd_and_hms(2000, 1, 1, 0, 0, 0).unwrap(),
+            publish_timestamp: Some(Utc.with_ymd_and_hms(2000, 1, 1, 0, 0, 0).unwrap()),
+            channel_id: 1,
+        })
+        .collect();
+
+    let ids = insert_items(&pool, &items).await.unwrap();
+    assert_eq!(vec![1, 2, 3, 4, 5], ids); // Let's hope my ids are predictable here. They should.
+
+    // Link them to the user
+    insert_items_delta_for_all_registered_users(&pool, 1, &Utc::now())
+        .await
+        .unwrap();
+
+    // User 1 should now have 5 articles
+    let items = get_items_of_user(&pool, Some(1), None, None, 1, 1, 200)
+        .await
+        .unwrap();
+    assert_eq!(5, *items.total_items(), "5 items should be inserted");
+
+    // Ok now let's fetch some new items
+    process(&pool, &redis_pool).await.unwrap();
+
+    // User 1 should now have 65 articles
+    let items = get_items_of_user(&pool, Some(1), None, None, 1, 1, 200)
+        .await
+        .unwrap();
+    assert_eq!(
+        65,
+        *items.total_items(),
+        "60 items should be inserted  + 5 previous"
+    );
+}
 
 #[sqlx::test(migrations = "../../migrations")]
 #[serial]

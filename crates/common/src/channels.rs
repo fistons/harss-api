@@ -272,7 +272,7 @@ pub async fn get_all_enabled_channels(db: &Pool) -> Result<Vec<Channel>> {
 
 /// Update the last fetched timestamp of a channel
 #[tracing::instrument(skip(db))]
-pub async fn update_last_fetched(db: &Pool, channel_id: i32, date: DateTime<Utc>) -> Result<()> {
+pub async fn update_last_fetched(db: &Pool, channel_id: i32, date: &DateTime<Utc>) -> Result<()> {
     sqlx::query!(
         r#"
         UPDATE channels SET last_update = $2 WHERE id = $1
@@ -284,6 +284,22 @@ pub async fn update_last_fetched(db: &Pool, channel_id: i32, date: DateTime<Utc>
     .await?;
 
     Ok(())
+}
+
+/// Retrieve the last update of channel
+pub async fn get_last_update(db: &Pool, channel_id: &i32) -> Result<DateTime<Utc>> {
+    let last_update = sqlx::query!(
+        r#"
+        SELECT last_update FROM channels WHERE id = $1
+        "#,
+        channel_id
+    )
+    .fetch_one(db)
+    .await?;
+
+    last_update
+        .last_update
+        .ok_or(sqlx::error::Error::RowNotFound)
 }
 
 /// Update the failure count of the given channel and insert the error in the dedicated table

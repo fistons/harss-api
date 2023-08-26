@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO users_items (user_id, item_id, channel_id, read, starred, added_timestamp)\n        SELECT  $1, id, $2, false, false, $3\n        FROM    items\n        WHERE   channel_id = $2\n        AND     fetch_timestamp > COALESCE((SELECT MAX(added_timestamp) FROM users_items WHERE user_id = $1 AND channel_id = $2), TO_TIMESTAMP(0));\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7469b78993786c6ba5013660f94be7db3fbad7ee26fd3a4a0d8d77aa1fb7e120"
+}
