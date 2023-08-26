@@ -1,9 +1,9 @@
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, post, put, web, HttpResponse};
 
 use common::items::*;
 
 use crate::auth::AuthenticatedUser;
-use crate::model::{IdListParameter, PageParameters, ReadStarredParameters};
+use crate::model::{IdListParameter, ItemNotesRequest, PageParameters, ReadStarredParameters};
 use crate::routes::errors::ApiError;
 use crate::startup::AppState;
 
@@ -82,10 +82,32 @@ pub async fn unread_item(
     Ok(HttpResponse::Accepted().finish())
 }
 
+#[put("/items/{item_id}/notes")]
+#[tracing::instrument(skip(app_state))]
+pub async fn add_item_notes(
+    item_id: web::Path<i32>,
+    request: web::Json<ItemNotesRequest>,
+    app_state: web::Data<AppState>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
+    add_notes(
+        connection,
+        request.into_inner().notes,
+        user.id,
+        item_id.into_inner(),
+    )
+    .await?;
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_all_items)
         .service(star_items)
         .service(unstar_items)
         .service(read_item)
-        .service(unread_item);
+        .service(unread_item)
+        .service(add_item_notes);
 }

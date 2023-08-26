@@ -133,6 +133,7 @@ pub struct UserItem {
     pub starred: bool,
     pub channel_id: i32,
     pub channel_name: String,
+    pub notes: Option<String>,
 }
 
 /// RSS Item representation to be inserted in the database

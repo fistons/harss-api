@@ -26,6 +26,7 @@ pub async fn get_items_of_user(
                items.publish_timestamp,
                users_items.read    AS read,
                users_items.starred AS starred,
+               users_items.notes    AS notes,
                channels.name       AS channel_name,
                channels.id         AS channel_id
         FROM items
@@ -180,6 +181,27 @@ pub async fn insert_items(db: &Pool, items: &Vec<NewItem>) -> Result<Vec<i32>> {
         "#,
         &guids[..] as _, &titles[..] as _, &urls[..] as _, &contents[..] as _, &fetch_timestamps[..], &publish_timestamps[..] as _, &channel_ids[..])
         .fetch_all(db).await
+}
+
+/// Add a note to a item for a user. The user_id is needed to insure that a user does not try to 
+/// add a note on someone else item.
+pub async fn add_notes(db: &Pool, notes: String, user_id: i32, item_id: i32) -> Result<()> {
+    let r = sqlx::query!(
+        r#"
+        UPDATE users_items SET notes = $1 WHERE item_id = $2 and user_id = $3
+        "#,
+        notes,
+        item_id,
+        user_id
+    )
+    .execute(db)
+    .await?;
+    
+    if r.rows_affected() == 0 {
+        return Err(sqlx::Error::RowNotFound)
+    }
+
+    Ok(())
 }
 
 /// Insert the delta of the missing user's items for a given channel
