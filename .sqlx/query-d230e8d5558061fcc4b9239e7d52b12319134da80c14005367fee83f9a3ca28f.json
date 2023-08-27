@@ -32,6 +32,11 @@
         "ordinal": 5,
         "name": "added_timestamp",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "notes",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -43,7 +48,8 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
   "hash": "d230e8d5558061fcc4b9239e7d52b12319134da80c14005367fee83f9a3ca28f"

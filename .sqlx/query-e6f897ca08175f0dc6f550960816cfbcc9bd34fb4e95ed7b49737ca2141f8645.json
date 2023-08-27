@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE users_items SET notes = $1 WHERE item_id = $2 and user_id = $3\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e6f897ca08175f0dc6f550960816cfbcc9bd34fb4e95ed7b49737ca2141f8645"
+}
