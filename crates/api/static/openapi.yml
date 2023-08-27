@@ -463,13 +463,19 @@ paths:
       responses:
         '202':
           $ref: '#/components/responses/Accepted'
-  /items/{item_id}/notes:
+  /item/{item_id}/notes:
     put:
       operationId: add_item_notes
       summary: Add notes to an item
       description: Add or overwrite user's notes on an item
       tags:
         - Items
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ItemID'
       requestBody:
         required: true
         description: The note to the article
@@ -483,6 +489,31 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /item/{item_id}:
+    get:
+      operationId: get_item
+      summary: Get a single item
+      description: Retrieve a single item
+      tags:
+        - Items
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ItemID'
+      responses:
+        '200':
+          description: The wanted item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   parameters:
     PageSizeParameter:
@@ -962,3 +993,9 @@ components:
                 status: 401
                 detail: Full authentication is required to access this resource
                 message: Full authentication is required to access this resource
+    NotFound:
+      description: The wanted object could not be found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericProblem'

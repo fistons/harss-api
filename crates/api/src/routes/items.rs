@@ -82,7 +82,7 @@ pub async fn unread_item(
     Ok(HttpResponse::Accepted().finish())
 }
 
-#[put("/items/{item_id}/notes")]
+#[put("/item/{item_id}/notes")]
 #[tracing::instrument(skip(app_state))]
 pub async fn add_item_notes(
     item_id: web::Path<i32>,
@@ -103,11 +103,29 @@ pub async fn add_item_notes(
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[get("/item/{id}")]
+#[tracing::instrument(skip(app_state))]
+pub async fn get_item(
+    id: web::Path<i32>,
+    app_state: web::Data<AppState>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
+    let item = get_one_item(connection, id.into_inner(), user.id).await?;
+
+    match item {
+        Some(item) => Ok(HttpResponse::Ok().json(item)),
+        None => Ok(HttpResponse::NotFound().finish()),
+    }
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_all_items)
         .service(star_items)
         .service(unstar_items)
         .service(read_item)
         .service(unread_item)
-        .service(add_item_notes);
+        .service(add_item_notes)
+        .service(get_item);
 }

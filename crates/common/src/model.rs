@@ -133,6 +133,7 @@ pub struct UserItem {
     pub starred: bool,
     pub channel_id: i32,
     pub channel_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
 }
 
