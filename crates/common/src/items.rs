@@ -26,6 +26,7 @@ pub async fn get_items_of_user(
                items.publish_timestamp,
                users_items.read    AS read,
                users_items.starred AS starred,
+               users_items.notes    AS notes,
                channels.name       AS channel_name,
                channels.id         AS channel_id
         FROM items
@@ -180,6 +181,58 @@ pub async fn insert_items(db: &Pool, items: &Vec<NewItem>) -> Result<Vec<i32>> {
         "#,
         &guids[..] as _, &titles[..] as _, &urls[..] as _, &contents[..] as _, &fetch_timestamps[..], &publish_timestamps[..] as _, &channel_ids[..])
         .fetch_all(db).await
+}
+
+/// Add a note to a item for a user.
+/// The user_id is needed to insure that a user does not try to add a note on someone else item.
+pub async fn add_notes(db: &Pool, notes: String, user_id: i32, item_id: i32) -> Result<()> {
+    let r = sqlx::query!(
+        r#"
+        UPDATE users_items SET notes = $1 WHERE item_id = $2 and user_id = $3
+        "#,
+        notes,
+        item_id,
+        user_id
+    )
+    .execute(db)
+    .await?;
+
+    if r.rows_affected() == 0 {
+        return Err(sqlx::Error::RowNotFound);
+    }
+
+    Ok(())
+}
+
+/// Get a particular item for a given user
+/// The user_id is needed to insure that a user does not try to add a note on someone else item.
+#[tracing::instrument(skip(db))]
+pub async fn get_one_item(db: &Pool, item_id: i32, user_id: i32) -> Result<Option<UserItem>> {
+    sqlx::query_as!(
+        UserItem,
+        r#"
+        SELECT items.id,
+               items.guid,
+               items.title,
+               items.url,
+               items.content,
+               items.fetch_timestamp,
+               items.publish_timestamp,
+               users_items.read    AS read,
+               users_items.starred AS starred,
+               users_items.notes    AS notes,
+               channels.name       AS channel_name,
+               channels.id         AS channel_id
+        FROM items
+               RIGHT JOIN users_items ON items.id = users_items.item_id
+               RIGHT JOIN channels ON items.channel_id = channels.id
+        WHERE users_items.user_id = $1 AND users_items.item_id = $2
+        "#,
+        user_id,
+        item_id
+    )
+    .fetch_optional(db)
+    .await
 }
 
 /// Insert the delta of the missing user's items for a given channel

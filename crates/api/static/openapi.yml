@@ -463,6 +463,57 @@ paths:
       responses:
         '202':
           $ref: '#/components/responses/Accepted'
+  /item/{item_id}/notes:
+    put:
+      operationId: add_item_notes
+      summary: Add notes to an item
+      description: Add or overwrite user's notes on an item
+      tags:
+        - Items
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ItemID'
+      requestBody:
+        required: true
+        description: The note to the article
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  $ref: '#/components/schemas/ItemNotes'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /item/{item_id}:
+    get:
+      operationId: get_item
+      summary: Get a single item
+      description: Retrieve a single item
+      tags:
+        - Items
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ItemID'
+      responses:
+        '200':
+          description: The wanted item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   parameters:
     PageSizeParameter:
@@ -813,6 +864,8 @@ components:
           $ref: '#/components/schemas/ChannelID'
         channel_name:
           $ref: '#/components/schemas/ChannelName'
+        notes:
+          $ref: '#/components/schemas/ItemNotes'
     ItemStarred:
       type: boolean
       description: The item has been read
@@ -850,6 +903,12 @@ components:
         It stinks like rotten meat, but looks like the lost Deimos base. Looks like you're stuck on the shores of Hell. The only way out is through.
 
         To continue the DOOM experience, play The Shores of Hell and its amazing sequel, Inferno!
+    ItemNotes:
+      type: string
+      description: Note on an item
+      maxLength: 5000
+      example: >-
+        Their first album was better than their first albums.
     GenericProblem:
       type: object
       properties:
@@ -934,3 +993,9 @@ components:
                 status: 401
                 detail: Full authentication is required to access this resource
                 message: Full authentication is required to access this resource
+    NotFound:
+      description: The wanted object could not be found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericProblem'
