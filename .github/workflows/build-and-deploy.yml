@@ -47,7 +47,6 @@ jobs:
           name: ${{ matrix.docker-arch }}
           path: |
             target/${{ matrix.arch }}/release/rss-aggregator
-            target/${{ matrix.arch }}/release/fetcher
   docker:
     name: Build docker images
     runs-on: ubuntu-latest
@@ -74,15 +73,6 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: |
             rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
-      - name: Build and push fetcher docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          target: fetcher
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
   release:
     name: Release
     runs-on: ubuntu-latest
