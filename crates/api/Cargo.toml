@@ -42,6 +42,8 @@ feed-rs.workspace = true
 scraper.workspace = true
 once_cell.workspace = true
 rand.workspace = true
+sqlx.workspace = true
+tokio-cron-scheduler = "0.9.4"
 
 common = { path = "../common" }
 

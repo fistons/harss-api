@@ -1,25 +1,24 @@
-extern crate core;
-
-use std::error::Error;
-
 use anyhow::Context;
 use chrono::{DateTime, Utc};
-use deadpool_redis::{Pool as Redis, PoolError};
+use common::channels::{
+    disable_channels, fail_channel, get_all_enabled_channels, get_last_update, update_last_fetched,
+};
+use common::items::{insert_items, insert_items_delta_for_all_registered_users};
+use common::model::{Channel, NewItem};
+use common::DbError;
+use deadpool_redis::{Connection, Pool as RedisPool, PoolError};
 use feed_rs::model::{Entry, Feed};
 use once_cell::sync::Lazy;
-use redis::aio::Connection;
 use redis::{AsyncCommands, ExistenceCheck, RedisError, RedisResult, SetExpiry, SetOptions};
 use reqwest::Client;
+use sqlx::PgPool;
+use std::error::Error;
+use tracing::info;
 use uuid::Uuid;
-
-use common::channels::*;
-use common::items::*;
-use common::model::{Channel, NewItem};
-use common::{DbError, Pool};
 
 static CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()
-        .user_agent("rss-aggregator checker (+https://github.com/fistons/rss-aggregator)")
+        .user_agent("HaRSS fetcher (+https://github.com/fistons/rss-aggregator)")
         .build()
         .expect("Could not build CLIENT")
 });
@@ -44,28 +43,15 @@ pub enum FetchError {
 
 /// Process the whole database update in one single transaction. BALLSY.
 #[tracing::instrument(skip_all)]
-pub async fn process(connection: &Pool, redis: &Redis) -> Result<(), anyhow::Error> {
+pub async fn process(connection: &PgPool, redis: &RedisPool) -> Result<(), anyhow::Error> {
     let channels = get_all_enabled_channels(connection)
         .await
         .context("Could not get channels to update")?;
-    let mut redis = redis.get().await?;
 
     for channel in channels {
-        let (key, value, response) = acquire_lock(&mut redis, channel.id).await;
-        if response?.is_none() {
-            tracing::error!(
-                "Lock for channel {} already acquired. Giving up for now",
-                channel.name
-            );
-            continue;
-        }
-
-        if let Err(error) = update_channel(connection, channel).await {
+        if let Err(error) = update_channel(connection, redis, channel).await {
             tracing::error!("{:?}", error.source());
         }
-
-        // Remove the lock on the channel.
-        release_lock(&mut redis, &key, &value).await?;
     }
 
     let threshold = std::env::var("FAILURE_THRESHOLD")
@@ -77,6 +63,55 @@ pub async fn process(connection: &Pool, redis: &Redis) -> Result<(), anyhow::Err
     if threshold > 0 {
         disable_channels(connection, threshold).await?;
     }
+
+    Ok(())
+}
+
+#[tracing::instrument(skip(connection, redis))]
+pub async fn update_channel(
+    connection: &PgPool,
+    redis: &RedisPool,
+    channel: Channel,
+) -> Result<(), FetchError> {
+    let mut redis = redis.get().await?;
+
+    let (key, value, response) = acquire_lock(&mut redis, channel.id).await;
+    if response?.is_none() {
+        tracing::error!(
+            "Lock for channel {} already acquired. Giving up for now",
+            channel.name
+        );
+        return Ok(());
+    }
+
+    tracing::info!("Updating {} ({})", channel.name, channel.url);
+
+    let feed = match get_and_parse_feed(&channel.url).await {
+        Ok(feed) => feed,
+        Err(error) => {
+            fail_channel(connection, channel.id, &error.to_string()).await?;
+            return Err(error);
+        }
+    };
+
+    let now = Utc::now();
+    let last_update = get_last_update(connection, &channel.id).await?;
+
+    // Retrieve all the items not already retrieved in precedent run
+    let new_items = feed
+        .entries
+        .into_iter()
+        .map(|entry| item_from_rss_entry(entry, channel.id, &now))
+        .filter(|item| item.publish_timestamp.unwrap_or(last_update) > last_update)
+        .collect::<Vec<NewItem>>();
+
+    info!("wat {:?}", new_items);
+    info!("last_update {:?} ", last_update);
+    insert_items(connection, &new_items).await?;
+    insert_items_delta_for_all_registered_users(connection, channel.id, &now).await?;
+    update_last_fetched(connection, channel.id, &now).await?;
+
+    release_lock(&mut redis, &key, &value).await?;
 
     Ok(())
 }
@@ -102,36 +137,6 @@ async fn release_lock(redis: &mut Connection, key: &str, value: &str) -> RedisRe
     if redis_value.unwrap() == value {
         redis.del(key).await?;
     }
-
-    Ok(())
-}
-
-#[tracing::instrument(skip(connection))]
-async fn update_channel(connection: &Pool, channel: Channel) -> Result<(), FetchError> {
-    tracing::info!("Updating {} ({})", channel.name, channel.url);
-
-    let feed = match get_and_parse_feed(&channel.url).await {
-        Ok(feed) => feed,
-        Err(error) => {
-            fail_channel(connection, channel.id, &error.to_string()).await?;
-            return Err(error);
-        }
-    };
-
-    let now = Utc::now();
-    let last_update = get_last_update(connection, &channel.id).await?;
-
-    // Retrieve all the items not already retrieved in precedent run
-    let new_items = feed
-        .entries
-        .into_iter()
-        .map(|entry| item_from_rss_entry(entry, channel.id, &now))
-        .filter(|item| item.fetch_timestamp > last_update)
-        .collect::<Vec<NewItem>>();
-
-    insert_items(connection, &new_items).await?;
-    insert_items_delta_for_all_registered_users(connection, channel.id, &now).await?;
-    update_last_fetched(connection, channel.id, &now).await?;
 
     Ok(())
 }

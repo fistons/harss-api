@@ -42,6 +42,7 @@ All the configuration must be pass through environment variables.
   Default `100`
 * `RATE_LIMITING_FILL_RATE`: Set the interval after which one element of the quota is replenished in seconds.
   Default `10`
+* `FETCH_CRON`: Cron expression to determine when the scheduler should run. Default `0 0 * * * *` (every hour)
 
 ## What does it use
 

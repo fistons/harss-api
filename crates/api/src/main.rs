@@ -1,8 +1,10 @@
 use std::env;
 use std::net::TcpListener;
 
-use tracing::error;
+use tokio_cron_scheduler::{Job, JobScheduler};
+use tracing::{error, info};
 
+use api::services;
 use api::startup;
 use common::init_postgres_connection;
 use common::init_redis_connection;
@@ -27,6 +29,32 @@ async fn main() -> std::io::Result<()> {
     if !check_configuration() {
         panic!()
     }
+
+    let postgres_connection_clone = postgres_connection.clone();
+    let redis_pool_clone = redis_pool.clone();
+
+    // Init scheduler
+    let sched = JobScheduler::new().await.unwrap();
+    let schedule = env::var("FETCH_CRON").unwrap_or("0 0 * * * *".to_owned());
+    sched
+        .add(
+            Job::new_async(&schedule[..], move |_, _| {
+                let postgres_connection = postgres_connection_clone.clone();
+                let redis_pool = redis_pool_clone.clone();
+                Box::pin(async move {
+                    info!("Scheduled fetching in progress");
+                    //TODO handle unwrap()
+                    services::fetching::process(&postgres_connection, &redis_pool)
+                        .await
+                        .unwrap();
+                    info!("Scheduled fetching done");
+                })
+            })
+            .expect("Could not add create fetching task"),
+        )
+        .await
+        .expect("Could not schedule fetching task");
+    sched.start().await.expect("Could not start scheduler");
 
     startup::startup(postgres_connection, redis_pool, listener).await
 }
