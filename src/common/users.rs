@@ -1,9 +1,9 @@
 use secrecy::Secret;
 use sqlx::Result;
 
-use crate::model::{PagedResult, User, UserRole};
-use crate::password::encode_password;
-use crate::Pool;
+use crate::common::model::{PagedResult, User, UserRole};
+use crate::common::password::encode_password;
+use crate::common::Pool;
 
 /// Return the user matching the username
 #[tracing::instrument(skip(db))]

@@ -5,7 +5,7 @@ use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 use deadpool_redis::Pool;
 
-use common::Pool as DbPool;
+use crate::common::Pool as DbPool;
 
 use crate::rate_limiting::build_rate_limiting_conf;
 use crate::routes;

@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
 use sqlx::{Postgres, QueryBuilder, Result};
 
-use crate::channels::get_user_ids_of_channel;
-use crate::model::{NewItem, PagedResult, UserItem};
-use crate::Pool;
+use crate::common::channels::get_user_ids_of_channel;
+use crate::common::model::{NewItem, PagedResult, UserItem};
+use crate::common::Pool;
 
 /// Return a page of items of a given channel for a given user.
 #[tracing::instrument(skip(db))]
@@ -286,7 +286,7 @@ mod tests {
 
     use super::*;
 
-    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn basic_without_filter(pool: Pool) -> Result<()> {
         let page = get_items_of_user(&pool, None, None, None, 1, 1, 20).await?;
 
@@ -300,7 +300,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn basic_channel_filter(pool: Pool) -> Result<()> {
         let page = get_items_of_user(&pool, Some(1), None, None, 1, 1, 20).await?;
 
@@ -314,7 +314,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn basic_read_filter(pool: Pool) -> Result<()> {
         let page = get_items_of_user(&pool, None, Some(true), None, 1, 1, 20).await?;
 
@@ -337,7 +337,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn basic_starred_filter(pool: Pool) -> Result<()> {
         let page = get_items_of_user(&pool, None, None, Some(true), 1, 1, 20).await?;
 
@@ -360,7 +360,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn basic_all_filters(pool: Pool) -> Result<()> {
         let page = get_items_of_user(&pool, Some(1), Some(true), Some(true), 1, 1, 20).await?;
 

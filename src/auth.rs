@@ -1,13 +1,13 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use crate::common::Pool as DbPool;
 use actix_web::http::header::HeaderMap;
 use actix_web::web::Data;
 use actix_web::{dev, FromRequest, HttpRequest};
 use anyhow::Context;
 use chrono::LocalResult::Single;
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use common::Pool as DbPool;
 use deadpool_redis::Pool;
 use hmac::{Hmac, Mac};
 use http_auth_basic::Credentials;
@@ -18,9 +18,9 @@ use secrecy::Secret;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
+use crate::common::model::{User, UserRole};
+use crate::common::users::*;
 use crate::errors::AuthenticationError;
-use common::model::{User, UserRole};
-use common::users::*;
 
 use crate::startup::AppState;
 
@@ -153,7 +153,7 @@ async fn check_and_get_user(
         Some(u) => u,
     };
 
-    if !common::password::verify_password(&user.password, password) {
+    if !crate::common::password::verify_password(&user.password, password) {
         return Err(AuthenticationError::Unauthorized(
             "Invalid credentials".into(),
         ));

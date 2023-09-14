@@ -1,10 +1,10 @@
-use crate::errors::RssParsingError;
-use crate::errors::RssParsingError::NonOkStatus;
 use feed_rs::model::Feed;
 use once_cell::sync::Lazy;
 use scraper::Selector;
 
-use crate::model::FoundRssChannel;
+use crate::common::errors::RssParsingError;
+use crate::common::errors::RssParsingError::NonOkStatus;
+use crate::common::model::FoundRssChannel;
 
 static ALTERNATE_LINK_HEADER: Lazy<Selector> =
     Lazy::new(|| Selector::parse(r#"link[type="application/rss+xml"]"#).unwrap());

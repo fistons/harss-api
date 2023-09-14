@@ -80,4 +80,4 @@ jobs:
       # Run Spectral
       - uses: stoplightio/spectral-action@latest
         with:
-          file_glob: 'crates/api/static/openapi.yaml'
+          file_glob: 'static/openapi.yaml'

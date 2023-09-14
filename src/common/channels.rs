@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
 use sqlx::Result;
 
-use crate::model::{Channel, ChannelError, PagedResult, UsersChannel};
-use crate::rss::check_feed;
-use crate::{DbError, Pool};
+use crate::common::model::{Channel, ChannelError, PagedResult, UsersChannel};
+use crate::common::rss::check_feed;
+use crate::common::{DbError, Pool};
 
 /// Returns the whole list of errors associated to the given channel id.
 #[tracing::instrument(skip(db))]
@@ -368,12 +368,12 @@ async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> R
 
 #[cfg(test)]
 mod tests {
-    use crate::items::get_items_of_user;
+    use crate::common::items::get_items_of_user;
     use speculoos::prelude::*;
 
     use super::*;
 
-    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn test_no_conflict_on_existing_channel_insertion(pool: Pool) -> Result<()> {
         let channel_id = create_or_link_channel(&pool, "https://www.canardpc.com/feed", 1) // 1 is root
             .await
@@ -384,7 +384,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn test_user_get_items_on_registration(pool: Pool) -> Result<()> {
         let channel_id = create_or_link_channel(&pool, "https://www.canardpc.com/feed", 2) // 2 is john_doe
             .await
@@ -401,7 +401,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures("base_fixtures"), migrations = "../../migrations")]
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn test_user_registration_on_empty_channel(pool: Pool) -> Result<()> {
         let channel_id =
             create_or_link_channel(&pool, "https://rss.slashdot.org/Slashdot/slashdotMain", 1) // 1 is root

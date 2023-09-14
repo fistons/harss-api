@@ -34,22 +34,6 @@ services:
 #        condition: service_started
     healthcheck: 
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/ping"]
-  fetcher:
-    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-fetcher:latest
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    links:
-      - postgres
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
-      RUST_LOG: info
-      DD_AGENT: http://host.docker.internal:8126
-      DD_ENABLED: true
-    depends_on:
-      migrations:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
   redis:
     image: redis:alpine
     restart: unless-stopped

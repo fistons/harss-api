@@ -3,9 +3,9 @@ use actix_web::{get, post, web, HttpResponse};
 use serde::Deserialize;
 use serde_json::json;
 
-use common::channels;
-use common::items;
-use common::rss;
+use crate::common::channels;
+use crate::common::items;
+use crate::common::rss;
 
 use crate::auth::AuthenticatedUser;
 use crate::model::{PageParameters, RegisterChannelRequest};

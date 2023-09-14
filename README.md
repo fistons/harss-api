@@ -16,7 +16,7 @@ so if you want to highlight something, you're more than welcome!**
 
 ## Api specification
 
-You can find an openapi specification [here](crates/api/static/openapi.yml)
+You can find an openapi specification [here](static/openapi.yml)
 
 ## Configuration
 
@@ -42,6 +42,7 @@ All the configuration must be pass through environment variables.
   Default `100`
 * `RATE_LIMITING_FILL_RATE`: Set the interval after which one element of the quota is replenished in seconds.
   Default `10`
+* `FETCH_CRON`: Cron expression to determine when the scheduler should run. Default `0 0 * * * *` (every hour)
 
 ## What does it use
 

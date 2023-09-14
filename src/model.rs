@@ -1,6 +1,6 @@
 //! Http model
 
-pub use common::model::UserRole;
+pub use crate::common::model::UserRole;
 use secrecy::Secret;
 use serde::Deserialize;
 
