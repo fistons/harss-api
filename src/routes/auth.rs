@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
-use common::users::get_user_by_username;
+use crate::common::users::get_user_by_username;
 
 use crate::routes::errors::ApiError;
 use crate::startup::AppState;

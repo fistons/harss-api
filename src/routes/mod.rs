@@ -11,7 +11,7 @@ mod errors {
     use actix_web::{HttpResponse, ResponseError};
     use serde_json::json;
 
-    use common::DbError;
+    use crate::common::DbError;
 
     use crate::errors::AuthenticationError;
 

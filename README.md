@@ -16,7 +16,7 @@ so if you want to highlight something, you're more than welcome!**
 
 ## Api specification
 
-You can find an openapi specification [here](crates/api/static/openapi.yml)
+You can find an openapi specification [here](static/openapi.yml)
 
 ## Configuration
 

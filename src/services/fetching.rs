@@ -1,11 +1,11 @@
 use anyhow::Context;
 use chrono::{DateTime, Utc};
-use common::channels::{
+use crate::common::channels::{
     disable_channels, fail_channel, get_all_enabled_channels, get_last_update, update_last_fetched,
 };
-use common::items::{insert_items, insert_items_delta_for_all_registered_users};
-use common::model::{Channel, NewItem};
-use common::DbError;
+use crate::common::items::{insert_items, insert_items_delta_for_all_registered_users};
+use crate::common::model::{Channel, NewItem};
+use crate::common::DbError;
 use deadpool_redis::{Connection, Pool as RedisPool, PoolError};
 use feed_rs::model::{Entry, Feed};
 use once_cell::sync::Lazy;
@@ -84,7 +84,7 @@ pub async fn update_channel(
         return Ok(());
     }
 
-    tracing::info!("Updating {} ({})", channel.name, channel.url);
+    info!("Updating {} ({})", channel.name, channel.url);
 
     let feed = match get_and_parse_feed(&channel.url).await {
         Ok(feed) => feed,
@@ -105,8 +105,6 @@ pub async fn update_channel(
         .filter(|item| item.publish_timestamp.unwrap_or(last_update) > last_update)
         .collect::<Vec<NewItem>>();
 
-    info!("wat {:?}", new_items);
-    info!("last_update {:?} ", last_update);
     insert_items(connection, &new_items).await?;
     insert_items_delta_for_all_registered_users(connection, channel.id, &now).await?;
     update_last_fetched(connection, channel.id, &now).await?;

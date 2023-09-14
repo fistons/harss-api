@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod common;
 pub mod model;
 pub mod rate_limiting;
 pub mod routes;

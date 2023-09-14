@@ -4,18 +4,18 @@ use std::net::TcpListener;
 use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::{error, info};
 
-use api::services;
-use api::startup;
-use common::init_postgres_connection;
-use common::init_redis_connection;
+use rss_aggregator::common::{init_postgres_connection, init_redis_connection};
+use rss_aggregator::services;
+use rss_aggregator::startup;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     // Init dotenv
     dotenvy::dotenv().ok();
 
-    let subscriber = common::observability::get_subscriber("rss_aggregator", "info");
-    common::observability::init_subscriber(subscriber);
+    let subscriber =
+        rss_aggregator::common::observability::get_subscriber("rss_aggregator", "info");
+    rss_aggregator::common::observability::init_subscriber(subscriber);
 
     let postgres_connection = init_postgres_connection().await;
     let redis_pool = init_redis_connection();
@@ -24,7 +24,7 @@ async fn main() -> std::io::Result<()> {
         env::var("RSS_AGGREGATOR_LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")),
     )?;
 
-    let _sentry_guard = common::observability::init_sentry();
+    let _sentry_guard = rss_aggregator::common::observability::init_sentry();
 
     if !check_configuration() {
         panic!()
@@ -43,11 +43,13 @@ async fn main() -> std::io::Result<()> {
                 let redis_pool = redis_pool_clone.clone();
                 Box::pin(async move {
                     info!("Scheduled fetching in progress");
-                    //TODO handle unwrap()
-                    services::fetching::process(&postgres_connection, &redis_pool)
-                        .await
-                        .unwrap();
-                    info!("Scheduled fetching done");
+                    if let Err(e) =
+                        services::fetching::process(&postgres_connection, &redis_pool).await
+                    {
+                        error!("Error during the scheduled fetching: {:?}", e);
+                    } else {
+                        info!("Scheduled fetching done");
+                    }
                 })
             })
             .expect("Could not add create fetching task"),
@@ -63,7 +65,6 @@ async fn main() -> std::io::Result<()> {
 fn check_configuration() -> bool {
     if env::var("JWT_SECRET").is_err() {
         error!("JWT_SECRET environment variable is mandatory");
-
         return false;
     }
 
