@@ -76,7 +76,7 @@ jobs:
           tags: |
             rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
             rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:${{ needs.set-vars.outputs.version_dashed }}
-            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:${{ GITHUB_REF_NAME }}_${{ GITHUB_RUN_ID }}
+            rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:${{ env.GITHUB_REF_NAME }}_${{ env.GITHUB_RUN_ID }}
   release:
     name: Release
     runs-on: ubuntu-latest
