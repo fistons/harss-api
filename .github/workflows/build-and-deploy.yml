@@ -85,7 +85,6 @@ jobs:
         run: |
           for i in $(ls -d */ | sed 's#/##')
           do
-            mv $i/fetcher fetcher-$i
             mv $i/rss-aggregator rss-aggregator-$i
           done
       - name: Release
@@ -94,5 +93,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           files: |
-            fetcher-*
             rss-aggregator-*
