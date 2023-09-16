@@ -46,7 +46,7 @@ pub enum UserRole {
 }
 
 /// A channel with a user's metadata
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Channel {
     pub id: i32,
     pub name: String,

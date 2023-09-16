@@ -49,7 +49,7 @@ pub async fn process(connection: &PgPool, redis: &RedisPool) -> Result<(), anyho
         .context("Could not get channels to update")?;
 
     for channel in channels {
-        if let Err(error) = update_channel(connection, redis, channel).await {
+        if let Err(error) = update_channel(connection, redis, &channel).await {
             tracing::error!("{:?}", error.source());
         }
     }
@@ -71,7 +71,7 @@ pub async fn process(connection: &PgPool, redis: &RedisPool) -> Result<(), anyho
 pub async fn update_channel(
     connection: &PgPool,
     redis: &RedisPool,
-    channel: Channel,
+    channel: &Channel,
 ) -> Result<(), FetchError> {
     let mut redis = redis.get().await?;
 
