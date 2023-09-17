@@ -1,6 +1,6 @@
 services:
   api:
-    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator-api:latest
+    image: rg.nl-ams.scw.cloud/pedr0/harss-api:latest
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

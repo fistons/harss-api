@@ -1224,6 +1224,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "harss-api"
+version = "0.4.0"
+dependencies = [
+ "actix-files",
+ "actix-governor",
+ "actix-web",
+ "anyhow",
+ "argon2",
+ "chrono",
+ "deadpool-redis",
+ "dotenvy",
+ "fake",
+ "feed-rs",
+ "hmac",
+ "http-auth-basic",
+ "jwt",
+ "once_cell",
+ "openssl",
+ "opentelemetry",
+ "opentelemetry-datadog",
+ "opentelemetry-jaeger",
+ "rand 0.8.5",
+ "rand_core 0.6.4",
+ "redis",
+ "reqwest",
+ "scraper",
+ "secrecy",
+ "sentry",
+ "sentry-actix",
+ "sentry-tracing",
+ "serde",
+ "serde_json",
+ "sha2",
+ "speculoos",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tokio-cron-scheduler",
+ "tracing",
+ "tracing-actix-web",
+ "tracing-log",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
+ "wiremock",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2664,54 +2712,6 @@ dependencies = [
  "spki",
  "subtle",
  "zeroize",
-]
-
-[[package]]
-name = "rss-aggregator"
-version = "0.4.0"
-dependencies = [
- "actix-files",
- "actix-governor",
- "actix-web",
- "anyhow",
- "argon2",
- "chrono",
- "deadpool-redis",
- "dotenvy",
- "fake",
- "feed-rs",
- "hmac",
- "http-auth-basic",
- "jwt",
- "once_cell",
- "openssl",
- "opentelemetry",
- "opentelemetry-datadog",
- "opentelemetry-jaeger",
- "rand 0.8.5",
- "rand_core 0.6.4",
- "redis",
- "reqwest",
- "scraper",
- "secrecy",
- "sentry",
- "sentry-actix",
- "sentry-tracing",
- "serde",
- "serde_json",
- "sha2",
- "speculoos",
- "sqlx",
- "thiserror",
- "tokio",
- "tokio-cron-scheduler",
- "tracing",
- "tracing-actix-web",
- "tracing-log",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "uuid",
- "wiremock",
 ]
 
 [[package]]

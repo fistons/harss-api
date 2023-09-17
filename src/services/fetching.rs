@@ -1,11 +1,11 @@
-use anyhow::Context;
-use chrono::{DateTime, Utc};
 use crate::common::channels::{
     disable_channels, fail_channel, get_all_enabled_channels, get_last_update, update_last_fetched,
 };
 use crate::common::items::{insert_items, insert_items_delta_for_all_registered_users};
 use crate::common::model::{Channel, NewItem};
 use crate::common::DbError;
+use anyhow::Context;
+use chrono::{DateTime, Utc};
 use deadpool_redis::{Connection, Pool as RedisPool, PoolError};
 use feed_rs::model::{Entry, Feed};
 use once_cell::sync::Lazy;

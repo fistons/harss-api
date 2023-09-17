@@ -1,12 +1,12 @@
 [package]
-name = "rss-aggregator"
+name = "harss-api"
 edition = "2021"
 authors = ["Eric <Fistons> <eric@pedr0.net>"]
 version = "0.4.0"
 
 [[bin]]
 path = "src/main.rs"
-name = "rss-aggregator"
+name = "harss-api"
 
 [dependencies]
 openssl = {version = "0.10", features = ["vendored"]}
