@@ -1,8 +1,8 @@
 [![Check, test, everything](https://github.com/fistons/rss-aggregator/actions/workflows/test.yml/badge.svg?branch=devel)](https://github.com/fistons/rss-aggregator/actions/workflows/test.yml)
 
-# RSS Aggregator
+# HaRSS Api
 
-RSS, but in rust
+RSS API, but in rust
 
 ## Disclaimer
 
