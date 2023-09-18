@@ -5,7 +5,7 @@ use crate::common::items::{insert_items, insert_items_delta_for_all_registered_u
 use crate::common::model::{Channel, NewItem};
 use crate::common::DbError;
 use anyhow::Context;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Days, Utc};
 use deadpool_redis::{Connection, Pool as RedisPool, PoolError};
 use feed_rs::model::{Entry, Feed};
 use once_cell::sync::Lazy;
@@ -84,7 +84,7 @@ pub async fn update_channel(
         return Ok(());
     }
 
-    info!("Updating {} ({})", channel.name, channel.url);
+    info!("Updating {} {} ({})", channel.id, channel.name, channel.url);
 
     let feed = match get_and_parse_feed(&channel.url).await {
         Ok(feed) => feed,
@@ -95,7 +95,9 @@ pub async fn update_channel(
     };
 
     let now = Utc::now();
-    let last_update = get_last_update(connection, &channel.id).await?;
+    let last_update = get_last_update(connection, &channel.id)
+        .await?
+        .unwrap_or(Utc::now().checked_sub_days(Days::new(7)).unwrap());
 
     // Retrieve all the items not already retrieved in precedent run
     let new_items = feed
