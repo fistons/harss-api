@@ -189,7 +189,7 @@ paths:
           $ref: '#/components/responses/ObjectCreatedResponse'
         default:
           $ref: '#/components/responses/Error'
-  /channel/{id}:
+  /channel/{channelId}:
     get:
       operationId: get_channel
       tags:
@@ -197,7 +197,7 @@ paths:
       summary: Retrieve a single channel.
       description: Retrieve a single RSS channel information.
       parameters:
-        - name: id
+        - name: channelId
           in: path
           description: Unique ID of a channel
           required: true
@@ -213,7 +213,7 @@ paths:
                 $ref: '#/components/schemas/Channel'
         default:
           $ref: '#/components/responses/Error'
-  /channel/{id}/enable:
+  /channel/{channelId}/enable:
     post:
       operationId: enable_channel
       tags:
@@ -221,7 +221,7 @@ paths:
       summary: Enable the channel and reset it's failure count.
       description: Enable the channel and reset it's failure count.
       parameters:
-        - name: id
+        - name: channelId
           in: path
           description: Unique ID of a channel
           required: true
@@ -233,7 +233,7 @@ paths:
           $ref: '#/components/responses/NoContent'
         default:
           $ref: '#/components/responses/Error'
-  /channel/{id}/read:
+  /channel/{channelId}/read:
     post:
       operationId: mark_channel_as_read
       tags:
@@ -241,7 +241,7 @@ paths:
       summary: Marks all the items of the channel as read
       description: Marks all the items of the channel as read
       parameters:
-        - name: id
+        - name: channelId
           in: path
           description: Unique ID of a channel
           required: true
@@ -253,7 +253,7 @@ paths:
           $ref: '#/components/responses/NoContent'
         default:
           $ref: '#/components/responses/Error'
-  /channel/{id}/errors:
+  /channel/{channelId}/errors:
     get:
       operationId: get_errors_of_channel
       tags:
@@ -261,7 +261,7 @@ paths:
       summary: List fetch errors of channel
       description: Return the list of errors of the given channel. Restricted to admin only
       parameters:
-        - name: id
+        - name: channelId
           in: path
           description: Unique ID of a channel
           required: true
@@ -279,18 +279,18 @@ paths:
                   $ref: '#/components/schemas/ChannelError'
         default:
           $ref: '#/components/responses/default'
-  /channel/{id}/items:
+  /channel/{channelId}/items:
     get:
       operationId: get_items_of_channel
       tags:
         - Channels
         - Items
-      summary: Returns items
+      summary: Returns items of a channel
       description: Returns the list of items of the given channel
       parameters:
         - $ref: '#/components/parameters/PageSizeParameter'
         - $ref: '#/components/parameters/PageNumberParameter'
-        - name: id
+        - name: channelId
           in: path
           description: Unique ID of a channel
           required: true
@@ -473,7 +473,7 @@ paths:
           $ref: '#/components/responses/Accepted'
         default:
           $ref: '#/components/responses/default'
-  /item/{item_id}/notes:
+  /item/{itemId}/notes:
     put:
       operationId: add_item_notes
       summary: Add notes to an item
@@ -481,7 +481,7 @@ paths:
       tags:
         - Items
       parameters:
-        - name: item_id
+        - name: itemId
           in: path
           required: true
           schema:
@@ -503,7 +503,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         default:
           $ref: '#/components/responses/default'
-  /item/{item_id}:
+  /item/{itemId}:
     get:
       operationId: get_item
       summary: Get a single item
@@ -511,7 +511,7 @@ paths:
       tags:
         - Items
       parameters:
-        - name: item_id
+        - name: itemId
           in: path
           required: true
           schema:
