@@ -1,9 +1,14 @@
 use chrono::{DateTime, Utc};
 use sqlx::Result;
+use tokio::task;
+use tracing::error;
+use tracing::log::debug;
 
 use crate::common::model::{Channel, ChannelError, PagedResult, UsersChannel};
 use crate::common::rss::check_feed;
 use crate::common::{DbError, Pool};
+use crate::services::fetching;
+use deadpool_redis::Pool as RedisPool;
 
 /// Returns the whole list of errors associated to the given channel id.
 #[tracing::instrument(skip(db))]
@@ -151,8 +156,13 @@ pub async fn select_page_by_user_id(
 }
 
 /// Create or linked an existing channel to a user, returning the channel id
-#[tracing::instrument(skip(db))]
-pub async fn create_or_link_channel(db: &Pool, url: &str, user_id: i32) -> Result<i32> {
+#[tracing::instrument(skip(db, redis))]
+pub async fn create_or_link_channel(
+    db: &Pool,
+    redis: &RedisPool,
+    url: &str,
+    user_id: i32,
+) -> Result<i32> {
     // Retrieve or create the channel
     let channel_id = match sqlx::query_scalar!(
         r#"
@@ -164,7 +174,7 @@ pub async fn create_or_link_channel(db: &Pool, url: &str, user_id: i32) -> Resul
     .await?
     {
         Some(id) => id,
-        None => create_new_channel(db, url).await?,
+        None => create_new_channel(db, redis, url).await?,
     };
 
     // Insert the channel in the users registered channel
@@ -331,15 +341,16 @@ pub async fn fail_channel(db: &Pool, channel_id: i32, error_cause: &str) -> Resu
 }
 
 /// # Create a new channel in the database, returning the created channel id
-#[tracing::instrument(skip(db))]
-async fn create_new_channel(db: &Pool, channel_url: &str) -> Result<i32> {
+#[tracing::instrument(skip(db, redis))]
+async fn create_new_channel(db: &Pool, redis: &RedisPool, channel_url: &str) -> Result<i32> {
     let feed = check_feed(channel_url)
         .await
         .map_err(|_| DbError::RowNotFound)?; //TODO: Bad error type
 
-    let result = sqlx::query!(
+    let channel = sqlx::query_as!(
+        Channel,
         r#"
-        INSERT INTO channels (name, url) VALUES ($1, $2) RETURNING id
+        INSERT INTO channels (name, url) VALUES ($1, $2) RETURNING *
         "#,
         feed.title.map(|x| x.content).unwrap_or(channel_url.into()),
         channel_url
@@ -347,7 +358,21 @@ async fn create_new_channel(db: &Pool, channel_url: &str) -> Result<i32> {
     .fetch_one(db)
     .await?;
 
-    Ok(result.id)
+    let channel_id = channel.id;
+
+    // Launch a fetch in a task
+    let channel = channel.clone();
+    let redis = redis.clone();
+    let db = db.clone();
+    task::spawn(async move {
+        if let Err(err) = fetching::update_channel(&db, &redis, &channel).await {
+            error!("Could not update channel {}: {:?}", channel.name, err);
+        } else {
+            debug!("Channel {} updated", channel.id);
+        }
+    });
+
+    Ok(channel_id)
 }
 
 async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> Result<()> {
@@ -367,14 +392,16 @@ async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> R
 
 #[cfg(test)]
 mod tests {
-    use crate::common::items::get_items_of_user;
+    use crate::common::{init_redis_connection, items::get_items_of_user};
     use speculoos::prelude::*;
 
     use super::*;
 
     #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn test_no_conflict_on_existing_channel_insertion(pool: Pool) -> Result<()> {
-        let channel_id = create_or_link_channel(&pool, "https://www.canardpc.com/feed", 1) // 1 is root
+        let redis = init_redis_connection();
+
+        let channel_id = create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 1) // 1 is root
             .await
             .unwrap();
 
@@ -385,7 +412,8 @@ mod tests {
 
     #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn test_user_get_items_on_registration(pool: Pool) -> Result<()> {
-        let channel_id = create_or_link_channel(&pool, "https://www.canardpc.com/feed", 2) // 2 is john_doe
+        let redis = init_redis_connection();
+        let channel_id = create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 2) // 2 is john_doe
             .await
             .unwrap();
 
@@ -402,10 +430,15 @@ mod tests {
 
     #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn test_user_registration_on_empty_channel(pool: Pool) -> Result<()> {
-        let channel_id =
-            create_or_link_channel(&pool, "https://rss.slashdot.org/Slashdot/slashdotMain", 1) // 1 is root
-                .await
-                .unwrap();
+        let redis = init_redis_connection();
+        let channel_id = create_or_link_channel(
+            &pool,
+            &redis,
+            "https://rss.slashdot.org/Slashdot/slashdotMain",
+            1,
+        ) // 1 is root
+        .await
+        .unwrap();
 
         assert_that!(channel_id).is_equal_to(3);
         let items = get_items_of_user(&pool, Some(3), None, None, 1, 1, 400) // Channel 3 is empty
