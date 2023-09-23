@@ -1,63 +1,128 @@
-use actix_web::{get, HttpResponse, post, web};
+use std::env;
+
+use crate::common::DbError::RowNotFound;
+use actix_web::{get, patch, post, web, HttpResponse};
+use secrecy::ExposeSecret;
 use serde_json::json;
 
-use entity::sea_orm_active_enums::UserRole;
+use crate::common::model::UserRole;
+use crate::common::users;
 
-use crate::errors::ApiError;
-use crate::model::{HttpNewUser, HttpUser, PagedResult, PageParameters};
-use crate::model::configuration::ApplicationConfiguration;
-use crate::services::auth::AuthenticatedUser;
-use crate::services::users::UserService;
+use crate::auth::AuthenticatedUser;
+use crate::errors::AuthenticationError;
+use crate::model::{
+    NewUserRequest, PageParameters, UpdateOtherPasswordRequest, UpdatePasswordRequest,
+};
+use crate::routes::errors::ApiError;
+use crate::startup::AppState;
 
 #[post("/users")]
+#[tracing::instrument(skip(app_state))]
 async fn new_user(
-    new_user: web::Json<HttpNewUser>,
-    user_service: web::Data<UserService>,
+    new_user: web::Json<NewUserRequest>,
+    app_state: web::Data<AppState>,
     user: Option<AuthenticatedUser>,
-    configuration: web::Data<ApplicationConfiguration>,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
     let admin = user.map(|x| x.is_admin()).unwrap_or(false);
-    if configuration.allow_account_creation.unwrap_or(false)
-        || admin
-    {
-        log::debug!("Recording new user {:?}", new_user);
+    let allow_account_creation = env::var("RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION")
+        .map(|x| x.parse().unwrap_or_default())
+        .unwrap_or_default();
+
+    if allow_account_creation || admin {
+        tracing::debug!("Recording new user {:?}", new_user);
         let data = new_user.into_inner();
 
-        if data.role == UserRole::Admin && admin {
-            log::debug!("Tried to create a new admin with a non admin user");
+        if data.role == UserRole::Admin && !admin {
+            tracing::debug!("Tried to create a new admin with a non admin user");
             return Ok(HttpResponse::Unauthorized().finish());
         }
 
-        let user = user_service.create_user(&data.username, &data.password, data.role).await?;
+        let user =
+            users::create_user(connection, &data.username, &data.password, data.role).await?;
 
         Ok(HttpResponse::Created().json(json!({"id": user.id})))
     } else {
-        log::debug!("User creation attempt while it's disabled or creator is not admin");
+        tracing::debug!("User creation attempt while it's disabled or creator is not admin");
         Ok(HttpResponse::Unauthorized().finish())
     }
 }
 
 #[get("/users")]
+#[tracing::instrument(skip(app_state))]
 async fn list_users(
-    user_service: web::Data<UserService>,
+    app_state: web::Data<AppState>,
     page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
     if user.is_admin() {
-        log::debug!("Get all users");
-
-        //FIXME: This is ugly as fuck. Cf. https://git.pedr0.net/twitch/rss-aggregator/-/issues/15
-        let users_page = user_service.list_users(page.get_page(), page.get_size()).await?;
-        let mapped_users = users_page.content.into_iter().map(|x| x.into()).collect::<Vec<HttpUser>>();
-        let users = PagedResult { content: mapped_users, page: users_page.page, page_size: users_page.page_size, total_pages: users_page.total_pages, elements_number: users_page.elements_number, total_items: users_page.total_items };
-
-        Ok(HttpResponse::Ok().json(users))
+        Ok(HttpResponse::Ok()
+            .json(users::list_users(connection, page.get_page(), page.get_size()).await?))
     } else {
-        Err(ApiError::unauthorized("You are not allowed to do that"))
+        Err(ApiError::AuthenticationError(
+            AuthenticationError::Forbidden("no".into()),
+        ))
     }
 }
 
-pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
+#[patch("/user/update-password")]
+#[tracing::instrument(skip(app_state), level = "debug")]
+async fn update_password(
+    app_state: web::Data<AppState>,
+    request: web::Json<UpdatePasswordRequest>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+
+    if request.new_password.expose_secret() != request.confirm_password.expose_secret() {
+        return Err(ApiError::PasswordMismatch);
+    }
+
+    if let Err(e) =
+        users::update_user_password(connection, user.id, &request.current_password).await
+    {
+        return Err(ApiError::DatabaseError(e));
+    }
+    //TODO: Invalid token?
+    Ok(HttpResponse::NoContent().finish())
+}
+
+#[patch("/user/{user_id}/update-password")]
+#[tracing::instrument(skip(app_state), level = "debug")]
+async fn update_other_password(
+    app_state: web::Data<AppState>,
+    user_id: web::Path<i32>,
+    request: web::Json<UpdateOtherPasswordRequest>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    let user_id = user_id.into_inner();
+
+    if !user.is_admin() {
+        return Err(ApiError::AuthenticationError(
+            AuthenticationError::Forbidden("You need to be an administrator".to_owned()),
+        ));
+    }
+
+    if request.new_password.expose_secret() != request.confirm_password.expose_secret() {
+        return Err(ApiError::PasswordMismatch);
+    }
+
+    if let Err(e) = users::update_user_password(connection, user_id, &request.new_password).await {
+        return match e {
+            RowNotFound => Err(ApiError::NotFound(String::from("user"), user_id)),
+            _ => return Err(ApiError::DatabaseError(e)),
+        };
+    }
+    //TODO: We should probably invalid the current refresh token in redis
+    Ok(HttpResponse::NoContent().finish())
+}
+
+pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(new_user)
-        .service(list_users);
+        .service(list_users)
+        .service(update_password);
 }

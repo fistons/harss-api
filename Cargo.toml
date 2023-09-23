@@ -1,40 +1,64 @@
 [package]
-name = "rss-aggregator"
-version = "0.1.0"
-authors = ["Eric <Fistons> <eric@pedr0.net>"]
+name = "harss-api"
 edition = "2021"
+authors = ["Eric <Fistons> <eric@pedr0.net>"]
+version = "0.6.0"
 
-[workspace]
-members = [".", "entity"]
+[[bin]]
+path = "src/main.rs"
+name = "harss-api"
 
 [dependencies]
-reqwest = { version = "0.11", features = ["json"] } # Request stuff over the web
-actix-web = { version = "4"} # Serve stuff over the web
-actix-files = "0.6.0"
+openssl = {version = "0.10", features = ["vendored"]}
+actix-web = { version = "4", features = ["rustls"] }
+actix-files = "0.6"
+actix-governor = { version = "0.4" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_yaml = "0.8.17"
-rss = { version = "1.10.0", features = ["validation", "atom"] }
-dotenv = "0.15"
-log = "0.4"
-simplelog = "^0.10.0"
-rust-argon2 = "0.8"
-futures-util = "0.3.15"
-http-auth-basic = "0.1.3"
-jwt = "0.14.0"
-hmac = "0.11.0"
-tokio = "1"
-sha2 = "0.9.5"
-chrono = "0.4"
-uuid = { version = "0.8.2", features = ["v4"] }
-redis = { version = "0.20" }
-clokwerk = "0.4.0-rc1"
-sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "debug-print"], default-features = false }
-entity = { path = "entity" }
+dotenvy = "0.15"
+argon2 = "0.5"
+rand_core = { version = "0.6", features = ["std"] }
+http-auth-basic = "0.3"
+jwt = "0.16"
+hmac = "0.12"
+sha2 = "0.10"
+chrono = { version = "0.4", default-features = false, features = ["serde"] }
+uuid = { version = "1.1", features = ["v4"] }
+redis = { version = "0.23", features = ["r2d2", "tokio-comp", "connection-manager"] }
+deadpool-redis = "0.12"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+secrecy = { version = "0.8", features = ["serde"] }
+sentry-actix = "0.31"
+tracing-actix-web = "0.7"
+tracing = { version = "0.1", features = ["log"] }
+thiserror = "1"
+anyhow = "1"
+reqwest = { version = "0.11", features = ["tokio-rustls", "rustls-tls"] }
+feed-rs = "1"
+sqlx = { version = "0.7", features = ["runtime-tokio", "uuid", "macros", "postgres", "chrono", "migrate"] }
+fake = { version = "2.8", features = ["chrono"] }
+tracing-log = "0.1"
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter", "fmt", "std", "json"] }
+tracing-opentelemetry = "0.21.0"
+opentelemetry = { version = "0.20.0", features = ["rt-tokio"] }
+opentelemetry-jaeger = { version = "0.19", features = ["rt-tokio"] }
+opentelemetry-datadog = { version = "*", features = ["reqwest", "reqwest-client"] }
+sentry-tracing = "0.31"
+sentry = "0.31"
+scraper = "0.17"
+once_cell = "1"
+rand = "0.8.5"
+tokio-cron-scheduler = "0.9.4"
 
 [dev-dependencies]
-actix-rt = "1"
-
+speculoos = "0.11.0"
+wiremock = "0.5"
 
 [profile.release]
 strip = true
+opt-level = "s"
+lto = true
+codegen-units = 1
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3

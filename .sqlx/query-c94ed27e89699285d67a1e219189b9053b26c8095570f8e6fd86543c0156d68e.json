@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE users_items SET read = $3 WHERE users_items.channel_id = $1 AND users_items.user_id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c94ed27e89699285d67a1e219189b9053b26c8095570f8e6fd86543c0156d68e"
+}

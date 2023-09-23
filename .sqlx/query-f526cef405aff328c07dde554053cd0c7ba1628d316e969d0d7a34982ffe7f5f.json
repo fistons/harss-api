@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO users_items (user_id, item_id, channel_id, read, starred)\n        SELECT $2, id, $1, false, false\n        from items\n        where channel_id = $1\n        ON CONFLICT DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f526cef405aff328c07dde554053cd0c7ba1628d316e969d0d7a34982ffe7f5f"
+}

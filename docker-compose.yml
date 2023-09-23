@@ -1,28 +1,42 @@
 services:
   api:
-    image: rg.nl-ams.scw.cloud/pedr0/rss-aggregator
+    image: rg.nl-ams.scw.cloud/pedr0/harss-api:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:8080"
     links:
       - redis
       - postgres
+#      - jaeger
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
-      JWT_SECRETS: 6ce319be-880a-419f-a39e-0058bceec28a
-      CONFIG_PATH: /data/configuration.yaml
+      JWT_SECRET: 6ce319be-880a-419f-a39e-0058bceec28a
+      PASSWORD_SALT: fd364f91-1fbb-41f2-8d90-33c7231e3cfa
+      RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION: false
       REDIS_URL: redis://redis
       POLLING_INTERVAL: 300
-    volumes:
-      - ${PWD}/configuration.yaml:/data/configuration.yaml
+#      JAEGER_ENABLED: true
+#      OTEL_EXPORTER_JAEGER_AGENT_HOST: jaeger
+#      OTEL_EXPORTER_JAEGER_AGENT_PORT: 6831
+      RUST_LOG: info
+      DD_AGENT: http://host.docker.internal:8126
+      DD_ENABLED: true
+    restart: unless-stopped
     depends_on:
+      migrations:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
+#      jaeger:
+#        condition: service_started
     healthcheck: 
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/ping"]
   redis:
     image: redis:alpine
+    restart: unless-stopped
   postgres:
     image: postgres:alpine
     environment:
@@ -30,6 +44,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       PGDATA: /data/postgres
+    restart: unless-stopped
     volumes:
       - database:/data/postgres
     healthcheck:
@@ -37,11 +52,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  migration:
-    image: clux/diesel-cli
-    command: diesel migration run
+  migrations:
+    build:
+      context: migrations
+    command: sqlx migrate run
     volumes:
-    - "$PWD:/volume"
+     - "$PWD:/volume"
     links:
       - postgres
     environment:
@@ -50,5 +66,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+#  jaeger:
+#    image: jaegertracing/all-in-one
+#    ports:
+#      - 16686:16686 # Expose Web UI
+#    restart: unless-stopped
 volumes:
   database: {}
