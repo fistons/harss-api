@@ -358,23 +358,21 @@ async fn create_new_channel(db: &Pool, redis: &RedisPool, channel_url: &str) -> 
     .fetch_one(db)
     .await?;
 
+    let channel_id = channel.id;
+
     // Launch a fetch in a task
-    let cloned_channel = channel.clone();
-    let cloned_redis = redis.clone();
-    let cloned_db = db.clone();
+    let channel = channel.clone();
+    let redis = redis.clone();
+    let db = db.clone();
     task::spawn(async move {
-        if let Err(err) = fetching::update_channel(&cloned_db, &cloned_redis, &cloned_channel).await
-        {
-            error!(
-                "Could not update channel {}: {:?}",
-                cloned_channel.name, err
-            );
+        if let Err(err) = fetching::update_channel(&db, &redis, &channel).await {
+            error!("Could not update channel {}: {:?}", channel.name, err);
         } else {
-            debug!("Channel {} updated", cloned_channel.id);
+            debug!("Channel {} updated", channel.id);
         }
     });
 
-    Ok(channel.id)
+    Ok(channel_id)
 }
 
 async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> Result<()> {
