@@ -1,5 +1,5 @@
 use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{delete, get, post, web, HttpResponse};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -26,6 +26,19 @@ pub async fn get_channel(
         Some(data) => Ok(HttpResponse::Ok().json(data)),
         None => Ok(HttpResponse::new(StatusCode::NOT_FOUND)),
     }
+}
+
+#[delete("/channel/{id}")]
+#[tracing::instrument(skip(app_state))]
+pub async fn unsubscribe_channel(
+    id: web::Path<i32>,
+    app_state: web::Data<AppState>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    channels::unsubscribe_channel(connection, id.into_inner(), user.id).await?;
+
+    Ok(HttpResponse::NoContent().finish())
 }
 
 #[get("/channel/{id}/errors")]
@@ -155,5 +168,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(new_channel)
         .service(get_items_of_channel)
         .service(enable_channel)
-        .service(get_errors_of_channel);
+        .service(get_errors_of_channel)
+        .service(unsubscribe_channel);
 }
