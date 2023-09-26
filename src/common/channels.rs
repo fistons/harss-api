@@ -375,6 +375,7 @@ async fn create_new_channel(db: &Pool, redis: &RedisPool, channel_url: &str) -> 
     Ok(channel_id)
 }
 
+#[tracing::instrument(skip(db))]
 async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> Result<()> {
     sqlx::query!(
         r#"
