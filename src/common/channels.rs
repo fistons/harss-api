@@ -494,4 +494,54 @@ mod tests {
 
         Ok(())
     }
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
+    async fn test_channel_unsubscribe(pool: Pool) -> Result<()> {
+        let redis = init_redis_connection();
+
+        // Register the same channel for two users
+        let channel_id_u1 =
+            create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 1)
+                .await
+                .unwrap();
+
+        let channel_id_u2 =
+            create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 2)
+                .await
+                .unwrap();
+        assert_eq!(channel_id_u1, channel_id_u2);
+
+        // Unsubscribe user 1 from channel and check.
+        unsubscribe_channel(&pool, channel_id_u1, 1).await.unwrap();
+        let result = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM channel_users WHERE channel_id = $1 AND user_id = $2",
+            channel_id_u1,
+            1,
+        )
+        .fetch_one(&pool)
+        .await;
+        assert_eq!(Some(0i64), result.unwrap());
+
+        // Unsubscribe user 2 from channel and check.
+        unsubscribe_channel(&pool, channel_id_u1, 2).await.unwrap();
+        let result = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM channel_users WHERE channel_id = $1 AND user_id = $2",
+            channel_id_u1,
+            1,
+        )
+        .fetch_one(&pool)
+        .await;
+        assert_eq!(Some(0i64), result.unwrap());
+
+        // Check that the channel have been completely removed
+        let result = sqlx::query_scalar!(
+            "SELECT count(id) as count FROM channels WHERE id = $1",
+            channel_id_u1
+        )
+        .fetch_one(&pool)
+        .await;
+        assert_eq!(Some(0i64), result.unwrap());
+
+        Ok(())
+    }
 }
