@@ -1,8 +1,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::Result;
 use tokio::task;
-use tracing::log::debug;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::common::model::{Channel, ChannelError, PagedResult, UsersChannel};
 use crate::common::rss::check_feed;
@@ -408,26 +407,19 @@ pub async fn unsubscribe_channel(db: &Pool, channel_id: i32, user_id: i32) -> Re
         return Err(DbError::RowNotFound);
     }
 
-    let result = sqlx::query_scalar!(
-        r#"
-            SELECT count(*) FROM channel_users WHERE channel_id = $1
-        "#,
-        channel_id,
-    )
-    .fetch_one(db)
-    .await?
-    .unwrap_or(0);
+    debug!("User {} unsubscribed fron channel {}", user_id, channel_id);
 
-    // If not users remain subscribed, delete the whole chan
-    if result == 0 {
-        sqlx::query!(
-            r#"
-                DELETE FROM channels WHERE id = $1
-            "#,
-            channel_id
-        )
-        .execute(db)
-        .await?;
+    // If no user remains subscribed, delete the whole chan
+    let result = sqlx::query!(
+        r#"
+           DELETE FROM channels WHERE id = $1 AND (SELECT count(*) FROM channel_users WHERE channel_id = $1) = 0
+        "#,
+        channel_id
+    )
+    .execute(db)
+    .await?;
+
+    if result.rows_affected() == 1 {
         info!("Deleted channel id {} from database", channel_id);
     }
 
