@@ -190,20 +190,33 @@ paths:
         default:
           $ref: '#/components/responses/Error'
   /channel/{channelId}:
+    parameters:
+     - name: channelId
+       in: path
+       description: Unique ID of a channel
+       required: true
+       example: 1
+       schema:
+         $ref: '#/components/schemas/ChannelID'
+    delete:
+      operationId: unsubscribe_channel
+      tags:
+        - Channels
+      summary: Unsubscribe from a single channel.
+      description: Unsubscribe from a single RSS channel.
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
     get:
       operationId: get_channel
       tags:
         - Channels
       summary: Retrieve a single channel.
       description: Retrieve a single RSS channel information.
-      parameters:
-        - name: channelId
-          in: path
-          description: Unique ID of a channel
-          required: true
-          example: 1
-          schema:
-            $ref: '#/components/schemas/ChannelID'
       responses:
         '200':
           description: A single channel

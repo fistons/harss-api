@@ -1,8 +1,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::Result;
 use tokio::task;
-use tracing::error;
-use tracing::log::debug;
+use tracing::{debug, error, info};
 
 use crate::common::model::{Channel, ChannelError, PagedResult, UsersChannel};
 use crate::common::rss::check_feed;
@@ -375,6 +374,7 @@ async fn create_new_channel(db: &Pool, redis: &RedisPool, channel_url: &str) -> 
     Ok(channel_id)
 }
 
+#[tracing::instrument(skip(db))]
 async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> Result<()> {
     sqlx::query!(
         r#"
@@ -386,6 +386,42 @@ async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> R
     )
     .execute(db)
     .await?;
+
+    Ok(())
+}
+
+/// Unsubscribe a user from a channel
+#[tracing::instrument(skip(db))]
+pub async fn unsubscribe_channel(db: &Pool, channel_id: i32, user_id: i32) -> Result<()> {
+    let result = sqlx::query!(
+        r#"
+           DELETE FROM channel_users WHERE channel_id = $1 and user_id = $2
+        "#,
+        channel_id,
+        user_id
+    )
+    .execute(db)
+    .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(DbError::RowNotFound);
+    }
+
+    debug!("User {} unsubscribed fron channel {}", user_id, channel_id);
+
+    // If no user remains subscribed, delete the whole chan
+    let result = sqlx::query!(
+        r#"
+           DELETE FROM channels WHERE id = $1 AND (SELECT count(*) FROM channel_users WHERE channel_id = $1) = 0
+        "#,
+        channel_id
+    )
+    .execute(db)
+    .await?;
+
+    if result.rows_affected() == 1 {
+        info!("Deleted channel id {} from database", channel_id);
+    }
 
     Ok(())
 }
@@ -447,6 +483,56 @@ mod tests {
         asserting!("List of items is empty")
             .that(items.content())
             .is_empty();
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
+    async fn test_channel_unsubscribe(pool: Pool) -> Result<()> {
+        let redis = init_redis_connection();
+
+        // Register the same channel for two users
+        let channel_id_u1 =
+            create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 1)
+                .await
+                .unwrap();
+
+        let channel_id_u2 =
+            create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 2)
+                .await
+                .unwrap();
+        assert_eq!(channel_id_u1, channel_id_u2);
+
+        // Unsubscribe user 1 from channel and check.
+        unsubscribe_channel(&pool, channel_id_u1, 1).await.unwrap();
+        let result = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM channel_users WHERE channel_id = $1 AND user_id = $2",
+            channel_id_u1,
+            1,
+        )
+        .fetch_one(&pool)
+        .await;
+        assert_eq!(Some(0i64), result.unwrap());
+
+        // Unsubscribe user 2 from channel and check.
+        unsubscribe_channel(&pool, channel_id_u1, 2).await.unwrap();
+        let result = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM channel_users WHERE channel_id = $1 AND user_id = $2",
+            channel_id_u1,
+            1,
+        )
+        .fetch_one(&pool)
+        .await;
+        assert_eq!(Some(0i64), result.unwrap());
+
+        // Check that the channel have been completely removed
+        let result = sqlx::query_scalar!(
+            "SELECT count(id) as count FROM channels WHERE id = $1",
+            channel_id_u1
+        )
+        .fetch_one(&pool)
+        .await;
+        assert_eq!(Some(0i64), result.unwrap());
 
         Ok(())
     }
