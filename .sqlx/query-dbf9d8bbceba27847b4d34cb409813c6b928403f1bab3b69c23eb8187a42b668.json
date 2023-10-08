@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO channel_users (channel_id, user_id, name, registration_timestamp) \n        VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dbf9d8bbceba27847b4d34cb409813c6b928403f1bab3b69c23eb8187a42b668"
+}

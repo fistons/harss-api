@@ -179,11 +179,12 @@ pub async fn create_or_link_channel(
     // Insert the channel in the users registered channel
     sqlx::query!(
         r#"
-        INSERT INTO channel_users (channel_id, user_id, registration_timestamp) 
-        VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+        INSERT INTO channel_users (channel_id, user_id, name, registration_timestamp) 
+        VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING
         "#,
         channel_id,
         user_id,
+        "TODO Name",
         Utc::now().into()
     )
     .execute(db)
