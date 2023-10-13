@@ -1,12 +1,17 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT id FROM channels WHERE url = $1\n        ",
+  "query": "\n        SELECT id, name FROM channels WHERE url = $1\n        ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
         "name": "id",
         "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -15,8 +20,9 @@
       ]
     },
     "nullable": [
+      false,
       false
     ]
   },
-  "hash": "5e89f51f7fd6062c1a88ec9c3d3241fd3dbd482a4e7b6e391ef33139da441f46"
+  "hash": "967e68ab529e7b7e64e5ae9a9bccaa3fff679a3cd7392a55e6782d51a9ce19ca"
 }

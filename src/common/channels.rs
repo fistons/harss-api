@@ -160,32 +160,35 @@ pub async fn create_or_link_channel(
     db: &Pool,
     redis: &RedisPool,
     url: &str,
+    name: Option<String>,
+    notes: Option<String>,
     user_id: i32,
 ) -> Result<i32> {
     // Retrieve or create the channel
-    let channel_id = match sqlx::query_scalar!(
+    let (channel_id, channel_name) = match sqlx::query!(
         r#"
-        SELECT id FROM channels WHERE url = $1
+        SELECT id, name FROM channels WHERE url = $1
         "#,
         url
     )
     .fetch_optional(db)
     .await?
     {
-        Some(id) => id,
+        Some(result) => (result.id, result.name),
         None => create_new_channel(db, redis, url).await?,
     };
 
     // Insert the channel in the users registered channel
     sqlx::query!(
         r#"
-        INSERT INTO channel_users (channel_id, user_id, name, registration_timestamp) 
-        VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING
+        INSERT INTO channel_users (channel_id, user_id, name, registration_timestamp, notes) 
+        VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING
         "#,
         channel_id,
         user_id,
-        "TODO Name",
-        Utc::now().into()
+        name.unwrap_or(channel_name),
+        Utc::now().into(),
+        notes
     )
     .execute(db)
     .await?;
@@ -342,7 +345,11 @@ pub async fn fail_channel(db: &Pool, channel_id: i32, error_cause: &str) -> Resu
 
 /// # Create a new channel in the database, returning the created channel id
 #[tracing::instrument(skip(db, redis))]
-async fn create_new_channel(db: &Pool, redis: &RedisPool, channel_url: &str) -> Result<i32> {
+async fn create_new_channel(
+    db: &Pool,
+    redis: &RedisPool,
+    channel_url: &str,
+) -> Result<(i32, String)> {
     let feed = check_feed(channel_url)
         .await
         .map_err(|_| DbError::RowNotFound)?; //TODO: Bad error type
@@ -359,6 +366,7 @@ async fn create_new_channel(db: &Pool, redis: &RedisPool, channel_url: &str) -> 
     .await?;
 
     let channel_id = channel.id;
+    let channel_name = channel.name.clone();
 
     // Launch a fetch in a task
     let channel = channel.clone();
@@ -372,7 +380,7 @@ async fn create_new_channel(db: &Pool, redis: &RedisPool, channel_url: &str) -> 
         }
     });
 
-    Ok(channel_id)
+    Ok((channel_id, channel_name))
 }
 
 #[tracing::instrument(skip(db))]
@@ -438,9 +446,16 @@ mod tests {
     async fn test_no_conflict_on_existing_channel_insertion(pool: Pool) -> Result<()> {
         let redis = init_redis_connection();
 
-        let channel_id = create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 1) // 1 is root
-            .await
-            .unwrap();
+        let channel_id = create_or_link_channel(
+            &pool,
+            &redis,
+            "https://www.canardpc.com/feed",
+            None,
+            None,
+            1,
+        ) // 1 is root
+        .await
+        .unwrap();
 
         assert_that!(channel_id).is_equal_to(1);
 
@@ -450,9 +465,16 @@ mod tests {
     #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
     async fn test_user_get_items_on_registration(pool: Pool) -> Result<()> {
         let redis = init_redis_connection();
-        let channel_id = create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 2) // 2 is john_doe
-            .await
-            .unwrap();
+        let channel_id = create_or_link_channel(
+            &pool,
+            &redis,
+            "https://www.canardpc.com/feed",
+            None,
+            None,
+            2,
+        ) // 2 is john_doe
+        .await
+        .unwrap();
 
         assert_that!(channel_id).is_equal_to(1);
         let items = get_items_of_user(&pool, Some(1), None, None, 2, 1, 400)
@@ -472,6 +494,8 @@ mod tests {
             &pool,
             &redis,
             "https://rss.slashdot.org/Slashdot/slashdotMain",
+            None,
+            None,
             1,
         ) // 1 is root
         .await
@@ -493,15 +517,27 @@ mod tests {
         let redis = init_redis_connection();
 
         // Register the same channel for two users
-        let channel_id_u1 =
-            create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 1)
-                .await
-                .unwrap();
+        let channel_id_u1 = create_or_link_channel(
+            &pool,
+            &redis,
+            "https://www.canardpc.com/feed",
+            None,
+            None,
+            1,
+        )
+        .await
+        .unwrap();
 
-        let channel_id_u2 =
-            create_or_link_channel(&pool, &redis, "https://www.canardpc.com/feed", 2)
-                .await
-                .unwrap();
+        let channel_id_u2 = create_or_link_channel(
+            &pool,
+            &redis,
+            "https://www.canardpc.com/feed",
+            None,
+            None,
+            2,
+        )
+        .await
+        .unwrap();
         assert_eq!(channel_id_u1, channel_id_u2);
 
         // Unsubscribe user 1 from channel and check.

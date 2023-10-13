@@ -99,8 +99,10 @@ async fn new_channel(
     let redis = &app_state.redis;
     let data = new_channel.into_inner();
 
-    let channel_id =
-        channels::create_or_link_channel(connection, redis, &data.url, user.id).await?;
+    let channel_id = channels::create_or_link_channel(
+        connection, redis, &data.url, data.name, data.notes, user.id,
+    )
+    .await?;
 
     Ok(HttpResponse::Created().json(json!({"id": channel_id})))
 }
