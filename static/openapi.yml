@@ -812,6 +812,8 @@ components:
           $ref: '#/components/schemas/ChannelID'
         name:
           $ref: '#/components/schemas/ChannelName'
+        notes:
+          $ref: '#/conponents/schemas/ChannelNotes'
         url:
           $ref: '#/components/schemas/ChannelURL'
         registration_timestamp:

@@ -50,7 +50,8 @@ pub async fn select_by_id_and_user_id(
         UsersChannel,
         r#"
         SELECT      "channels"."id",
-                    "channels"."name",
+                    "channel_users"."name",
+                    "channel_users"."notes",
                     "channels"."url",
                     "channels"."registration_timestamp",
                     "channels"."last_update",
@@ -63,7 +64,7 @@ pub async fn select_by_id_and_user_id(
                     LEFT JOIN "users_items" ON "channels"."id" = "users_items"."channel_id"
         WHERE       "channel_users"."user_id" = $2
         AND         "channel_users"."channel_id" = $1
-        GROUP BY    "channels"."id"
+        GROUP BY    "channels"."id", "channel_users"."name", "channel_users"."notes"
         "#,
         channel_id,
         user_id
@@ -98,7 +99,8 @@ pub async fn select_page_by_user_id(
         UsersChannel,
         r#"
         SELECT "channels"."id",
-                "channels"."name",
+                "channel_users"."name",
+                "channel_users"."notes",
                 "channels"."url",
                 "channels"."registration_timestamp",
                 "channels"."last_update",
@@ -107,10 +109,10 @@ pub async fn select_page_by_user_id(
                 COUNT("users_items"."item_id") AS "items_count",
                 SUM(CAST("read" AS integer))   AS "items_read"
         FROM "channels"
-                 RIGHT JOIN "channel_users" ON "channels"."id" = "channel_users"."channel_id"
-                 LEFT JOIN "users_items" ON "channels"."id" = "users_items"."channel_id"
+        RIGHT JOIN "channel_users" ON "channels"."id" = "channel_users"."channel_id"
+        LEFT JOIN "users_items" ON "channels"."id" = "users_items"."channel_id"
         WHERE "channel_users"."user_id" = $1
-        GROUP BY "channels"."id", "channel_users"."registration_timestamp"
+        GROUP BY "channels"."id", "channel_users"."registration_timestamp", "channel_users"."name", "channel_users"."notes"
         ORDER BY "channel_users"."registration_timestamp" DESC
         LIMIT $2 OFFSET $3
         "#,

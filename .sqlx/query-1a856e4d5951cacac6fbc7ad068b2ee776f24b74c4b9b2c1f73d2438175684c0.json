@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT      \"channels\".\"id\",\n                    \"channel_users\".\"name\",\n                    \"channel_users\".\"notes\",\n                    \"channels\".\"url\",\n                    \"channels\".\"registration_timestamp\",\n                    \"channels\".\"last_update\",\n                    \"channels\".\"disabled\",\n                    \"channels\".\"failure_count\",\n                    COUNT(\"users_items\".\"item_id\") AS \"items_count\",\n                    SUM(CAST(\"read\" AS integer))   AS \"items_read\"\n        FROM        \"channels\"\n                    RIGHT JOIN \"channel_users\" ON \"channels\".\"id\" = \"channel_users\".\"channel_id\"\n                    LEFT JOIN \"users_items\" ON \"channels\".\"id\" = \"users_items\".\"channel_id\"\n        WHERE       \"channel_users\".\"user_id\" = $2\n        AND         \"channel_users\".\"channel_id\" = $1\n        GROUP BY    \"channels\".\"id\", \"channel_users\".\"name\", \"channel_users\".\"notes\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "notes",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "registration_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "last_update",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "disabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "failure_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "items_count",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "items_read",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "1a856e4d5951cacac6fbc7ad068b2ee776f24b74c4b9b2c1f73d2438175684c0"
+}
