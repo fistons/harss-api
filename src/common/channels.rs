@@ -575,4 +575,36 @@ mod tests {
 
         Ok(())
     }
+
+    #[sqlx::test(fixtures("base_fixtures"), migrations = "./migrations")]
+    async fn test_add_notes_and_custom_name(pool: Pool) -> Result<()> {
+        let redis = init_redis_connection();
+        let channel_id = create_or_link_channel(
+            &pool,
+            &redis,
+            "https://www.canardpc.com/feed",
+            Some("My custom name".to_owned()),
+            Some("My custom notes".to_owned()),
+            2,
+        )
+        .await
+        .unwrap();
+
+        let channel = select_by_id_and_user_id(&pool, channel_id, 2)
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!("My custom name", channel.name);
+        assert_that!(channel.notes).is_equal_to(Some("My custom notes".to_owned()));
+
+        let channel_from_other_user = select_by_id_and_user_id(&pool, channel_id, 1)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!("Canard PC", channel_from_other_user.name);
+        assert_that!(channel_from_other_user.notes).is_equal_to(None);
+
+        Ok(())
+    }
 }
