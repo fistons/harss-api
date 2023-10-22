@@ -20,6 +20,7 @@ pub struct UsersChannel {
     pub id: i32,
     pub name: String,
     pub url: String,
+    pub notes: Option<String>,
     pub last_update: Option<DateTime<Utc>>,
     pub registration_timestamp: DateTime<Utc>,
     pub items_count: Option<i64>,

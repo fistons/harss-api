@@ -1,0 +1,5 @@
+ALTER TABLE channel_users
+    ADD COLUMN IF NOT EXISTS
+        name VARCHAR(512) NOT NULL,
+    ADD COLUMN IF NOT EXISTS
+        notes VARCHAR(5000) NULL;

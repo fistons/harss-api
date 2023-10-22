@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT items.id,\n               items.guid,\n               items.title,\n               items.url,\n               items.content,\n               items.fetch_timestamp,\n               items.publish_timestamp,\n               users_items.read    AS read,\n               users_items.starred AS starred,\n               users_items.notes    AS notes,\n               channels.name       AS channel_name,\n               channels.id         AS channel_id\n        FROM items\n               RIGHT JOIN users_items ON items.id = users_items.item_id\n               RIGHT JOIN channels ON items.channel_id = channels.id\n        WHERE users_items.user_id = $1 AND users_items.item_id = $2\n        ",
+  "query": "\n        SELECT items.id,\n               items.guid,\n               items.title,\n               items.url,\n               items.content,\n               items.fetch_timestamp,\n               items.publish_timestamp,\n               users_items.read    AS read,\n               users_items.starred AS starred,\n               users_items.notes    AS notes,\n               channel_users.name       AS channel_name,\n               channel_users.channel_id AS channel_id\n        FROM items\n               RIGHT JOIN users_items ON items.id = users_items.item_id\n               RIGHT JOIN channel_users ON items.channel_id = channel_users.channel_id\n        WHERE users_items.user_id = $1 AND users_items.item_id = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -85,5 +85,5 @@
       false
     ]
   },
-  "hash": "fe55b709c7528dced7fd935e9d455c198917ae0034128b60e09373155ca7f5a3"
+  "hash": "d44bbde15a4714cea7bb7bdfccd74d8b3bfa2efbe6a8eedb6cfc0125970eecf4"
 }

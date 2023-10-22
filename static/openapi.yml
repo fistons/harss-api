@@ -784,6 +784,10 @@ components:
       properties:
         url:
           $ref: '#/components/schemas/ChannelURL'
+        name:
+          $ref: '#/components/schemas/ChannelName'
+        notes:
+          $ref: '#/components/schemas/ChannelNotes'
     FoundChannel:
       type: object
       description: A RSS channel found in a website
@@ -808,6 +812,8 @@ components:
           $ref: '#/components/schemas/ChannelID'
         name:
           $ref: '#/components/schemas/ChannelName'
+        notes:
+          $ref: '#/conponents/schemas/ChannelNotes'
         url:
           $ref: '#/components/schemas/ChannelURL'
         registration_timestamp:
@@ -847,6 +853,12 @@ components:
       nullable: false
       description: URL of a RSS channel.
       example: "https://canardpc.com/rss.xml"
+    ChannelNotes:
+      type: string
+      description: Note on an channel
+      maxLength: 5000
+      example: >-
+        This channel has nice images.
     WebsiteURL:
       type: string
       format: URL
