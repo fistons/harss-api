@@ -6,8 +6,10 @@ use crate::common::errors::RssParsingError;
 use crate::common::errors::RssParsingError::NonOkStatus;
 use crate::common::model::FoundRssChannel;
 
-static ALTERNATE_LINK_HEADER: Lazy<Selector> =
-    Lazy::new(|| Selector::parse(r#"link[type="application/rss+xml"]"#).unwrap());
+static ALTERNATE_LINK_HEADER: Lazy<Selector> = Lazy::new(|| {
+    Selector::parse(r#"link[type="application/rss+xml"],link[type="application/atom+xml"]"#)
+        .unwrap()
+});
 
 static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
     reqwest::Client::builder()
@@ -76,10 +78,53 @@ mod tests {
         // Prepare the web server
         let html = r#"
                     <!DOCTYPE html>
-                    <meta charset="utf-8">
-                    <link rel="alternate" type="application/rss+xml" title="Pedr0.net" href="https://blog.pedr0.net/rss/" />
-                    <title>Hello, world!</title>
-                    <h1 class="foo">Hello, <i>world!</i></h1>"#;
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <link rel="alternate" type="application/rss+xml" title="Pedr0.net" href="https://blog.pedr0.net/rss/" />
+                        <title>Hello, world!</title>
+                    </head>
+                    <body>
+                        <title>Hello, world!</title>
+                        <h1 class="foo">Hello, <i>world!</i></h1>
+                    </body>
+                    </html>"#;
+        let response = ResponseTemplate::new(200).set_body_string(html);
+        Mock::given(method("GET"))
+            .and(path("/coucou"))
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock)
+            .await;
+
+        let url = format!("{}/coucou", mock.uri());
+
+        assert_eq!(
+            download_and_look_for_rss(&url).await.unwrap(),
+            vec![FoundRssChannel::new(
+                "https://blog.pedr0.net/rss/",
+                "Pedr0.net"
+            )]
+        );
+    }
+
+    #[tokio::test]
+    pub async fn test_find_some_atom_links() {
+        let mock = MockServer::start().await;
+
+        // Prepare the web server
+        let html = r#"
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <link rel="alternate" type="application/atom+xml" title="Pedr0.net" href="https://blog.pedr0.net/rss/" />
+                        <title>Hello, world!</title>
+                    </head>
+                    <body>
+                        <h1 class="foo">Hello, <i>world!</i></h1>
+                    </body>
+                    </html>"#;
         let response = ResponseTemplate::new(200).set_body_string(html);
         Mock::given(method("GET"))
             .and(path("/coucou"))
@@ -106,9 +151,15 @@ mod tests {
         // Prepare the web server
         let html = r#"
                     <!DOCTYPE html>
-                    <meta charset="utf-8">
-                    <title>Hello, world!</title>
-                    <h1 class="foo">Hello, <i>world!</i></h1>"#;
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Hello, world!</title>
+                    </head>
+                    <body>
+                        <h1 class="foo">Hello, <i>world!</i></h1>
+                    </body>
+                    </html>"#;
         let response = ResponseTemplate::new(200).set_body_string(html);
         Mock::given(method("GET"))
             .and(path("/coucou"))

@@ -16,6 +16,8 @@ pub struct NewUserRequest {
 #[derive(Debug, Deserialize, Clone)]
 pub struct RegisterChannelRequest {
     pub url: String,
+    pub name: Option<String>,
+    pub notes: Option<String>,
 }
 
 /// Filter parameters on read/starred items' status

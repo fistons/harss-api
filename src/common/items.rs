@@ -26,12 +26,12 @@ pub async fn get_items_of_user(
                items.publish_timestamp,
                users_items.read    AS read,
                users_items.starred AS starred,
-               users_items.notes    AS notes,
-               channels.name       AS channel_name,
-               channels.id         AS channel_id
+               users_items.notes   AS notes,
+               channel_users.name       AS channel_name,
+               items.channel_id AS channel_id
         FROM items
                  RIGHT JOIN users_items ON items.id = users_items.item_id
-                 RIGHT JOIN channels ON items.channel_id = channels.id
+                 RIGHT JOIN channel_users ON items.channel_id = channel_users.channel_id and users_items.user_id = channel_users.user_id
         WHERE users_items.user_id =
     "#;
 
@@ -221,11 +221,11 @@ pub async fn get_one_item(db: &Pool, item_id: i32, user_id: i32) -> Result<Optio
                users_items.read    AS read,
                users_items.starred AS starred,
                users_items.notes    AS notes,
-               channels.name       AS channel_name,
-               channels.id         AS channel_id
+               channel_users.name       AS channel_name,
+               channel_users.channel_id AS channel_id
         FROM items
                RIGHT JOIN users_items ON items.id = users_items.item_id
-               RIGHT JOIN channels ON items.channel_id = channels.id
+               RIGHT JOIN channel_users ON items.channel_id = channel_users.channel_id
         WHERE users_items.user_id = $1 AND users_items.item_id = $2
         "#,
         user_id,
