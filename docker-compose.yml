@@ -4,7 +4,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "8080:8080"
+      - "9090:8080"
     links:
       - redis
       - postgres
@@ -19,7 +19,7 @@ services:
 #      JAEGER_ENABLED: true
 #      OTEL_EXPORTER_JAEGER_AGENT_HOST: jaeger
 #      OTEL_EXPORTER_JAEGER_AGENT_PORT: 6831
-      RUST_LOG: info
+      RUST_LOG: info,selectors::matching=none
       DD_AGENT: http://host.docker.internal:8126
       DD_ENABLED: true
     restart: unless-stopped
