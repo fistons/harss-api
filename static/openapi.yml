@@ -2,7 +2,7 @@ openapi: '3.1.0'
 info:
   title: HaRSS API
   description: An RSS API in rust
-  version: 0.6.0
+  version: 0.7.0
   contact:
     name: Eric
     email: eric@pedr0.net
