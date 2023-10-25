@@ -1,12 +1,13 @@
 use std::env;
 
+use crate::common::password::verify_password;
 use crate::common::DbError::RowNotFound;
 use actix_web::{get, patch, post, web, HttpResponse};
 use secrecy::ExposeSecret;
 use serde_json::json;
 
 use crate::common::model::UserRole;
-use crate::common::users;
+use crate::common::users::{self, get_user_by_id};
 
 use crate::auth::AuthenticatedUser;
 use crate::errors::AuthenticationError;
@@ -81,9 +82,16 @@ async fn update_password(
         return Err(ApiError::PasswordMismatch);
     }
 
-    if let Err(e) =
-        users::update_user_password(connection, user.id, &request.current_password).await
-    {
+    // if let Ok(Some(user)) = get_user_by_id(connection, user.id).await {
+    //     if !verify_password(&user.password, &request.new_password) {
+    //         return Err(ApiError::PasswordMismatch);
+    //     }
+    // } else {
+    //     return Err(ApiError::NotFound("User".to_owned(), user.id));
+    // }
+    // Doesn't work. sad.
+
+    if let Err(e) = users::update_user_password(connection, user.id, &request.new_password).await {
         return Err(ApiError::DatabaseError(e));
     }
     //TODO: Invalid token?
