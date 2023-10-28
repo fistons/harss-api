@@ -2,7 +2,7 @@
 name = "harss-api"
 edition = "2021"
 authors = ["Eric <Fistons> <eric@pedr0.net>"]
-version = "0.7.0"
+version = "0.7.1"
 
 [[bin]]
 path = "src/main.rs"
