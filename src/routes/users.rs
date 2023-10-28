@@ -1,13 +1,12 @@
 use std::env;
 
-use crate::common::password::verify_password;
 use crate::common::DbError::RowNotFound;
 use actix_web::{get, patch, post, web, HttpResponse};
 use secrecy::ExposeSecret;
 use serde_json::json;
 
 use crate::common::model::UserRole;
-use crate::common::users::{self, get_user_by_id};
+use crate::common::users;
 
 use crate::auth::AuthenticatedUser;
 use crate::errors::AuthenticationError;
