@@ -4,6 +4,7 @@ pub use sqlx::Error as DbError;
 pub use sqlx::PgPool as Pool;
 
 pub mod channels;
+pub mod email;
 pub mod errors;
 pub mod items;
 pub mod model;
