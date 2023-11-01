@@ -1,12 +1,13 @@
 use std::env;
 
+use crate::common::password::verify_password;
 use crate::common::DbError::RowNotFound;
 use actix_web::{get, patch, post, web, HttpResponse};
 use secrecy::ExposeSecret;
 use serde_json::json;
 
 use crate::common::model::UserRole;
-use crate::common::users;
+use crate::common::users::{self, get_user_by_id};
 
 use crate::auth::AuthenticatedUser;
 use crate::errors::AuthenticationError;
@@ -81,14 +82,13 @@ async fn update_password(
         return Err(ApiError::PasswordMismatch);
     }
 
-    // if let Ok(Some(user)) = get_user_by_id(connection, user.id).await {
-    //     if !verify_password(&user.password, &request.new_password) {
-    //         return Err(ApiError::PasswordMismatch);
-    //     }
-    // } else {
-    //     return Err(ApiError::NotFound("User".to_owned(), user.id));
-    // }
-    // Doesn't work. sad.
+    if let Ok(Some(user)) = get_user_by_id(connection, user.id).await {
+        if !verify_password(&user.password, &request.current_password) {
+            return Err(ApiError::PasswordMismatch);
+        }
+    } else {
+        return Err(ApiError::NotFound("User".to_owned(), user.id));
+    }
 
     if let Err(e) = users::update_user_password(connection, user.id, &request.new_password).await {
         return Err(ApiError::DatabaseError(e));
@@ -131,5 +131,6 @@ async fn update_other_password(
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(new_user)
         .service(list_users)
-        .service(update_password);
+        .service(update_password)
+        .service(update_other_password);
 }
