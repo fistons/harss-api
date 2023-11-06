@@ -1,9 +1,14 @@
-use secrecy::Secret;
+use redis::{AsyncCommands, SetExpiry, SetOptions};
+use secrecy::{ExposeSecret, Secret};
 use sqlx::Result;
 
 use crate::common::model::{PagedResult, User, UserRole};
 use crate::common::password::encode_password;
 use crate::common::Pool;
+
+use deadpool_redis::Pool as RedisPool;
+
+use super::email::send_reset_password_email;
 
 /// Return the user matching the username
 #[tracing::instrument(skip(db))]
@@ -111,4 +116,41 @@ pub async fn update_user_password(
     }
 
     Ok(())
+}
+
+#[tracing::instrument(skip(db, redis))]
+pub async fn reset_password(db: &Pool, redis: &RedisPool, email: &Secret<String>) -> Result<()> {
+    let encoded_email = encode_password(email);
+
+    let user = sqlx::query_as!(
+        User,
+        r#"
+        SELECT id, username, password, role as "role: UserRole" FROM users WHERE email = $1
+        "#,
+        encoded_email
+    )
+    .fetch_optional(db)
+    .await?;
+
+    if let Some(user) = user {
+        let reset_token = uuid::Uuid::new_v4();
+
+        let key = format!("user.reset-token.{}", user.id);
+        let options = SetOptions::default().with_expiration(SetExpiry::EX(60 * 5));
+        let _ = redis
+            .get()
+            .await
+            .unwrap()
+            .set_options::<&str, &str, String>(&key, &reset_token.to_string(), options)
+            .await;
+
+        send_reset_password_email(
+            email.expose_secret(),
+            &user.username,
+            &reset_token.to_string(),
+        )
+        .await;
+    };
+
+    Err(sqlx::Error::RowNotFound)
 }
