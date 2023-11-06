@@ -12,7 +12,8 @@ use crate::common::users::{self, get_user_by_id};
 use crate::auth::AuthenticatedUser;
 use crate::errors::AuthenticationError;
 use crate::model::{
-    NewUserRequest, PageParameters, UpdateOtherPasswordRequest, UpdatePasswordRequest,
+    NewUserRequest, PageParameters, ResetPasswordRequest, UpdateOtherPasswordRequest,
+    UpdatePasswordRequest,
 };
 use crate::routes::errors::ApiError;
 use crate::startup::AppState;
@@ -97,6 +98,21 @@ async fn update_password(
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[post("/user/reset-password")]
+#[tracing::instrument(skip(app_state), level = "debug")]
+async fn reset_password(
+    app_state: web::Data<AppState>,
+    request: web::Json<ResetPasswordRequest>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    let redis = &app_state.redis;
+
+    let _ = users::reset_password(connection, redis, &request.email).await;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 #[patch("/user/{user_id}/update-password")]
 #[tracing::instrument(skip(app_state), level = "debug")]
 async fn update_other_password(
@@ -132,5 +148,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(new_user)
         .service(list_users)
         .service(update_password)
-        .service(update_other_password);
+        .service(update_other_password)
+        .service(reset_password);
 }
