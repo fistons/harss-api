@@ -9,6 +9,7 @@ use serde::Deserialize;
 pub struct NewUserRequest {
     pub username: String,
     pub password: Secret<String>,
+    pub email: Option<String>,
     pub role: UserRole,
 }
 

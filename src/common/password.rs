@@ -3,7 +3,7 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use rand_core::OsRng;
 use secrecy::{ExposeSecret, Secret};
 
-/// Encore the password using argon2
+/// Encode the password using argon2
 #[tracing::instrument(skip(password))]
 pub fn encode_password(password: &Secret<String>) -> String {
     let argon2 = Argon2::default();
@@ -15,6 +15,25 @@ pub fn encode_password(password: &Secret<String>) -> String {
         .to_string();
 
     password_hash
+}
+
+/// Encode the password using argon2
+pub fn encode_email(email: Option<String>) -> Option<String> {
+    if email.is_none() {
+        return None;
+    }
+
+    let email = email.unwrap();
+
+    let argon2 = Argon2::default();
+    let salt = SaltString::generate(&mut OsRng);
+
+    let password_hash = argon2
+        .hash_password(email.as_bytes(), &salt)
+        .unwrap()
+        .to_string();
+
+    Some(password_hash)
 }
 
 /// Check if the candidate match the hashed user password

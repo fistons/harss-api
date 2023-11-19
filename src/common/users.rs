@@ -3,7 +3,7 @@ use secrecy::{ExposeSecret, Secret};
 use sqlx::Result;
 
 use crate::common::model::{PagedResult, User, UserRole};
-use crate::common::password::encode_password;
+use crate::common::password::{encode_email, encode_password};
 use crate::common::Pool;
 
 use deadpool_redis::Pool as RedisPool;
@@ -77,16 +77,18 @@ pub async fn create_user(
     db: &Pool,
     login: &str,
     password: &Secret<String>,
+    email: Option<String>,
     user_role: UserRole,
 ) -> Result<User> {
     sqlx::query_as!(
         User,
         r#"
-        INSERT INTO users (username, password, role) VALUES ($1, $2, $3) 
+        INSERT INTO users (username, password, email, role) VALUES ($1, $2, $3, $4) 
         RETURNING id, username, password, role as "role: UserRole"
         "#,
         login,
         encode_password(password),
+        encode_email(email),
         user_role as UserRole
     )
     .fetch_one(db)

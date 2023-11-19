@@ -742,6 +742,8 @@ components:
           $ref: '#/components/schemas/UserPassword'
         role:
           $ref: '#/components/schemas/UserRole'
+        email:
+          $ref: '#/components/schemas/UserEmail'
     User:
       type: object
       properties:
@@ -765,6 +767,7 @@ components:
     UserPassword:
       type: string
       description: The user's password.
+      format: password
       nullable: false
       minLength: 1
     UserID:
@@ -776,6 +779,10 @@ components:
       description: The user's name.
       minLength: 1
       nullable: false
+    UserEmail:
+      type: string
+      description: The user's email.
+      format: email
     RegisterChannelRequest:
       type: object
       description: A RSS Channel creation request.

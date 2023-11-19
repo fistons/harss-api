@@ -41,8 +41,14 @@ async fn new_user(
             return Ok(HttpResponse::Unauthorized().finish());
         }
 
-        let user =
-            users::create_user(connection, &data.username, &data.password, data.role).await?;
+        let user = users::create_user(
+            connection,
+            &data.username,
+            &data.password,
+            data.email,
+            data.role,
+        )
+        .await?;
 
         Ok(HttpResponse::Created().json(json!({"id": user.id})))
     } else {
