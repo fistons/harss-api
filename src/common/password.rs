@@ -19,17 +19,17 @@ pub fn encode_password(password: &Secret<String>) -> String {
 
 /// Encode the password using argon2
 pub fn encode_email(email: Option<String>) -> Option<String> {
-    if email.is_none() {
-        return None;
-    }
+    // if email.is_none() {
+    //     return None;
+    // }
 
-    let email = email.unwrap();
+    // let email = email.unwrap();
 
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
 
     let password_hash = argon2
-        .hash_password(email.as_bytes(), &salt)
+        .hash_password(email?.as_bytes(), &salt)
         .unwrap()
         .to_string();
 
