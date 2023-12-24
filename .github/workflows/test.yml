@@ -9,15 +9,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-
+      - run: cargo check --verbose
   test:
     name: Test Suite
     runs-on: ubuntu-latest
@@ -44,32 +36,13 @@ jobs:
       DATABASE_URL: "postgres://harss:harss@localhost/harss"
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-         profile: minimal
-         toolchain: stable
-         override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all
-
+      - run: cargo test --all --verbose 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
-
+      - run: cargo clippy -- -D warning
   spectral:
     name: Run Spectral
     runs-on: ubuntu-latest

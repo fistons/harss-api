@@ -31,21 +31,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install libssl
-        run: |
-          sudo apt-get install -y pkg-config libssl-dev
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.arch }}
-          override: true
-      - uses: actions-rs/cargo@v1
+        run: sudo apt-get install -y pkg-config libssl-dev
+      - name: Update toolchain to last stable and install croos
+        run: rustup update stable && rustup default stable && cargo install cross
+      - name: Compile
+        run: cross build --release --target ${{ matrix.arch }}
         env:
           SQLX_OFFLINE: true
-        with:
-          use-cross: true
-          command: build
-          args: --release --target ${{ matrix.arch }}
-      - uses: actions/upload-artifact@v3
+      - name: Upload
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.docker-arch }}
           path: |
