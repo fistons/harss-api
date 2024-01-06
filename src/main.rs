@@ -23,8 +23,6 @@ async fn main() -> std::io::Result<()> {
         env::var("RSS_AGGREGATOR_LISTEN_ON").unwrap_or_else(|_| String::from("0.0.0.0:8080")),
     )?;
 
-    let _sentry_guard = harss_api::common::observability::init_sentry();
-
     if !check_configuration() {
         panic!()
     }
