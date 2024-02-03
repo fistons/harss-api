@@ -12,8 +12,8 @@ use crate::common::users::{self, get_user_by_id};
 use crate::auth::AuthenticatedUser;
 use crate::errors::AuthenticationError;
 use crate::model::{
-    NewUserRequest, PageParameters, ResetPasswordRequest, UpdateOtherPasswordRequest,
-    UpdatePasswordRequest,
+    NewUserRequest, PageParameters, ResetPasswordRequest, ResetPasswordTokenRequest,
+    UpdateOtherPasswordRequest, UpdatePasswordRequest,
 };
 use crate::routes::errors::ApiError;
 use crate::startup::AppState;
@@ -104,19 +104,35 @@ async fn update_password(
     Ok(HttpResponse::NoContent().finish())
 }
 
-#[post("/user/reset-password")]
+#[post("/user/reset-password-request")]
 #[tracing::instrument(skip(app_state), level = "debug")]
-async fn reset_password(
+async fn reset_password_request(
     app_state: web::Data<AppState>,
     request: web::Json<ResetPasswordRequest>,
-    user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
     let redis = &app_state.redis;
 
-    let _ = users::reset_password(connection, redis, &request.email).await;
+    users::reset_password_request(connection, redis, &request.email).await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Accepted().finish())
+}
+
+#[post("/user/reset-password")]
+#[tracing::instrument(skip(app_state), level = "debug")]
+async fn reset_password(
+    app_state: web::Data<AppState>,
+    request: web::Json<ResetPasswordTokenRequest>,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    let redis = &app_state.redis;
+    let token = &request.token;
+    let password = &request.new_password;
+    let email = &request.email;
+
+    users::reset_password(connection, redis, token, password, email).await?;
+
+    Ok(HttpResponse::Accepted().finish())
 }
 
 #[patch("/user/{user_id}/update-password")]
@@ -155,5 +171,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(list_users)
         .service(update_password)
         .service(update_other_password)
+        .service(reset_password_request)
         .service(reset_password);
 }

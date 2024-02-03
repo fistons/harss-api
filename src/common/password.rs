@@ -17,7 +17,7 @@ pub fn encode_password(password: &Secret<String>) -> String {
     password_hash
 }
 
-/// Encode the password using argon2
+/// Encode the email using argon2
 pub fn encode_email(email: Option<String>) -> Option<String> {
     // if email.is_none() {
     //     return None;

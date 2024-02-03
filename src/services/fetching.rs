@@ -158,7 +158,7 @@ async fn get_and_parse_feed(channel_url: &str) -> Result<Feed, FetchError> {
 fn item_from_rss_entry(entry: Entry, channel_id: i32, timestamp: &DateTime<Utc>) -> NewItem {
     let title = entry.title.map(|x| x.content);
     let guid = Some(entry.id);
-    let url = entry.links.get(0).map(|x| String::from(&x.href[..]));
+    let url = entry.links.first().map(|x| String::from(&x.href[..]));
     let content = entry.summary.map(|x| x.content);
     let publish_timestamp = entry.published.or(Some(*timestamp));
 

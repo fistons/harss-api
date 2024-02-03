@@ -79,3 +79,10 @@ pub struct ItemNotesRequest {
 pub struct ResetPasswordRequest {
     pub email: Secret<String>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordTokenRequest {
+    pub token: Secret<String>,
+    pub email: Secret<String>, // Needed?
+    pub new_password: Secret<String>,
+}

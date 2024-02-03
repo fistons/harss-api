@@ -38,6 +38,21 @@ pub async fn get_user_by_id(db: &Pool, id: i32) -> Result<Option<User>> {
     .await
 }
 
+/// Return the user matching the id
+#[tracing::instrument(skip(db), level = "debug")]
+pub async fn get_user_by_email(db: &Pool, email: &Secret<String>) -> Result<Option<User>> {
+    let encoded_email = encode_password(email);
+    sqlx::query_as!(
+        User,
+        r#"
+        SELECT id, username, password, role as "role: UserRole" FROM users WHERE email = $1
+        "#,
+        encoded_email
+    )
+    .fetch_optional(db)
+    .await
+}
+
 /// List all the users
 #[tracing::instrument(skip(db))]
 pub async fn list_users(db: &Pool, page_number: u64, page_size: u64) -> Result<PagedResult<User>> {
@@ -120,19 +135,46 @@ pub async fn update_user_password(
     Ok(())
 }
 
-#[tracing::instrument(skip(db, redis))]
-pub async fn reset_password(db: &Pool, redis: &RedisPool, email: &Secret<String>) -> Result<()> {
-    let encoded_email = encode_password(email);
+pub async fn reset_password(
+    db: &Pool,
+    redis: &RedisPool,
+    token: &Secret<String>,
+    new_password: &Secret<String>,
+    email: &Secret<String>,
+) -> Result<()> {
+    let token = token.expose_secret();
 
-    let user = sqlx::query_as!(
-        User,
-        r#"
-        SELECT id, username, password, role as "role: UserRole" FROM users WHERE email = $1
-        "#,
-        encoded_email
-    )
-    .fetch_optional(db)
-    .await?;
+    let user = get_user_by_email(db, email).await?;
+    if let Some(user) = user {
+        let key = format!("user.reset-token.{}", user.id);
+        let registered_token: Option<String> = redis.get().await.unwrap().get(&key).await.unwrap();
+        if let Some(registered_token) = registered_token {
+            if registered_token == *token {
+                update_user_password(db, user.id, new_password).await?;
+
+                redis
+                    .get()
+                    .await
+                    .unwrap()
+                    .del::<String, String>(key)
+                    .await
+                    .unwrap();
+
+                return Ok(());
+            }
+        }
+    }
+
+    Err(sqlx::Error::RowNotFound)
+}
+
+#[tracing::instrument(skip(db, redis))]
+pub async fn reset_password_request(
+    db: &Pool,
+    redis: &RedisPool,
+    email: &Secret<String>,
+) -> Result<()> {
+    let user = get_user_by_email(db, email).await?;
 
     if let Some(user) = user {
         let reset_token = uuid::Uuid::new_v4();
