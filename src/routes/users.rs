@@ -45,7 +45,7 @@ async fn new_user(
             connection,
             &data.username,
             &data.password,
-            data.email,
+            &data.email,
             data.role,
         )
         .await?;
@@ -128,9 +128,9 @@ async fn reset_password(
     let redis = &app_state.redis;
     let token = &request.token;
     let password = &request.new_password;
-    let email = &request.email;
+    let login = &request.username;
 
-    users::reset_password(connection, redis, token, password, email).await?;
+    users::reset_password(connection, redis, token, password, login).await?;
 
     Ok(HttpResponse::Accepted().finish())
 }

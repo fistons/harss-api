@@ -187,7 +187,7 @@ mod tests {
 
         let url = format!("{}/coucou", mock.uri());
 
-        assert!(matches!(download_and_look_for_rss(&url).await, Err(_)));
+        assert!(download_and_look_for_rss(&url).await.is_err());
     }
 
     #[tokio::test]

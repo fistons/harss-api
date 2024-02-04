@@ -3,7 +3,7 @@ use secrecy::{ExposeSecret, Secret};
 use sqlx::Result;
 
 use crate::common::model::{PagedResult, User, UserRole};
-use crate::common::password::{encode_email, encode_password};
+use crate::common::password::{encode_password, hash_email};
 use crate::common::Pool;
 
 use deadpool_redis::Pool as RedisPool;
@@ -41,7 +41,8 @@ pub async fn get_user_by_id(db: &Pool, id: i32) -> Result<Option<User>> {
 /// Return the user matching the id
 #[tracing::instrument(skip(db), level = "debug")]
 pub async fn get_user_by_email(db: &Pool, email: &Secret<String>) -> Result<Option<User>> {
-    let encoded_email = encode_password(email);
+    let encoded_email = hash_email(&Some(email.clone()));
+    tracing::info!("{:?} {encoded_email:?}", email.expose_secret());
     sqlx::query_as!(
         User,
         r#"
@@ -92,7 +93,7 @@ pub async fn create_user(
     db: &Pool,
     login: &str,
     password: &Secret<String>,
-    email: Option<String>,
+    email: &Option<Secret<String>>,
     user_role: UserRole,
 ) -> Result<User> {
     sqlx::query_as!(
@@ -103,7 +104,7 @@ pub async fn create_user(
         "#,
         login,
         encode_password(password),
-        encode_email(email),
+        hash_email(email),
         user_role as UserRole
     )
     .fetch_one(db)
@@ -120,7 +121,7 @@ pub async fn update_user_password(
     let result = sqlx::query!(
         r#"
         UPDATE users SET password = $1 WHERE id=$2
-    "#,
+        "#,
         encode_password(new_password),
         user_id
     )
@@ -140,11 +141,11 @@ pub async fn reset_password(
     redis: &RedisPool,
     token: &Secret<String>,
     new_password: &Secret<String>,
-    email: &Secret<String>,
+    username: &str,
 ) -> Result<()> {
     let token = token.expose_secret();
 
-    let user = get_user_by_email(db, email).await?;
+    let user = get_user_by_username(db, username).await?;
     if let Some(user) = user {
         let key = format!("user.reset-token.{}", user.id);
         let registered_token: Option<String> = redis.get().await.unwrap().get(&key).await.unwrap();
@@ -193,7 +194,10 @@ pub async fn reset_password_request(
             &user.username,
             &reset_token.to_string(),
         )
-        .await;
+        .await
+        .unwrap();
+
+        return Ok(());
     };
 
     Err(sqlx::Error::RowNotFound)

@@ -2,6 +2,7 @@ use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use rand_core::OsRng;
 use secrecy::{ExposeSecret, Secret};
+use sha2::{Digest, Sha256};
 
 /// Encode the password using argon2
 #[tracing::instrument(skip(password))]
@@ -15,6 +16,18 @@ pub fn encode_password(password: &Secret<String>) -> String {
         .to_string();
 
     password_hash
+}
+
+pub fn hash_email(email: &Option<Secret<String>>) -> String {
+    if let Some(email) = email {
+        let mut hasher = Sha256::new();
+
+        hasher.update(email.expose_secret());
+        let hash = hasher.finalize();
+
+        return String::from_utf8_lossy(&hash).to_string();
+    }
+    String::new()
 }
 
 /// Encode the email using argon2

@@ -9,7 +9,7 @@ use serde::Deserialize;
 pub struct NewUserRequest {
     pub username: String,
     pub password: Secret<String>,
-    pub email: Option<String>,
+    pub email: Option<Secret<String>>,
     pub role: UserRole,
 }
 
@@ -83,6 +83,6 @@ pub struct ResetPasswordRequest {
 #[derive(Debug, Deserialize)]
 pub struct ResetPasswordTokenRequest {
     pub token: Secret<String>,
-    pub email: Secret<String>, // Needed?
+    pub username: String,
     pub new_password: Secret<String>,
 }
