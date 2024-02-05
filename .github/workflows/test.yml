@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: cargo check --verbose
   test:
     name: Test Suite
@@ -32,23 +32,24 @@ jobs:
         ports:
           - 5432:5432
     env:
-      SQLX_OFFLINE: true
       DATABASE_URL: "postgres://harss:harss@localhost/harss"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - run: cargo install sqlx-cli
+      - run: cargo sqlx migrate run
       - run: cargo test --all --verbose 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: cargo clippy -- -D warning
   spectral:
     name: Run Spectral
     runs-on: ubuntu-latest
     steps:
       # Check out the repository
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Run Spectral
       - uses: stoplightio/spectral-action@latest
