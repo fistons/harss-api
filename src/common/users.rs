@@ -3,8 +3,9 @@ use secrecy::{ExposeSecret, Secret};
 use sqlx::Result;
 
 use crate::common::model::{PagedResult, User, UserRole};
-use crate::common::password::{encode_password, hash_email};
+use crate::common::password::encode_password;
 use crate::common::Pool;
+use sha2::{Digest, Sha256};
 
 use deadpool_redis::Pool as RedisPool;
 
@@ -94,7 +95,7 @@ pub async fn create_user(
     login: &str,
     password: &Secret<String>,
     email: &Option<Secret<String>>,
-    user_role: UserRole,
+    user_role: &UserRole,
 ) -> Result<User> {
     sqlx::query_as!(
         User,
@@ -105,7 +106,7 @@ pub async fn create_user(
         login,
         encode_password(password),
         hash_email(email),
-        user_role as UserRole
+        user_role as &UserRole
     )
     .fetch_one(db)
     .await
@@ -157,7 +158,7 @@ pub async fn reset_password(
                     .get()
                     .await
                     .unwrap()
-                    .del::<String, String>(key)
+                    .del::<String, usize>(key)
                     .await
                     .unwrap();
 
@@ -203,4 +204,17 @@ pub async fn reset_password_request(
     };
 
     Ok(())
+}
+
+/// Hash an email adresse using sha256
+fn hash_email(email: &Option<Secret<String>>) -> String {
+    if let Some(email) = email {
+        let mut hasher = Sha256::new();
+
+        hasher.update(email.expose_secret());
+        let hash = hasher.finalize();
+
+        return String::from_utf8_lossy(&hash).to_string();
+    }
+    String::new()
 }

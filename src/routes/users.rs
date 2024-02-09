@@ -21,7 +21,7 @@ use crate::startup::AppState;
 #[post("/users")]
 #[tracing::instrument(skip(app_state))]
 async fn new_user(
-    new_user: web::Json<NewUserRequest>,
+    request: web::Json<NewUserRequest>,
     app_state: web::Data<AppState>,
     user: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, ApiError> {
@@ -33,20 +33,23 @@ async fn new_user(
         .unwrap_or_default();
 
     if allow_account_creation || admin {
-        tracing::debug!("Recording new user {:?}", new_user);
-        let data = new_user.into_inner();
+        tracing::debug!("Recording new user {:?}", request);
 
-        if data.role == UserRole::Admin && !admin {
+        if request.role == UserRole::Admin && !admin {
             tracing::debug!("Tried to create a new admin with a non admin user");
             return Ok(HttpResponse::Unauthorized().finish());
         }
 
+        if request.password.expose_secret() != request.confirm_password.expose_secret() {
+            return Err(ApiError::PasswordMismatch);
+        }
+
         let user = users::create_user(
             connection,
-            &data.username,
-            &data.password,
-            &data.email,
-            data.role,
+            &request.username,
+            &request.password,
+            &request.email,
+            &request.role,
         )
         .await?;
 
@@ -106,7 +109,7 @@ async fn update_password(
 
 #[post("/user/reset-password-request")]
 #[tracing::instrument(skip(app_state), level = "debug")]
-async fn reset_password_request(
+async fn reset_password_token(
     app_state: web::Data<AppState>,
     request: web::Json<ResetPasswordRequest>,
 ) -> Result<HttpResponse, ApiError> {
@@ -126,13 +129,21 @@ async fn reset_password(
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
     let redis = &app_state.redis;
-    let token = &request.token;
-    let password = &request.new_password;
-    let login = &request.username;
 
-    users::reset_password(connection, redis, token, password, login).await?;
+    if request.new_password.expose_secret() != request.confirm_password.expose_secret() {
+        return Err(ApiError::PasswordMismatch);
+    }
 
-    Ok(HttpResponse::Accepted().finish())
+    users::reset_password(
+        connection,
+        redis,
+        &request.token,
+        &request.new_password,
+        &request.username,
+    )
+    .await?;
+
+    Ok(HttpResponse::NoContent().finish())
 }
 
 #[patch("/user/{user_id}/update-password")]
@@ -171,6 +182,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(list_users)
         .service(update_password)
         .service(update_other_password)
-        .service(reset_password_request)
+        .service(reset_password_token)
         .service(reset_password);
 }

@@ -61,24 +61,41 @@ paths:
           $ref: '#/components/responses/Error'
   /user/reset-password-request:
     post:
-      operationId: reset_password_request
+      operationId: reset_password_token
       security: []
       tags:
         - Users
-      summary: Request password reset
-      description: Request for a password reset
+      summary: Request password reset token
+      description:
+        Request for a password reset token that will be sent by email. The user must have registred its email
       requestBody:
         required: true
-        description: Password reset request
+        description: Reset Password request
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasswordResetRequest'
+              $ref: '#/components/schemas/ResetPasswordTokenRequest'
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
-        '404':
-          $ref: '#/components/response/NotFound'
+  /user/reset-password:
+    post:
+      operationId: reset_password
+      security: []
+      tags:
+        - Users
+      summary: Reset password
+      description: Reset password using the given token
+      requestBody:
+        required: true
+        description: Reset forgotten password request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
   /user/{userId}/update-password:
     patch:
       operationId: update_other_password
@@ -720,7 +737,7 @@ components:
         - password
       properties:
         login:
-          $ref: '#/components/schemas/UserLogin'
+          $ref: '#/components/schemas/UserName'
         password:
           $ref: '#/components/schemas/UserPassword'
     UpdatePasswordRequest:
@@ -737,14 +754,32 @@ components:
           $ref: '#/components/schemas/UserPassword'
         confirm_password:
           $ref: '#/components/schemas/UserPassword'
-    PasswordResetRequest:
+    ResetPasswordTokenRequest:
       type: object
-      description: A password reset request
+      description: A password reset token request
       required:
         - email
       properties:
         email:
           $ref: '#/components/schemas/UserEmail'
+    ResetPasswordRequest:
+      type: object
+      description: A reset password request
+      required:
+        - token
+        - new_password
+        - confirm_password
+        - login
+      properties:
+        username:
+          $ref: '#/components/schemas/UserName'
+        token:
+          type: string
+          format: uuid
+        new_password:
+          $ref: '#/components/schemas/UserPassword'
+        confirm_password:
+          $ref: '#/components/schemas/UserPassword'          
     UpdateOtherPasswordRequest:
       type: object
       description: Update other's password request.
@@ -762,11 +797,14 @@ components:
       required:
         - username
         - password
+        - confirm_password
         - role
       properties:
         username:
           $ref: '#/components/schemas/UserName'
         password:
+          $ref: '#/components/schemas/UserPassword'
+        confirm_password:
           $ref: '#/components/schemas/UserPassword'
         role:
           $ref: '#/components/schemas/UserRole'
@@ -781,12 +819,6 @@ components:
           $ref: '#/components/schemas/UserName'
         role:
           $ref: '#/components/schemas/UserRole'
-    UserLogin:
-      type: string
-      format: email
-      description: The user's login (i.e. it's email).
-      nullable: false
-      minLength: 1
     UserRole:
       type: string
       description: The user's role (i.e. admin or not).
