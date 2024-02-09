@@ -115,7 +115,7 @@ async fn reset_password_request(
 
     users::reset_password_request(connection, redis, &request.email).await?;
 
-    Ok(HttpResponse::Accepted().finish())
+    Ok(HttpResponse::NoContent().finish())
 }
 
 #[post("/user/reset-password")]

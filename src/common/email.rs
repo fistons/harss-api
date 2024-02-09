@@ -38,8 +38,9 @@ fn build_request_body(dest_name: &str, dest_email: &String, token: &str) -> Valu
                 }
             ],
             "subject": "Your reset password token",
-            "text": format!("Hello {dest_name},\n\nHere is your token: {token}.\n\nBye."),
-            "html": format!("Hello {dest_name},\n\nHere is your token: <b>{token}</b>.<br/><br/>Bye."),
+            "text": format!("Hello {dest_name},\n\nHere is your token: {token}.\nIt will be valid 15 minutes.\n\nBye."),
+            "html": format!("Hello {dest_name},<br/><br/>Here is your token: <b>{token}</b>.
+                <br/>It will be valid 15 minutes.<br/><br/>Bye."),
             "project_id": project_id
         }
     )

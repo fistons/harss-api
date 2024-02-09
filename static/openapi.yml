@@ -59,6 +59,26 @@ paths:
           $ref: '#/components/responses/NoContent'
         default:
           $ref: '#/components/responses/Error'
+  /user/reset-password-request:
+    post:
+      operationId: reset_password_request
+      security: []
+      tags:
+        - Users
+      summary: Request password reset
+      description: Request for a password reset
+      requestBody:
+        required: true
+        description: Password reset request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/response/NotFound'
   /user/{userId}/update-password:
     patch:
       operationId: update_other_password
@@ -717,6 +737,14 @@ components:
           $ref: '#/components/schemas/UserPassword'
         confirm_password:
           $ref: '#/components/schemas/UserPassword'
+    PasswordResetRequest:
+      type: object
+      description: A password reset request
+      required:
+        - email
+      properties:
+        email:
+          $ref: '#/components/schemas/UserEmail'
     UpdateOtherPasswordRequest:
       type: object
       description: Update other's password request.

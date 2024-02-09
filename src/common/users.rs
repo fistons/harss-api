@@ -181,7 +181,7 @@ pub async fn reset_password_request(
         let reset_token = uuid::Uuid::new_v4();
 
         let key = format!("user.reset-token.{}", user.id);
-        let options = SetOptions::default().with_expiration(SetExpiry::EX(60 * 5));
+        let options = SetOptions::default().with_expiration(SetExpiry::EX(60 * 15));
         let _ = redis
             .get()
             .await
@@ -189,16 +189,18 @@ pub async fn reset_password_request(
             .set_options::<&str, &str, String>(&key, &reset_token.to_string(), options)
             .await;
 
-        send_reset_password_email(
+        if let Err(e) = send_reset_password_email(
             email.expose_secret(),
             &user.username,
             &reset_token.to_string(),
         )
         .await
-        .unwrap();
-
-        return Ok(());
+        {
+            tracing::error!("Could not send email {}", e);
+        }
+    } else {
+        tracing::debug!("Email not found for reset password request");
     };
 
-    Err(sqlx::Error::RowNotFound)
+    Ok(())
 }
