@@ -1,7 +1,6 @@
 use std::env::var;
 
 use opentelemetry::sdk::trace::{self, RandomIdGenerator, Sampler, Tracer};
-use sentry::ClientInitGuard;
 use tracing::{subscriber::set_global_default, Subscriber};
 use tracing_log::LogTracer;
 use tracing_opentelemetry::OpenTelemetryLayer;
@@ -17,7 +16,6 @@ pub fn get_subscriber(name: &str, env_filter: &str) -> impl Subscriber + Sync + 
 
     Registry::default()
         .with(telemetry)
-        .with(sentry_tracing::layer())
         .with(env_filter)
         .with(fmt)
 }
@@ -25,13 +23,6 @@ pub fn get_subscriber(name: &str, env_filter: &str) -> impl Subscriber + Sync + 
 pub fn init_subscriber(subscriber: impl Subscriber + Sync + Send) {
     LogTracer::init().expect("Failed to set logger");
     set_global_default(subscriber).expect("Failed to set subscriber");
-}
-
-pub fn init_sentry() -> ClientInitGuard {
-    sentry::init(sentry::ClientOptions {
-        release: sentry::release_name!(),
-        ..Default::default()
-    })
 }
 
 fn build_jaeger<S>(name: &str) -> Option<OpenTelemetryLayer<S, Tracer>>

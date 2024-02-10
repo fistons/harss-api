@@ -1,17 +1,19 @@
 use std::env;
 
+use crate::common::password::verify_password;
 use crate::common::DbError::RowNotFound;
 use actix_web::{get, patch, post, web, HttpResponse};
 use secrecy::ExposeSecret;
 use serde_json::json;
 
 use crate::common::model::UserRole;
-use crate::common::users;
+use crate::common::users::{self, get_user_by_id};
 
 use crate::auth::AuthenticatedUser;
 use crate::errors::AuthenticationError;
 use crate::model::{
-    NewUserRequest, PageParameters, UpdateOtherPasswordRequest, UpdatePasswordRequest,
+    NewUserRequest, PageParameters, ResetPasswordRequest, ResetPasswordTokenRequest,
+    UpdateOtherPasswordRequest, UpdatePasswordRequest,
 };
 use crate::routes::errors::ApiError;
 use crate::startup::AppState;
@@ -19,7 +21,7 @@ use crate::startup::AppState;
 #[post("/users")]
 #[tracing::instrument(skip(app_state))]
 async fn new_user(
-    new_user: web::Json<NewUserRequest>,
+    request: web::Json<NewUserRequest>,
     app_state: web::Data<AppState>,
     user: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, ApiError> {
@@ -31,16 +33,25 @@ async fn new_user(
         .unwrap_or_default();
 
     if allow_account_creation || admin {
-        tracing::debug!("Recording new user {:?}", new_user);
-        let data = new_user.into_inner();
+        tracing::debug!("Recording new user {:?}", request);
 
-        if data.role == UserRole::Admin && !admin {
+        if request.role == UserRole::Admin && !admin {
             tracing::debug!("Tried to create a new admin with a non admin user");
             return Ok(HttpResponse::Unauthorized().finish());
         }
 
-        let user =
-            users::create_user(connection, &data.username, &data.password, data.role).await?;
+        if request.password.expose_secret() != request.confirm_password.expose_secret() {
+            return Err(ApiError::PasswordMismatch);
+        }
+
+        let user = users::create_user(
+            connection,
+            &request.username,
+            &request.password,
+            &request.email,
+            &request.role,
+        )
+        .await?;
 
         Ok(HttpResponse::Created().json(json!({"id": user.id})))
     } else {
@@ -81,12 +92,57 @@ async fn update_password(
         return Err(ApiError::PasswordMismatch);
     }
 
-    if let Err(e) =
-        users::update_user_password(connection, user.id, &request.current_password).await
-    {
+    if let Ok(Some(user)) = get_user_by_id(connection, user.id).await {
+        if !verify_password(&user.password, &request.current_password) {
+            return Err(ApiError::PasswordMismatch);
+        }
+    } else {
+        return Err(ApiError::NotFound("User".to_owned(), user.id));
+    }
+
+    if let Err(e) = users::update_user_password(connection, user.id, &request.new_password).await {
         return Err(ApiError::DatabaseError(e));
     }
     //TODO: Invalid token?
+    Ok(HttpResponse::NoContent().finish())
+}
+
+#[post("/user/reset-password-request")]
+#[tracing::instrument(skip(app_state), level = "debug")]
+async fn reset_password_token(
+    app_state: web::Data<AppState>,
+    request: web::Json<ResetPasswordRequest>,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    let redis = &app_state.redis;
+
+    users::reset_password_request(connection, redis, &request.email).await?;
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
+#[post("/user/reset-password")]
+#[tracing::instrument(skip(app_state), level = "debug")]
+async fn reset_password(
+    app_state: web::Data<AppState>,
+    request: web::Json<ResetPasswordTokenRequest>,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    let redis = &app_state.redis;
+
+    if request.new_password.expose_secret() != request.confirm_password.expose_secret() {
+        return Err(ApiError::PasswordMismatch);
+    }
+
+    users::reset_password(
+        connection,
+        redis,
+        &request.token,
+        &request.new_password,
+        &request.username,
+    )
+    .await?;
+
     Ok(HttpResponse::NoContent().finish())
 }
 
@@ -124,5 +180,8 @@ async fn update_other_password(
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(new_user)
         .service(list_users)
-        .service(update_password);
+        .service(update_password)
+        .service(update_other_password)
+        .service(reset_password_token)
+        .service(reset_password);
 }

@@ -43,7 +43,7 @@ pub struct User {
 #[sqlx(type_name = "user_role", rename_all = "lowercase")]
 pub enum UserRole {
     Admin,
-    User,
+    Basic,
 }
 
 /// A channel with a user's metadata
