@@ -13,7 +13,7 @@ use redis::{AsyncCommands, ExistenceCheck, RedisError, RedisResult, SetExpiry, S
 use reqwest::Client;
 use sqlx::PgPool;
 use std::error::Error;
-use tracing::info;
+use tracing::{info, Instrument};
 use uuid::Uuid;
 
 static CLIENT: Lazy<Client> = Lazy::new(|| {
@@ -49,7 +49,10 @@ pub async fn process(connection: &PgPool, redis: &RedisPool) -> Result<(), anyho
         .context("Could not get channels to update")?;
 
     for channel in channels {
-        if let Err(error) = update_channel(connection, redis, &channel).await {
+        if let Err(error) = update_channel(connection, redis, &channel)
+            .in_current_span()
+            .await
+        {
             tracing::error!("{:?}", error.source());
         }
     }

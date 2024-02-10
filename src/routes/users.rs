@@ -13,7 +13,7 @@ use crate::auth::AuthenticatedUser;
 use crate::errors::AuthenticationError;
 use crate::model::{
     NewUserRequest, PageParameters, ResetPasswordRequest, ResetPasswordTokenRequest,
-    UpdateOtherPasswordRequest, UpdatePasswordRequest,
+    UpdateOtherPasswordRequest, UpdatePasswordRequest, UpdateUserRequest,
 };
 use crate::routes::errors::ApiError;
 use crate::startup::AppState;
@@ -177,11 +177,27 @@ async fn update_other_password(
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[patch("/user/update")]
+#[tracing::instrument(skip(app_state))]
+async fn update_user(
+    app_state: web::Data<AppState>,
+    request: web::Json<UpdateUserRequest>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    let redis = &app_state.redis;
+
+    users::update_user(connection, redis, user.id, &request.email).await?;
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(new_user)
         .service(list_users)
         .service(update_password)
         .service(update_other_password)
         .service(reset_password_token)
+        .service(update_user)
         .service(reset_password);
 }

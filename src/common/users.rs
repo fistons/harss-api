@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 
 use deadpool_redis::Pool as RedisPool;
 
-use super::email::send_reset_password_email;
+use super::email::{send_confirm_email, send_reset_password_email};
 
 /// Return the user matching the username
 #[tracing::instrument(skip(db))]
@@ -175,24 +175,16 @@ pub async fn reset_password_request(
     db: &Pool,
     redis: &RedisPool,
     email: &Secret<String>,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     let user = get_user_by_email(db, email).await?;
 
     if let Some(user) = user {
-        let reset_token = uuid::Uuid::new_v4();
-
         let key = format!("user.reset-token.{}", user.id);
-        let options = SetOptions::default().with_expiration(SetExpiry::EX(60 * 15));
-        let _ = redis
-            .get()
-            .await
-            .unwrap()
-            .set_options::<&str, &str, String>(&key, &reset_token.to_string(), options)
-            .await;
+        let reset_token = generate_and_persist_token(redis, &key, 60 * 15).await?;
 
         if let Err(e) = send_reset_password_email(
-            email.expose_secret(),
             &user.username,
+            email.expose_secret(),
             &reset_token.to_string(),
         )
         .await
@@ -204,6 +196,51 @@ pub async fn reset_password_request(
     };
 
     Ok(())
+}
+
+pub async fn update_user(
+    db: &Pool,
+    redis: &RedisPool,
+    user_id: i32,
+    email: &Option<Secret<String>>,
+) -> anyhow::Result<()> {
+    let user = get_user_by_id(db, user_id)
+        .await?
+        .ok_or_else(|| sqlx::Error::RowNotFound)?;
+
+    if let Some(email) = email {
+        let key = format!("user.confirm-email-token.{}", user.id);
+        let reset_token = generate_and_persist_token(redis, &key, 60 * 15 * 24).await?;
+
+        if let Err(e) = send_confirm_email(
+            &user.username,
+            email.expose_secret(),
+            &reset_token.to_string(),
+        )
+        .await
+        {
+            tracing::error!("Could not send email {}", e);
+        }
+    }
+
+    Ok(())
+}
+
+async fn generate_and_persist_token(
+    redis: &RedisPool,
+    key: &str,
+    ttl_in_seconds: usize,
+) -> anyhow::Result<String> {
+    let token = uuid::Uuid::new_v4().to_string();
+
+    let options = SetOptions::default().with_expiration(SetExpiry::EX(ttl_in_seconds));
+    let _ = redis
+        .get()
+        .await?
+        .set_options::<&str, &str, String>(key, &token, options)
+        .await;
+
+    Ok(token)
 }
 
 /// Hash an email adresse using sha256
