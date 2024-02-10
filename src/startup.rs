@@ -27,7 +27,6 @@ pub async fn startup(database: DbPool, redis: Pool, listener: TcpListener) -> st
     HttpServer::new(move || {
         App::new()
             .wrap(tracing_actix_web::TracingLogger::default())
-            .wrap(sentry_actix::Sentry::default())
             .app_data(app_state.clone())
             .service(routes::ping)
             .service(

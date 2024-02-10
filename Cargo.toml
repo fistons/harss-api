@@ -28,7 +28,6 @@ redis = { version = "0.23", features = ["r2d2", "tokio-comp", "connection-manage
 deadpool-redis = "0.12"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 secrecy = { version = "0.8", features = ["serde"] }
-sentry-actix = "0.31"
 tracing-actix-web = "0.7"
 tracing = { version = "0.1", features = ["log"] }
 thiserror = "1"
