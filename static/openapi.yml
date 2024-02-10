@@ -2,7 +2,7 @@ openapi: '3.1.0'
 info:
   title: HaRSS API
   description: An RSS API in rust
-  version: 0.7.0
+  version: 0.7.1
   contact:
     name: Eric
     email: eric@pedr0.net
@@ -59,6 +59,43 @@ paths:
           $ref: '#/components/responses/NoContent'
         default:
           $ref: '#/components/responses/Error'
+  /user/reset-password-request:
+    post:
+      operationId: reset_password_token
+      security: []
+      tags:
+        - Users
+      summary: Request password reset token
+      description:
+        Request for a password reset token that will be sent by email. The user must have registred its email
+      requestBody:
+        required: true
+        description: Reset Password request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordTokenRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+  /user/reset-password:
+    post:
+      operationId: reset_password
+      security: []
+      tags:
+        - Users
+      summary: Reset password
+      description: Reset password using the given token
+      requestBody:
+        required: true
+        description: Reset forgotten password request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
   /user/{userId}/update-password:
     patch:
       operationId: update_other_password
@@ -700,7 +737,7 @@ components:
         - password
       properties:
         login:
-          $ref: '#/components/schemas/UserLogin'
+          $ref: '#/components/schemas/UserName'
         password:
           $ref: '#/components/schemas/UserPassword'
     UpdatePasswordRequest:
@@ -717,6 +754,32 @@ components:
           $ref: '#/components/schemas/UserPassword'
         confirm_password:
           $ref: '#/components/schemas/UserPassword'
+    ResetPasswordTokenRequest:
+      type: object
+      description: A password reset token request
+      required:
+        - email
+      properties:
+        email:
+          $ref: '#/components/schemas/UserEmail'
+    ResetPasswordRequest:
+      type: object
+      description: A reset password request
+      required:
+        - token
+        - new_password
+        - confirm_password
+        - login
+      properties:
+        username:
+          $ref: '#/components/schemas/UserName'
+        token:
+          type: string
+          format: uuid
+        new_password:
+          $ref: '#/components/schemas/UserPassword'
+        confirm_password:
+          $ref: '#/components/schemas/UserPassword'          
     UpdateOtherPasswordRequest:
       type: object
       description: Update other's password request.
@@ -734,14 +797,19 @@ components:
       required:
         - username
         - password
+        - confirm_password
         - role
       properties:
         username:
           $ref: '#/components/schemas/UserName'
         password:
           $ref: '#/components/schemas/UserPassword'
+        confirm_password:
+          $ref: '#/components/schemas/UserPassword'
         role:
           $ref: '#/components/schemas/UserRole'
+        email:
+          $ref: '#/components/schemas/UserEmail'
     User:
       type: object
       properties:
@@ -751,12 +819,6 @@ components:
           $ref: '#/components/schemas/UserName'
         role:
           $ref: '#/components/schemas/UserRole'
-    UserLogin:
-      type: string
-      format: email
-      description: The user's login (i.e. it's email).
-      nullable: false
-      minLength: 1
     UserRole:
       type: string
       description: The user's role (i.e. admin or not).
@@ -765,6 +827,7 @@ components:
     UserPassword:
       type: string
       description: The user's password.
+      format: password
       nullable: false
       minLength: 1
     UserID:
@@ -776,6 +839,10 @@ components:
       description: The user's name.
       minLength: 1
       nullable: false
+    UserEmail:
+      type: string
+      description: The user's email.
+      format: email
     RegisterChannelRequest:
       type: object
       description: A RSS Channel creation request.

@@ -5,10 +5,12 @@ use secrecy::Secret;
 use serde::Deserialize;
 
 /// Request to create a new user
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 pub struct NewUserRequest {
     pub username: String,
     pub password: Secret<String>,
+    pub confirm_password: Secret<String>,
+    pub email: Option<Secret<String>>,
     pub role: UserRole,
 }
 
@@ -72,4 +74,17 @@ pub struct UpdateOtherPasswordRequest {
 #[derive(Debug, Deserialize)]
 pub struct ItemNotesRequest {
     pub notes: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordRequest {
+    pub email: Secret<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordTokenRequest {
+    pub token: Secret<String>,
+    pub username: String,
+    pub new_password: Secret<String>,
+    pub confirm_password: Secret<String>,
 }

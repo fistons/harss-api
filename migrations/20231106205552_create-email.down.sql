@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS users_email;
+ALTER TABLE users DROP COLUMN IF EXISTS email;

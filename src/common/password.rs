@@ -3,7 +3,7 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use rand_core::OsRng;
 use secrecy::{ExposeSecret, Secret};
 
-/// Encore the password using argon2
+/// Encode the password using argon2
 #[tracing::instrument(skip(password))]
 pub fn encode_password(password: &Secret<String>) -> String {
     let argon2 = Argon2::default();
