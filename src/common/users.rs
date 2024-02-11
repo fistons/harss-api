@@ -1,5 +1,6 @@
 use redis::{AsyncCommands, SetExpiry, SetOptions};
 use secrecy::{ExposeSecret, Secret};
+use serde::Serialize;
 use sqlx::Result;
 
 use crate::common::model::{PagedResult, User, UserRole};
@@ -9,7 +10,7 @@ use sha2::{Digest, Sha256};
 
 use deadpool_redis::Pool as RedisPool;
 
-use super::email::{send_confirm_email, send_reset_password_email};
+use super::email::send_email;
 
 /// Return the user matching the username
 #[tracing::instrument(skip(db))]
@@ -180,15 +181,17 @@ pub async fn reset_password_request(
 
     if let Some(user) = user {
         let key = format!("user.reset-token.{}", user.id);
-        let reset_token = generate_and_persist_token(redis, &key, 60 * 15).await?;
+        let ttl_in_minutes = 15;
+        let reset_token = generate_and_persist_token(redis, &key, ttl_in_minutes * 60).await?;
 
-        if let Err(e) = send_reset_password_email(
-            &user.username,
-            email.expose_secret(),
-            &reset_token.to_string(),
-        )
-        .await
-        {
+        let data = ResetPasswordData {
+            dest_name: &user.username,
+            dest_email: email.expose_secret(),
+            token: &reset_token,
+            token_ttl: ttl_in_minutes,
+        };
+
+        if let Err(e) = send_email("reset_password", &data).await {
             tracing::error!("Could not send email {}", e);
         }
     } else {
@@ -196,6 +199,14 @@ pub async fn reset_password_request(
     };
 
     Ok(())
+}
+
+#[derive(Serialize)]
+struct ResetPasswordData<'a> {
+    dest_name: &'a str,
+    dest_email: &'a str,
+    token: &'a str,
+    token_ttl: usize,
 }
 
 pub async fn update_user(
@@ -210,15 +221,16 @@ pub async fn update_user(
 
     if let Some(email) = email {
         let key = format!("user.confirm-email-token.{}", user.id);
-        let reset_token = generate_and_persist_token(redis, &key, 60 * 15 * 24).await?;
+        let ttl_in_days = 15;
+        let reset_token = generate_and_persist_token(redis, &key, ttl_in_days * 86400).await?;
+        let data = ResetPasswordData {
+            dest_name: &user.username,
+            dest_email: email.expose_secret(),
+            token: &reset_token,
+            token_ttl: ttl_in_days,
+        };
 
-        if let Err(e) = send_confirm_email(
-            &user.username,
-            email.expose_secret(),
-            &reset_token.to_string(),
-        )
-        .await
-        {
+        if let Err(e) = send_email("confirm_email", &data).await {
             tracing::error!("Could not send email {}", e);
         }
     }

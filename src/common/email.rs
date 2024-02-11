@@ -1,102 +1,68 @@
-use serde_json::{json, Value};
-use std::{env, error::Error};
+use anyhow::anyhow;
+use handlebars::{DirectorySourceOptions, Handlebars};
+use json_value_merge::Merge;
+use once_cell::sync::Lazy;
+use serde::Serialize;
+use serde_json::Value;
+use std::{env, error::Error, ops::Deref};
 use tracing::{debug, error, warn};
 
-pub async fn send_reset_password_email(
-    dest_name: &str,
-    dest_email: &str,
-    token: &str,
-) -> anyhow::Result<()> {
-    match EmailApiProperties::load() {
+static HANDLEBARS: Lazy<Handlebars> = Lazy::new(|| {
+    let mut handlebars = Handlebars::new();
+    let options = DirectorySourceOptions {
+        tpl_extension: ".json".to_owned(),
+        ..Default::default()
+    };
+    handlebars
+        .register_templates_directory("templates/", options)
+        .unwrap();
+    handlebars
+});
+
+static EMAIL_PROPERTIES: Lazy<anyhow::Result<EmailApiProperties>> =
+    Lazy::new(|| match EmailApiProperties::load() {
+        Ok(props) => Ok(props),
+        Err(err) => Err(anyhow!("Could not load Email properties: {:?}", err)),
+    });
+
+pub async fn send_email<T>(template_name: &str, email_content: &T) -> anyhow::Result<()>
+where
+    T: Serialize,
+{
+    match EMAIL_PROPERTIES.deref() {
         Ok(email_properties) => {
-            let body = json!(
-                {
-                    "from": {
-                        "name": &email_properties.email_sender_name,
-                        "email": &email_properties.email_sender_email,
-                    },
-                    "to": [
-                        {
-                            "name": dest_name,
-                            "email": dest_email,
-                        }
-                    ],
-                    "subject": "Your reset password token",
-                    "text": format!("Hello {dest_name},\n\nHere is your token: {token}.\nIt will be valid 15 minutes.\n\nBye."),
-                    "html": format!("Hello {dest_name},<br/><br/>Here is your token: <b>{token}</b>.
-                        <br/>It will be valid 15 minutes.<br/><br/>Bye."),
-                    "project_id": &email_properties.project_id
-                }
-            );
-            send_email(&body, &email_properties).await?;
+            let mut data = serde_json::json!(email_properties);
+            let content = serde_json::json!(email_content);
+
+            data.merge(&content);
+
+            let body: String = HANDLEBARS.render(template_name, &data)?;
+            let client = reqwest::Client::new();
+            let body: Value = serde_json::from_str(&body)?;
+            let response = client
+                .post(&email_properties.scw_email_endpoint)
+                .header("X-Auth-Token", &email_properties.scw_api_key)
+                .json(&body)
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                error!("Transactional email API response {:?}", response.status());
+                debug!("{:?}", response.text().await?)
+            } else {
+                debug!("Email sent");
+            }
         }
-
-        Err(e) => warn!(?e, "Could not load email properties. No email will be sent"),
-    }
-    Ok(())
-}
-
-pub async fn send_confirm_email(
-    dest_name: &str,
-    dest_email: &String,
-    token: &str,
-) -> anyhow::Result<()> {
-    match EmailApiProperties::load() {
-        Ok(email_properties) => {
-            let body = json!(
-                {
-                    "from": {
-                        "name": &email_properties.email_sender_name,
-                        "email": &email_properties.email_sender_email,
-                    },
-                    "to": [
-                        {
-                            "name": dest_name,
-                            "email": dest_email,
-                        }
-                    ],
-                    "subject": "Please confirm your email",
-                    "text": format!("Hello {dest_name},\n\nHere is your token: {token}.\nIt will be valid 15 minutes.\n\nBye."),
-                    "html": format!("Hello {dest_name},<br/><br/>Here is your token: <b>{token}</b>.
-                        <br/>It will be valid 15 minutes.<br/><br/>Bye."),
-                    "project_id": &email_properties.project_id
-                }
-            );
-            send_email(&body, &email_properties).await?;
-        }
-        Err(e) => warn!(?e, "Could not load email properties. No email will be sent"),
+        Err(e) => warn!("{e}"),
     }
 
     Ok(())
 }
 
-/// Send a reset password email.
-async fn send_email(
-    email_content: &Value,
-    email_properties: &EmailApiProperties,
-) -> anyhow::Result<()> {
-    let client = reqwest::Client::new();
-    debug!("Email body {email_content}");
-    let response = client
-        .post(&email_properties.scw_email_endpoint)
-        .header("X-Auth-Token", &email_properties.scw_api_key)
-        .json(email_content)
-        .send()
-        .await?;
-
-    if !response.status().is_success() {
-        error!("Email response {:?}", response.status());
-        debug!("{:?}", response.text().await?)
-    } else {
-        debug!("Email sent");
-    }
-
-    Ok(())
-}
-
+#[derive(Serialize)]
 struct EmailApiProperties {
-    email_sender_name: String,
-    email_sender_email: String,
+    sender_name: String,
+    sender_email: String,
     project_id: String,
     scw_email_endpoint: String,
     scw_api_key: String,
@@ -104,15 +70,15 @@ struct EmailApiProperties {
 
 impl EmailApiProperties {
     pub fn load() -> Result<Self, Box<dyn Error>> {
-        let email_sender_name = env::var("EMAIL_SENDER_NAME")?;
-        let email_sender_email = env::var("EMAIL_SENDER")?;
+        let sender_name = env::var("EMAIL_SENDER_NAME")?;
+        let sender_email = env::var("EMAIL_SENDER")?;
         let project_id = env::var("SCW_PROJECT_ID")?;
         let scw_email_endpoint = env::var("SCW_EMAIL_ENDPOINT")?;
         let scw_api_key = env::var("SCW_API_KEY")?;
 
         Ok(EmailApiProperties {
-            email_sender_name,
-            email_sender_email,
+            sender_name,
+            sender_email,
             project_id,
             scw_email_endpoint,
             scw_api_key,
