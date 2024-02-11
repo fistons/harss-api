@@ -20,8 +20,7 @@ services:
 #      OTEL_EXPORTER_JAEGER_AGENT_HOST: jaeger
 #      OTEL_EXPORTER_JAEGER_AGENT_PORT: 6831
       RUST_LOG: info,selectors::matching=none
-      DD_AGENT: http://host.docker.internal:8126
-      DD_ENABLED: true
+      DD_AGENT_ENDPOINT: http://host.docker.internal:8126
     restart: unless-stopped
     depends_on:
       migrations:
