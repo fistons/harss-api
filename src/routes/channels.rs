@@ -13,7 +13,6 @@ use crate::routes::errors::ApiError;
 use crate::startup::AppState;
 
 #[get("/channel/{id}")]
-#[tracing::instrument(skip(app_state))]
 pub async fn get_channel(
     id: web::Path<i32>,
     app_state: web::Data<AppState>,
@@ -29,7 +28,6 @@ pub async fn get_channel(
 }
 
 #[delete("/channel/{id}")]
-#[tracing::instrument(skip(app_state))]
 pub async fn unsubscribe_channel(
     id: web::Path<i32>,
     app_state: web::Data<AppState>,
@@ -42,7 +40,6 @@ pub async fn unsubscribe_channel(
 }
 
 #[get("/channel/{id}/errors")]
-#[tracing::instrument(skip(app_state))]
 pub async fn get_errors_of_channel(
     id: web::Path<i32>,
     app_state: web::Data<AppState>,
@@ -60,7 +57,6 @@ pub async fn get_errors_of_channel(
 }
 
 #[post("/channel/{id}/read")]
-#[tracing::instrument(skip(app_state))]
 pub async fn mark_channel_as_read(
     id: web::Path<i32>,
     app_state: web::Data<AppState>,
@@ -74,7 +70,6 @@ pub async fn mark_channel_as_read(
 }
 
 #[get("/channels")]
-#[tracing::instrument(skip(app_state))]
 pub async fn get_channels(
     app_state: web::Data<AppState>,
     page: web::Query<PageParameters>,
@@ -89,7 +84,6 @@ pub async fn get_channels(
 }
 
 #[post("/channels")]
-#[tracing::instrument(skip(app_state))]
 async fn new_channel(
     new_channel: web::Json<RegisterChannelRequest>,
     app_state: web::Data<AppState>,
@@ -108,7 +102,6 @@ async fn new_channel(
 }
 
 #[get("/channel/{chan_id}/items")]
-#[tracing::instrument(skip(app_state))]
 async fn get_items_of_channel(
     chan_id: web::Path<i32>,
     page: web::Query<PageParameters>,
@@ -132,7 +125,6 @@ async fn get_items_of_channel(
 }
 
 #[post("/channel/{id}/enable")]
-#[tracing::instrument(skip(app_state))]
 async fn enable_channel(
     id: web::Path<i32>,
     app_state: web::Data<AppState>,

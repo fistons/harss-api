@@ -2,9 +2,10 @@ use std::env;
 
 use crate::common::password::verify_password;
 use crate::common::DbError::RowNotFound;
-use actix_web::{get, patch, post, web, HttpResponse};
+use actix_web::{delete, get, patch, post, web, HttpResponse};
 use secrecy::{ExposeSecret, Secret};
 use serde_json::json;
+use tracing::debug;
 
 use crate::common::model::UserRole;
 use crate::common::users::{self, get_user_by_id};
@@ -19,7 +20,6 @@ use crate::routes::errors::ApiError;
 use crate::startup::AppState;
 
 #[post("/users")]
-#[tracing::instrument(skip(app_state))]
 async fn new_user(
     request: web::Json<NewUserRequest>,
     app_state: web::Data<AppState>,
@@ -34,10 +34,10 @@ async fn new_user(
         .unwrap_or_default();
 
     if allow_account_creation || admin {
-        tracing::debug!("Recording new user {:?}", request);
+        debug!("Recording new user {:?}", request);
 
         if request.role == UserRole::Admin && !admin {
-            tracing::debug!("Tried to create a new admin with a non admin user");
+            debug!("Tried to create a new admin with a non admin user");
             return Ok(HttpResponse::Unauthorized().finish());
         }
 
@@ -57,13 +57,12 @@ async fn new_user(
 
         Ok(HttpResponse::Created().json(json!({"id": user.id})))
     } else {
-        tracing::debug!("User creation attempt while it's disabled or creator is not admin");
+        debug!("User creation attempt while it's disabled or creator is not admin");
         Ok(HttpResponse::Unauthorized().finish())
     }
 }
 
 #[get("/users")]
-#[tracing::instrument(skip(app_state))]
 async fn list_users(
     app_state: web::Data<AppState>,
     page: web::Query<PageParameters>,
@@ -82,7 +81,6 @@ async fn list_users(
 }
 
 #[patch("/user/update-password")]
-#[tracing::instrument(skip(app_state), level = "debug")]
 async fn update_password(
     app_state: web::Data<AppState>,
     request: web::Json<UpdatePasswordRequest>,
@@ -110,7 +108,6 @@ async fn update_password(
 }
 
 #[post("/user/reset-password-request")]
-#[tracing::instrument(skip(app_state), level = "debug")]
 async fn reset_password_token(
     app_state: web::Data<AppState>,
     request: web::Json<ResetPasswordRequest>,
@@ -124,7 +121,6 @@ async fn reset_password_token(
 }
 
 #[post("/user/reset-password")]
-#[tracing::instrument(skip(app_state), level = "debug")]
 async fn reset_password(
     app_state: web::Data<AppState>,
     request: web::Json<ResetPasswordTokenRequest>,
@@ -149,7 +145,6 @@ async fn reset_password(
 }
 
 #[patch("/user/{user_id}/update-password")]
-#[tracing::instrument(skip(app_state), level = "debug")]
 async fn update_other_password(
     app_state: web::Data<AppState>,
     user_id: web::Path<i32>,
@@ -180,7 +175,6 @@ async fn update_other_password(
 }
 
 #[patch("/user")]
-#[tracing::instrument(skip(app_state))]
 async fn update_user(
     app_state: web::Data<AppState>,
     request: web::Json<UpdateUserRequest>,
@@ -208,6 +202,24 @@ async fn confirm_email(
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[delete("/user/{user_id}")]
+async fn delete_user(
+    app_state: web::Data<AppState>,
+    user_id: web::Path<i32>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    let db = &app_state.db;
+    let redis = &app_state.redis;
+
+    if !user.is_admin() && user.id != *user_id {
+        return Err(ApiError::NotFound("User not found".to_owned(), *user_id));
+    }
+
+    users::delete_user(db, redis, *user_id).await?;
+
+    Ok(HttpResponse::NoContent().json(json!({"you-will-be":"missed"})))
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(new_user)
         .service(list_users)
@@ -216,5 +228,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(reset_password_token)
         .service(update_user)
         .service(confirm_email)
+        .service(delete_user)
         .service(reset_password);
 }

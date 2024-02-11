@@ -2,7 +2,7 @@ use redis::{AsyncCommands, SetExpiry, SetOptions};
 use secrecy::{ExposeSecret, Secret};
 use serde::Serialize;
 use sqlx::Result;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::common::model::{PagedResult, User, UserRole};
 use crate::common::password::encode_password;
@@ -14,7 +14,6 @@ use deadpool_redis::Pool as RedisPool;
 use super::email::send_email;
 
 /// Return the user matching the username
-#[tracing::instrument(skip(db))]
 pub async fn get_user_by_username(db: &Pool, wanted_username: &str) -> Result<Option<User>> {
     sqlx::query_as!(
         User,
@@ -28,7 +27,6 @@ pub async fn get_user_by_username(db: &Pool, wanted_username: &str) -> Result<Op
 }
 
 /// Return the user matching the id
-#[tracing::instrument(skip(db), level = "debug")]
 pub async fn get_user_by_id(db: &Pool, id: i32) -> Result<Option<User>> {
     sqlx::query_as!(
         User,
@@ -42,7 +40,6 @@ pub async fn get_user_by_id(db: &Pool, id: i32) -> Result<Option<User>> {
 }
 
 /// Return the user matching the id
-#[tracing::instrument(skip(db), level = "debug")]
 pub async fn get_user_by_email(db: &Pool, email: &Secret<String>) -> Result<Option<User>> {
     let encoded_email = hash_email(&Some(email.clone()));
     tracing::info!("{:?} {encoded_email:?}", email.expose_secret());
@@ -58,7 +55,6 @@ pub async fn get_user_by_email(db: &Pool, email: &Secret<String>) -> Result<Opti
 }
 
 /// List all the users
-#[tracing::instrument(skip(db))]
 pub async fn list_users(db: &Pool, page_number: u64, page_size: u64) -> Result<PagedResult<User>> {
     let content = sqlx::query_as!(
         User,
@@ -91,7 +87,6 @@ pub async fn list_users(db: &Pool, page_number: u64, page_size: u64) -> Result<P
 }
 
 /// Create a new user
-#[tracing::instrument(skip(redis, db))]
 pub async fn create_user(
     redis: &RedisPool,
     db: &Pool,
@@ -126,7 +121,6 @@ pub async fn create_user(
 }
 
 /// Update a user's password
-#[tracing::instrument(skip(db))]
 pub async fn update_user_password(
     db: &Pool,
     user_id: i32,
@@ -177,7 +171,6 @@ pub async fn reset_password(
     Err(sqlx::Error::RowNotFound)?
 }
 
-#[tracing::instrument(skip(db, redis))]
 pub async fn reset_password_request(
     db: &Pool,
     redis: &RedisPool,
@@ -257,6 +250,17 @@ pub async fn confirm_email(
         }
     }
     Err(sqlx::Error::RowNotFound)?
+}
+
+pub async fn delete_user(db: &Pool, _redis: &RedisPool, user_id: i32) -> anyhow::Result<()> {
+    sqlx::query!(r#"DELETE FROM users WHERE id = $1"#, user_id)
+        .execute(db)
+        .await?;
+
+    //TODO remove trace of user in redis
+
+    info!("Deleted user {}", user_id);
+    Ok(())
 }
 
 async fn generate_and_persist_token(

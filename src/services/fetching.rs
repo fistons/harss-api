@@ -41,7 +41,7 @@ pub enum FetchError {
     UnexpectedError(#[from] anyhow::Error),
 }
 
-/// Process the whole database update in one single transaction. BALLSY.
+/// Check for RSS channel updates and proceed.
 #[tracing::instrument(skip_all)]
 pub async fn process(connection: &PgPool, redis: &RedisPool) -> Result<(), anyhow::Error> {
     let channels = get_all_enabled_channels(connection)
@@ -107,7 +107,7 @@ pub async fn update_channel(
         .entries
         .into_iter()
         .map(|entry| item_from_rss_entry(entry, channel.id, &now))
-        .filter(|item| item.publish_timestamp.unwrap_or(last_update) > last_update)
+        .filter(|item| item.publish_timestamp.unwrap_or(last_update) >= last_update)
         .collect::<Vec<NewItem>>();
 
     insert_items(connection, &new_items).await?;

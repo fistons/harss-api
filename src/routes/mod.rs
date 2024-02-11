@@ -56,7 +56,6 @@ mod errors {
 }
 
 #[get("/api/v1/ping")]
-#[tracing::instrument]
 pub async fn ping() -> HttpResponse {
     let mut rng = rand::thread_rng();
     let quotes = [

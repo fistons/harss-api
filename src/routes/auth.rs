@@ -23,7 +23,6 @@ pub struct RefreshRequest {
 }
 
 #[post("/auth/login")]
-#[tracing::instrument(skip(app_state))]
 pub async fn login(
     login: web::Json<LoginRequest>,
     app_state: web::Data<AppState>,
@@ -45,7 +44,6 @@ pub async fn login(
 }
 
 #[post("/auth/refresh")]
-#[tracing::instrument(skip(app_state))]
 pub async fn refresh_auth(
     refresh_token: web::Json<RefreshRequest>,
     app_state: web::Data<AppState>,
