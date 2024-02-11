@@ -164,6 +164,28 @@ paths:
           $ref: '#/components/responses/ObjectCreatedResponse'
         default:
           $ref: '#/components/responses/Error'
+  /user:
+    patch:
+      operationId: update_user
+      tags:
+        - Users
+      summary: Update your user
+      description: |
+        Update your user.
+
+        Currently support only email updates. An email will be sent to the new email address for confirmation.
+      requestBody:
+        required: true
+        description: User update request.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /channels/search:
     get:
       operationId: search_channels
@@ -791,6 +813,12 @@ components:
           $ref: '#/components/schemas/UserPassword'
         confirm_password:
           $ref: '#/components/schemas/UserPassword'
+    UpdateUserRequest:
+      type: object
+      description: User update request
+      properties:
+        email:
+          $ref: '#/components/schemas/UserEmail'
     CreateUserRequest:
       type: object
       description: User Creation request

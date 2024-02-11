@@ -177,7 +177,7 @@ async fn update_other_password(
     Ok(HttpResponse::NoContent().finish())
 }
 
-#[patch("/user/update")]
+#[patch("/user")]
 #[tracing::instrument(skip(app_state))]
 async fn update_user(
     app_state: web::Data<AppState>,
