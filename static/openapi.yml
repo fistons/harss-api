@@ -40,6 +40,25 @@ paths:
           $ref: '#/components/responses/DoomQuoteResponse'
         default:
           $ref: '#/components/responses/Error'
+  /user/confirm-email/{token}:
+    get:
+      operationId: confirm_email
+      tags:
+        - Users
+      summary: Confirm email adress
+      description: Confirm the user's email
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:    
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
   /user/update-password:
     patch:
       operationId: update_password
@@ -840,6 +859,10 @@ components:
           $ref: '#/components/schemas/UserEmail'
     User:
       type: object
+      required:
+        - id
+        - username
+        - role
       properties:
         id:
           $ref: '#/components/schemas/UserID'
@@ -847,6 +870,9 @@ components:
           $ref: '#/components/schemas/UserName'
         role:
           $ref: '#/components/schemas/UserRole'
+        email_verified:
+          type: boolean
+          description: Whether the user's email is verified, if the user has provided one.
     UserRole:
       type: string
       description: The user's role (i.e. admin or not).

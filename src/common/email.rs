@@ -66,6 +66,7 @@ struct EmailApiProperties {
     project_id: String,
     scw_email_endpoint: String,
     scw_api_key: String,
+    assets_path: String,
 }
 
 impl EmailApiProperties {
@@ -75,6 +76,7 @@ impl EmailApiProperties {
         let project_id = env::var("SCW_PROJECT_ID")?;
         let scw_email_endpoint = env::var("SCW_EMAIL_ENDPOINT")?;
         let scw_api_key = env::var("SCW_API_KEY")?;
+        let assets_path = env::var("ASSETS_PATH")?;
 
         Ok(EmailApiProperties {
             sender_name,
@@ -82,6 +84,7 @@ impl EmailApiProperties {
             project_id,
             scw_email_endpoint,
             scw_api_key,
+            assets_path,
         })
     }
 }

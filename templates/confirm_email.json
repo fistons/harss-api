@@ -10,7 +10,7 @@
     }
   ],
   "subject": "Please confirm your email",
-  "text": "Hello {{ dest_name }},\n\nHere is your token: {{ token }}.\nIt will be valid {{token_ttl}} days.\n\nBye.",
-  "html": "Hello {{ dest_name }},<br/><br/>Here is your token: <b>{{ token }}</b>.<br/>It will be valid {{token_ttl}} days.<br/><br/>Bye.",
+  "text": "Hello {{ dest_name }} {{user_id}},\n\nHere is your token: {{ token }}.\nIt will be valid {{token_ttl}} days.\n\nBye.",
+  "html": "Hello {{ dest_name }} {{user_id}},<br/><br/>Here is your token: <b>{{ token }}</b>.<br/>It will be valid {{token_ttl}} days.<br/><br/>Bye.",
   "project_id": "{{ project_id }}"
 }

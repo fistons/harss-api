@@ -3,7 +3,7 @@ use std::env;
 use crate::common::password::verify_password;
 use crate::common::DbError::RowNotFound;
 use actix_web::{get, patch, post, web, HttpResponse};
-use secrecy::ExposeSecret;
+use secrecy::{ExposeSecret, Secret};
 use serde_json::json;
 
 use crate::common::model::UserRole;
@@ -26,6 +26,7 @@ async fn new_user(
     user: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
+    let redis = &app_state.redis;
 
     let admin = user.map(|x| x.is_admin()).unwrap_or(false);
     let allow_account_creation = env::var("RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION")
@@ -45,6 +46,7 @@ async fn new_user(
         }
 
         let user = users::create_user(
+            redis,
             connection,
             &request.username,
             &request.password,
@@ -192,6 +194,20 @@ async fn update_user(
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[get("/user/confirm-email/{token}")]
+async fn confirm_email(
+    app_state: web::Data<AppState>,
+    token: web::Path<Secret<String>>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, ApiError> {
+    let connection = &app_state.db;
+    let redis = &app_state.redis;
+
+    users::confirm_email(connection, redis, user.id, &token).await?;
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(new_user)
         .service(list_users)
@@ -199,5 +215,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(update_other_password)
         .service(reset_password_token)
         .service(update_user)
+        .service(confirm_email)
         .service(reset_password);
 }
