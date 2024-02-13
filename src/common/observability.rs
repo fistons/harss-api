@@ -1,6 +1,6 @@
 use std::env::var;
 
-use opentelemetry::sdk::trace::{self, RandomIdGenerator, Sampler, Tracer};
+use tracing::info;
 use tracing::{subscriber::set_global_default, Subscriber};
 use tracing_log::LogTracer;
 use tracing_opentelemetry::OpenTelemetryLayer;
@@ -24,41 +24,36 @@ pub fn init_subscriber(subscriber: impl Subscriber + Sync + Send) {
     set_global_default(subscriber).expect("Failed to set subscriber");
 }
 
-fn build_jaeger<S>(name: &str) -> Option<OpenTelemetryLayer<S, Tracer>>
+fn build_jaeger<S>(name: &str) -> Option<OpenTelemetryLayer<S, opentelemetry_sdk::trace::Tracer>>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    // Building the jaeger layer, if needed
-    if var("JAEGER_AGENT_ENDPOINT").is_ok() {
-        opentelemetry_jaeger::new_agent_pipeline()
-            .with_service_name(name)
-            .install_batch(opentelemetry::runtime::Tokio)
-            .map_err(|err| eprintln!("Jaeger error {:?}", err))
-            .ok()
-            .map(|x| tracing_opentelemetry::layer().with_tracer(x))
-    } else {
-        None
-    }
+    var("JAEGER_AGENT_ENDPOINT")
+        .map(|jaeger_endpoint| {
+            info!("Setting up Jaeger agent on {}", jaeger_endpoint);
+            opentelemetry_jaeger::new_agent_pipeline()
+                .with_service_name(name)
+                .with_endpoint(jaeger_endpoint)
+                .install_batch(opentelemetry_sdk::runtime::Tokio)
+                .ok()
+                .map(|x| tracing_opentelemetry::layer().with_tracer(x))
+        })
+        .ok()?
 }
 
-fn build_datadog<S>(name: &str) -> Option<OpenTelemetryLayer<S, Tracer>>
+fn build_datadog<S>(name: &str) -> Option<OpenTelemetryLayer<S, opentelemetry_sdk::trace::Tracer>>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    if let Ok(dd_agent) = var("DD_AGENT_ENDPOINT") {
-        opentelemetry_datadog::new_pipeline()
-            .with_service_name(name)
-            .with_agent_endpoint(dd_agent)
-            .with_trace_config(
-                trace::config()
-                    .with_sampler(Sampler::AlwaysOn) //TODO Add sampling, one day.
-                    .with_id_generator(RandomIdGenerator::default()),
-            )
-            .install_batch(opentelemetry::runtime::Tokio)
-            .map_err(|err| eprintln!("Datadog error {:?}", err))
-            .ok()
-            .map(|x| tracing_opentelemetry::layer().with_tracer(x))
-    } else {
-        None
-    }
+    var("DD_AGENT_ENDPOINT")
+        .map(|dd_agent_endpoint| {
+            info!("Setting up Datadog agent on {}", dd_agent_endpoint);
+            opentelemetry_datadog::new_pipeline()
+                .with_service_name(name)
+                .with_agent_endpoint(dd_agent_endpoint)
+                .install_batch(opentelemetry_sdk::runtime::Tokio)
+                .ok()
+                .map(|x| tracing_opentelemetry::layer().with_tracer(x))
+        })
+        .ok()?
 }
