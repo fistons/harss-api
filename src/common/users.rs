@@ -155,7 +155,7 @@ pub async fn reset_password(
 
     let user = get_user_by_username(db, username).await?;
     if let Some(user) = user {
-        let key = format!("user.reset-token.{}", user.id);
+        let key = format!("user.{}.reset-token", user.id);
         let registered_token: Option<String> = redis.get().await?.get(&key).await?;
         if let Some(registered_token) = registered_token {
             if registered_token == *token {
@@ -179,7 +179,7 @@ pub async fn reset_password_request(
     let user = get_user_by_email(db, email).await?;
 
     if let Some(user) = user {
-        let key = format!("user.reset-token.{}", user.id);
+        let key = format!("user.{}.reset-token", user.id);
         let ttl_in_minutes = 15;
         let reset_token = generate_and_persist_token(redis, &key, ttl_in_minutes * 60).await?;
 
@@ -232,7 +232,7 @@ pub async fn confirm_email(
     user_id: i32,
     token: &Secret<String>,
 ) -> anyhow::Result<()> {
-    let key = format!("user.confirm-email-token.{}", user_id);
+    let key = format!("user.{}.confirm-email-token", user_id);
     let registered_token: Option<String> = redis.get().await?.get(&key).await?;
 
     if let Some(registered_token) = registered_token {
@@ -252,14 +252,32 @@ pub async fn confirm_email(
     Err(sqlx::Error::RowNotFound)?
 }
 
-pub async fn delete_user(db: &Pool, _redis: &RedisPool, user_id: i32) -> anyhow::Result<()> {
-    sqlx::query!(r#"DELETE FROM users WHERE id = $1"#, user_id)
+pub async fn delete_user(db: &Pool, redis: &RedisPool, user_id: i32) -> anyhow::Result<()> {
+    let result = sqlx::query!(r#"DELETE FROM users WHERE id = $1"#, user_id)
         .execute(db)
         .await?;
+    if result.rows_affected() == 0 {
+        return Err(sqlx::Error::RowNotFound)?;
+    }
 
-    //TODO remove trace of user in redis
-
+    delete_user_redis_keys(redis, user_id).await?;
     info!("Deleted user {}", user_id);
+    Ok(())
+}
+
+async fn delete_user_redis_keys(redis: &RedisPool, user_id: i32) -> anyhow::Result<()> {
+    debug!("Removing redis keys of user {}", user_id);
+    for key in redis
+        .get()
+        .await?
+        .keys::<String, Vec<String>>(format!("user.{}.*", user_id))
+        .await?
+        .iter()
+    {
+        debug!("Removing redis keys {} of user {}", key, user_id);
+        redis.get().await?.del::<&str, usize>(key).await?;
+    }
+
     Ok(())
 }
 
@@ -298,8 +316,8 @@ async fn send_confirmation_email(
     user: &User,
     email: &Secret<String>,
 ) -> anyhow::Result<()> {
-    let key = format!("user.confirm-email-token.{}", user.id);
-    let ttl_in_days = 15;
+    let key = format!("user.{}.confirm-email-token", user.id);
+    let ttl_in_days = 15; //TODO variable please
     let reset_token = generate_and_persist_token(redis, &key, ttl_in_days * 86400).await?;
     let data = ResetPasswordData {
         dest_name: &user.username,
