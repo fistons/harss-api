@@ -33,6 +33,8 @@ tracing = { version = "0.1", features = ["log"] }
 thiserror = "1"
 anyhow = "1"
 reqwest = { version = "0.11", features = ["tokio-rustls", "rustls-tls", "json"] }
+reqwest-tracing = { version = "0.4", features = ["opentelemetry_0_21"] }
+reqwest-middleware = "0.2"
 feed-rs = "1"
 sqlx = { version = "0.7", features = ["runtime-tokio", "uuid", "macros", "postgres", "chrono", "migrate"] }
 fake = { version = "2.8", features = ["chrono"] }
@@ -43,7 +45,7 @@ opentelemetry = { version = "0.21"}
 opentelemetry_sdk = {version="0.21", features = ["trace"]}
 opentelemetry-jaeger = { version = "0.20", features = ["rt-tokio"] }
 opentelemetry-datadog = { version = "0.9", features = ["reqwest", "reqwest-client"] }
-scraper = "0.17"
+scraper = "0.18"
 once_cell = "1"
 rand = "0.8.5"
 tokio-cron-scheduler = "0.9.4"

@@ -87,6 +87,7 @@ async fn update_password(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
+    let redis = &app_state.redis;
 
     if request.new_password.expose_secret() != request.confirm_password.expose_secret() {
         return Err(ApiError::PasswordMismatch);
@@ -103,7 +104,9 @@ async fn update_password(
     if let Err(e) = users::update_user_password(connection, user.id, &request.new_password).await {
         return Err(ApiError::DatabaseError(e));
     }
-    //TODO: Invalid token?
+
+    users::delete_user_redis_keys(redis, user.id).await?;
+
     Ok(HttpResponse::NoContent().finish())
 }
 
@@ -152,6 +155,7 @@ async fn update_other_password(
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
     let connection = &app_state.db;
+    let redis = &app_state.redis;
     let user_id = user_id.into_inner();
 
     if !user.is_admin() {
@@ -170,7 +174,9 @@ async fn update_other_password(
             _ => return Err(ApiError::DatabaseError(e)),
         };
     }
-    //TODO: We should probably invalid the current refresh token in redis
+
+    users::delete_user_redis_keys(redis, user_id).await?;
+
     Ok(HttpResponse::NoContent().finish())
 }
 

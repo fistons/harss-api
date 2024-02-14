@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use serde::Serialize;
 use serde_json::Value;
 use std::{env, error::Error, ops::Deref};
-use tracing::{debug, error, warn};
+use tracing::{debug, error, instrument, warn};
 
 static HANDLEBARS: Lazy<Handlebars> = Lazy::new(|| {
     let mut handlebars = Handlebars::new();
@@ -25,6 +25,7 @@ static EMAIL_PROPERTIES: Lazy<anyhow::Result<EmailApiProperties>> =
         Err(err) => Err(anyhow!("Could not load Email properties: {:?}", err)),
     });
 
+#[instrument(skip(email_content))]
 pub async fn send_email<T>(template_name: &str, email_content: &T) -> anyhow::Result<()>
 where
     T: Serialize,

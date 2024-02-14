@@ -2,7 +2,7 @@ use redis::{AsyncCommands, SetExpiry, SetOptions};
 use secrecy::{ExposeSecret, Secret};
 use serde::Serialize;
 use sqlx::Result;
-use tracing::{debug, info};
+use tracing::{debug, debug_span, info, instrument, Instrument};
 
 use crate::common::model::{PagedResult, User, UserRole};
 use crate::common::password::encode_password;
@@ -14,6 +14,7 @@ use deadpool_redis::Pool as RedisPool;
 use super::email::send_email;
 
 /// Return the user matching the username
+#[instrument(skip(db))]
 pub async fn get_user_by_username(db: &Pool, wanted_username: &str) -> Result<Option<User>> {
     sqlx::query_as!(
         User,
@@ -27,6 +28,7 @@ pub async fn get_user_by_username(db: &Pool, wanted_username: &str) -> Result<Op
 }
 
 /// Return the user matching the id
+#[instrument(skip(db))]
 pub async fn get_user_by_id(db: &Pool, id: i32) -> Result<Option<User>> {
     sqlx::query_as!(
         User,
@@ -40,6 +42,7 @@ pub async fn get_user_by_id(db: &Pool, id: i32) -> Result<Option<User>> {
 }
 
 /// Return the user matching the id
+#[instrument(skip(db))]
 pub async fn get_user_by_email(db: &Pool, email: &Secret<String>) -> Result<Option<User>> {
     let encoded_email = hash_email(&Some(email.clone()));
     tracing::info!("{:?} {encoded_email:?}", email.expose_secret());
@@ -55,6 +58,7 @@ pub async fn get_user_by_email(db: &Pool, email: &Secret<String>) -> Result<Opti
 }
 
 /// List all the users
+#[instrument(skip(db))]
 pub async fn list_users(db: &Pool, page_number: u64, page_size: u64) -> Result<PagedResult<User>> {
     let content = sqlx::query_as!(
         User,
@@ -87,6 +91,7 @@ pub async fn list_users(db: &Pool, page_number: u64, page_size: u64) -> Result<P
 }
 
 /// Create a new user
+#[instrument(skip(db, redis, password, email))]
 pub async fn create_user(
     redis: &RedisPool,
     db: &Pool,
@@ -121,6 +126,7 @@ pub async fn create_user(
 }
 
 /// Update a user's password
+#[instrument(skip(db, new_password))]
 pub async fn update_user_password(
     db: &Pool,
     user_id: i32,
@@ -144,6 +150,7 @@ pub async fn update_user_password(
     Ok(())
 }
 
+#[instrument(skip(db, redis, new_password, token))]
 pub async fn reset_password(
     db: &Pool,
     redis: &RedisPool,
@@ -156,7 +163,12 @@ pub async fn reset_password(
     let user = get_user_by_username(db, username).await?;
     if let Some(user) = user {
         let key = format!("user.{}.reset-token", user.id);
-        let registered_token: Option<String> = redis.get().await?.get(&key).await?;
+        let registered_token: Option<String> = redis
+            .get()
+            .await?
+            .get(&key)
+            .instrument(debug_span!("get_redis_key"))
+            .await?;
         if let Some(registered_token) = registered_token {
             if registered_token == *token {
                 update_user_password(db, user.id, new_password).await?;
@@ -171,6 +183,7 @@ pub async fn reset_password(
     Err(sqlx::Error::RowNotFound)?
 }
 
+#[instrument(skip_all)]
 pub async fn reset_password_request(
     db: &Pool,
     redis: &RedisPool,
@@ -201,6 +214,7 @@ pub async fn reset_password_request(
     Ok(())
 }
 
+#[instrument(skip(db, redis, email))]
 pub async fn update_user(
     db: &Pool,
     redis: &RedisPool,
@@ -226,6 +240,7 @@ pub async fn update_user(
     Ok(())
 }
 
+#[instrument(skip(db, redis, token))]
 pub async fn confirm_email(
     db: &Pool,
     redis: &RedisPool,
@@ -244,7 +259,12 @@ pub async fn confirm_email(
             .execute(db)
             .await?;
 
-            redis.get().await?.del::<String, usize>(key).await?;
+            redis
+                .get()
+                .await?
+                .del::<String, usize>(key)
+                .instrument(debug_span!("delete_redis_confirm_email_token"))
+                .await?;
 
             return Ok(());
         }
@@ -252,6 +272,7 @@ pub async fn confirm_email(
     Err(sqlx::Error::RowNotFound)?
 }
 
+#[instrument(skip(db, redis))]
 pub async fn delete_user(db: &Pool, redis: &RedisPool, user_id: i32) -> anyhow::Result<()> {
     let result = sqlx::query!(r#"DELETE FROM users WHERE id = $1"#, user_id)
         .execute(db)
@@ -265,7 +286,8 @@ pub async fn delete_user(db: &Pool, redis: &RedisPool, user_id: i32) -> anyhow::
     Ok(())
 }
 
-async fn delete_user_redis_keys(redis: &RedisPool, user_id: i32) -> anyhow::Result<()> {
+#[instrument(skip(redis))]
+pub async fn delete_user_redis_keys(redis: &RedisPool, user_id: i32) -> anyhow::Result<()> {
     debug!("Removing redis keys of user {}", user_id);
     for key in redis
         .get()
@@ -281,6 +303,7 @@ async fn delete_user_redis_keys(redis: &RedisPool, user_id: i32) -> anyhow::Resu
     Ok(())
 }
 
+#[instrument(skip(redis))]
 async fn generate_and_persist_token(
     redis: &RedisPool,
     key: &str,
@@ -298,6 +321,7 @@ async fn generate_and_persist_token(
     Ok(token)
 }
 
+#[instrument]
 /// Hash an email adresse using sha256
 fn hash_email(email: &Option<Secret<String>>) -> Option<String> {
     if let Some(email) = email {
@@ -311,6 +335,7 @@ fn hash_email(email: &Option<Secret<String>>) -> Option<String> {
     None
 }
 
+#[instrument(skip(redis))]
 async fn send_confirmation_email(
     redis: &RedisPool,
     user: &User,

@@ -4,7 +4,7 @@ use rand_core::OsRng;
 use secrecy::{ExposeSecret, Secret};
 
 /// Encode the password using argon2
-#[tracing::instrument(skip(password))]
+#[tracing::instrument(skip_all)]
 pub fn encode_password(password: &Secret<String>) -> String {
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);

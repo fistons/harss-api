@@ -4,8 +4,10 @@ use feed_rs::parser::ParseFeedError;
 pub enum RssParsingError {
     #[error("Non OK Http status returned: {0}")]
     NonOkStatus(u16),
-    #[error("Error while fetching the feed: {0}")]
-    HttpError(#[from] reqwest::Error),
+    #[error("Error while reading response: {0}")]
+    ReadResponsError(#[from] reqwest::Error),
+    #[error("Error while building request: {0}")]
+    HttpError(#[from] reqwest_middleware::Error),
     #[error("Parse error: {0}")]
     ParseFeedError(#[from] ParseFeedError),
 }

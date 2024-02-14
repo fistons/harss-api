@@ -4,6 +4,7 @@ use redis::AsyncCommands;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use serde_json::json;
+use tracing::{debug_span, Instrument};
 use uuid::Uuid;
 
 use crate::common::users::get_user_by_username;
@@ -34,9 +35,11 @@ pub async fn login(
         crate::auth::get_jwt_from_login_request(&login.login, &login.password, connection).await?;
     let refresh_token = format!("user.{}.{}", &login.login, Uuid::new_v4());
 
-    let mut redis = redis_pool.get().await?;
-    redis
+    redis_pool
+        .get()
+        .await?
         .set_ex::<_, _, ()>(&refresh_token, 1, 60 * 60 * 24 * 5)
+        .instrument(debug_span!("set_refresh_token_in_redis"))
         .await?;
 
     Ok(HttpResponse::Ok()
