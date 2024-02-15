@@ -72,6 +72,11 @@ pub struct UpdateOtherPasswordRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct UpdateUserRequest {
+    pub email: Option<Secret<String>>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct ItemNotesRequest {
     pub notes: String,
 }

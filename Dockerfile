@@ -10,6 +10,7 @@ RUN cp /usr/share/zoneinfo/Europe/Paris /etc/localtime
 
 COPY $TARGETARCH/harss-api /usr/local/bin/harss-api
 COPY static/ static/
+COPY templates/ templates/
 RUN chmod +x /usr/local/bin/harss-api
 
 EXPOSE 8080

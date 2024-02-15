@@ -8,7 +8,7 @@ services:
     links:
       - redis
       - postgres
-#      - jaeger
+      # - jaeger
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres/rss-aggregator
       JWT_SECRET: 6ce319be-880a-419f-a39e-0058bceec28a
@@ -16,12 +16,9 @@ services:
       RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION: false
       REDIS_URL: redis://redis
       POLLING_INTERVAL: 300
-#      JAEGER_ENABLED: true
-#      OTEL_EXPORTER_JAEGER_AGENT_HOST: jaeger
-#      OTEL_EXPORTER_JAEGER_AGENT_PORT: 6831
+      # JAEGER_AGENT_ENDPOINT: jaeger:6831
+      # DD_AGENT_ENDPOINT: http://host.docker.internal:8126
       RUST_LOG: info,selectors::matching=none
-      DD_AGENT: http://host.docker.internal:8126
-      DD_ENABLED: true
     restart: unless-stopped
     depends_on:
       migrations:
@@ -30,8 +27,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-#      jaeger:
-#        condition: service_started
+      # jaeger:
+      #   condition: service_started
     healthcheck: 
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/ping"]
   redis:
@@ -66,10 +63,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-#  jaeger:
-#    image: jaegertracing/all-in-one
-#    ports:
-#      - 16686:16686 # Expose Web UI
-#    restart: unless-stopped
+  # jaeger:
+  #   image: jaegertracing/all-in-one
+  #   ports:
+  #     - 16686:16686 # Expose Web UI
+  #   restart: unless-stopped
 volumes:
   database: {}

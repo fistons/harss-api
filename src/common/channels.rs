@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::Result;
 use tokio::task;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 use crate::common::model::{Channel, ChannelError, PagedResult, UsersChannel};
 use crate::common::rss::check_feed;
@@ -10,7 +10,7 @@ use crate::services::fetching;
 use deadpool_redis::Pool as RedisPool;
 
 /// Returns the whole list of errors associated to the given channel id.
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn select_errors_by_chan_id(
     db: &Pool,
     channel_id: i32,
@@ -40,7 +40,7 @@ pub async fn select_errors_by_chan_id(
 }
 
 /// Returns an optional given channel with the given user's metadata.
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn select_by_id_and_user_id(
     db: &Pool,
     channel_id: i32,
@@ -76,19 +76,19 @@ pub async fn select_by_id_and_user_id(
 }
 
 /// Mark the given channel as read for the given user
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn mark_channel_as_read(db: &Pool, channel_id: i32, user_id: i32) -> Result<()> {
     mark_channel(db, channel_id, user_id, true).await
 }
 
 /// Mark the given channel as unread for the given user
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn mark_channel_as_unread(db: &Pool, channel_id: i32, user_id: i32) -> Result<()> {
     mark_channel(db, channel_id, user_id, false).await
 }
 
 ///  Select all the channels of a user, along side the total number of items
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn select_page_by_user_id(
     db: &Pool,
     user_id: i32,
@@ -157,7 +157,7 @@ pub async fn select_page_by_user_id(
 }
 
 /// Create or linked an existing channel to a user, returning the channel id
-#[tracing::instrument(skip(db, redis))]
+#[instrument(skip(db, redis))]
 pub async fn create_or_link_channel(
     db: &Pool,
     redis: &RedisPool,
@@ -214,7 +214,7 @@ pub async fn create_or_link_channel(
 }
 
 /// Enable a channel and reset it's failure count
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn enable_channel(db: &Pool, channel_id: i32) -> Result<()> {
     sqlx::query!(
         r#"
@@ -229,6 +229,7 @@ pub async fn enable_channel(db: &Pool, channel_id: i32) -> Result<()> {
 }
 
 /// Disable a channel
+#[instrument(skip(db))]
 pub async fn disable_channel(db: &Pool, channel_id: i32) -> Result<()> {
     sqlx::query!(
         r#"
@@ -243,7 +244,7 @@ pub async fn disable_channel(db: &Pool, channel_id: i32) -> Result<()> {
 }
 
 /// Disable channels whom failure count is higher than the given threshold
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn disable_channels(db: &Pool, threshold: u32) -> Result<()> {
     let disabled_channels = sqlx::query!(
         r#"
@@ -260,7 +261,7 @@ pub async fn disable_channels(db: &Pool, threshold: u32) -> Result<()> {
 }
 
 /// Return the list of user IDs of of a given channel
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn get_user_ids_of_channel(db: &Pool, channel_id: i32) -> Result<Vec<i32>> {
     sqlx::query_scalar!(
         r#"
@@ -273,7 +274,7 @@ pub async fn get_user_ids_of_channel(db: &Pool, channel_id: i32) -> Result<Vec<i
 }
 
 /// Return the list of all enabled channels
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn get_all_enabled_channels(db: &Pool) -> Result<Vec<Channel>> {
     sqlx::query_as!(
         Channel,
@@ -286,7 +287,7 @@ pub async fn get_all_enabled_channels(db: &Pool) -> Result<Vec<Channel>> {
 }
 
 /// Update the last fetched timestamp of a channel
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn update_last_fetched(db: &Pool, channel_id: i32, date: &DateTime<Utc>) -> Result<()> {
     sqlx::query!(
         r#"
@@ -302,7 +303,7 @@ pub async fn update_last_fetched(db: &Pool, channel_id: i32, date: &DateTime<Utc
 }
 
 /// Retrieve the last update of channel
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn get_last_update(db: &Pool, channel_id: &i32) -> Result<Option<DateTime<Utc>>> {
     let last_update = sqlx::query!(
         r#"
@@ -318,7 +319,7 @@ pub async fn get_last_update(db: &Pool, channel_id: &i32) -> Result<Option<DateT
 
 /// Update the failure count of the given channel and insert the error in the dedicated table
 /// TODO: Transaction
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn fail_channel(db: &Pool, channel_id: i32, error_cause: &str) -> Result<()> {
     let mut transaction = db.begin().await?;
     sqlx::query!(
@@ -346,7 +347,7 @@ pub async fn fail_channel(db: &Pool, channel_id: i32, error_cause: &str) -> Resu
 }
 
 /// # Create a new channel in the database, returning the created channel id
-#[tracing::instrument(skip(db, redis))]
+#[instrument(skip(db, redis))]
 async fn create_new_channel(
     db: &Pool,
     redis: &RedisPool,
@@ -385,7 +386,6 @@ async fn create_new_channel(
     Ok((channel_id, channel_name))
 }
 
-#[tracing::instrument(skip(db))]
 async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> Result<()> {
     sqlx::query!(
         r#"
@@ -402,7 +402,7 @@ async fn mark_channel(db: &Pool, channel_id: i32, user_id: i32, read: bool) -> R
 }
 
 /// Unsubscribe a user from a channel
-#[tracing::instrument(skip(db))]
+#[instrument(skip(db))]
 pub async fn unsubscribe_channel(db: &Pool, channel_id: i32, user_id: i32) -> Result<()> {
     let result = sqlx::query!(
         r#"

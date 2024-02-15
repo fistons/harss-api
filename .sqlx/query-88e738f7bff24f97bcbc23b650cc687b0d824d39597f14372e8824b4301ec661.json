@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT id, username, password, role as \"role: UserRole\" FROM users WHERE id = $1\n        ",
+  "query": "\n        SELECT id, username, password, role as \"role: UserRole\", email_verified FROM users WHERE username = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -32,19 +32,25 @@
             }
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "email_verified",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
       "Left": [
-        "Int4"
+        "Text"
       ]
     },
     "nullable": [
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "1de9955b63c687976d41f79596c0bae30cf2748678be1cf4a2b0df0ea96f9648"
+  "hash": "88e738f7bff24f97bcbc23b650cc687b0d824d39597f14372e8824b4301ec661"
 }

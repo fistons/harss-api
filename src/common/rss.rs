@@ -1,6 +1,10 @@
 use feed_rs::model::Feed;
 use once_cell::sync::Lazy;
+use reqwest::Client;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_tracing::TracingMiddleware;
 use scraper::Selector;
+use tracing::instrument;
 
 use crate::common::errors::RssParsingError;
 use crate::common::errors::RssParsingError::NonOkStatus;
@@ -11,14 +15,18 @@ static ALTERNATE_LINK_HEADER: Lazy<Selector> = Lazy::new(|| {
         .unwrap()
 });
 
-static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
-    reqwest::Client::builder()
+static CLIENT: Lazy<ClientWithMiddleware> = Lazy::new(|| {
+    let client = Client::builder()
         .user_agent("rss-aggregator checker (+https://github.com/fistons/rss-aggregator)")
         .build()
-        .expect("Could not build client")
+        .expect("Could not build client");
+
+    ClientBuilder::new(client)
+        .with(TracingMiddleware::default())
+        .build()
 });
 
-#[tracing::instrument]
+#[instrument]
 async fn download_url(url: &str) -> anyhow::Result<String> {
     let response = reqwest::get(url).await?;
     if !response.status().is_success() {
@@ -33,7 +41,7 @@ async fn download_url(url: &str) -> anyhow::Result<String> {
     Ok(String::from_utf8_lossy(&url_content).to_string())
 }
 
-#[tracing::instrument(skip(content))]
+#[instrument(skip(content))]
 pub fn look_for_rss(content: &str) -> Vec<FoundRssChannel> {
     let document = scraper::Html::parse_document(content);
 
@@ -47,14 +55,14 @@ pub fn look_for_rss(content: &str) -> Vec<FoundRssChannel> {
         .collect()
 }
 
-#[tracing::instrument]
+#[instrument]
 pub async fn download_and_look_for_rss(url: &str) -> anyhow::Result<Vec<FoundRssChannel>> {
     let content = download_url(url).await?;
     Ok(look_for_rss(&content))
 }
 
 /// Check that the feed is correct
-#[tracing::instrument]
+#[instrument]
 pub async fn check_feed(url: &str) -> Result<Feed, RssParsingError> {
     let response = CLIENT.get(url).send().await?;
     if !response.status().is_success() {

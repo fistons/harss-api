@@ -37,6 +37,8 @@ pub struct User {
     #[serde(skip)] // Never ever serialize this field
     pub password: String,
     pub role: UserRole,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email_verified: Option<bool>,
 }
 
 #[derive(sqlx::Type, Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]

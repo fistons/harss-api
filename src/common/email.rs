@@ -1,49 +1,93 @@
-use serde_json::{json, Value};
-use std::env;
+use anyhow::anyhow;
+use handlebars::{DirectorySourceOptions, Handlebars};
+use json_value_merge::Merge;
+use once_cell::sync::Lazy;
+use serde::Serialize;
+use serde_json::Value;
+use std::{env, error::Error, ops::Deref};
+use tracing::{debug, error, instrument, warn};
 
-/// Send a reset password email.
-pub async fn send_reset_password_email(
-    dest_email: &String,
-    dest_name: &str,
-    token: &str,
-) -> anyhow::Result<()> {
-    let client = reqwest::Client::new();
-    let response = client
-        .post(env::var("SCW_EMAIL_ENDPOINT").unwrap())
-        .header("X-Auth-Token", env::var("SCW_API_KEY").unwrap())
-        .json(&build_request_body(dest_name, dest_email, token))
-        .send()
-        .await?;
+static HANDLEBARS: Lazy<Handlebars> = Lazy::new(|| {
+    let mut handlebars = Handlebars::new();
+    let options = DirectorySourceOptions {
+        tpl_extension: ".json".to_owned(),
+        ..Default::default()
+    };
+    handlebars
+        .register_templates_directory("templates/", options)
+        .unwrap();
+    handlebars
+});
 
-    tracing::debug!("Reset password email response {:?}", response);
+static EMAIL_PROPERTIES: Lazy<anyhow::Result<EmailApiProperties>> =
+    Lazy::new(|| match EmailApiProperties::load() {
+        Ok(props) => Ok(props),
+        Err(err) => Err(anyhow!("Could not load Email properties: {:?}", err)),
+    });
+
+#[instrument(skip(email_content))]
+pub async fn send_email<T>(template_name: &str, email_content: &T) -> anyhow::Result<()>
+where
+    T: Serialize,
+{
+    match EMAIL_PROPERTIES.deref() {
+        Ok(email_properties) => {
+            let mut data = serde_json::json!(email_properties);
+            let content = serde_json::json!(email_content);
+
+            data.merge(&content);
+
+            let body: String = HANDLEBARS.render(template_name, &data)?;
+            let client = reqwest::Client::new();
+            let body: Value = serde_json::from_str(&body)?;
+            let response = client
+                .post(&email_properties.scw_email_endpoint)
+                .header("X-Auth-Token", &email_properties.scw_api_key)
+                .json(&body)
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                error!("Transactional email API response {:?}", response.status());
+                debug!("{:?}", response.text().await?)
+            } else {
+                debug!("Email sent");
+            }
+        }
+        Err(e) => warn!("{e}"),
+    }
 
     Ok(())
 }
 
-fn build_request_body(dest_name: &str, dest_email: &String, token: &str) -> Value {
-    let email_sender_name = env::var("EMAIL_SENDER_NAME").unwrap();
-    let email_sender_email = env::var("EMAIL_SENDER").unwrap();
-    let project_id = env::var("SCW_PROJECT_ID").unwrap();
+#[derive(Serialize)]
+struct EmailApiProperties {
+    sender_name: String,
+    sender_email: String,
+    project_id: String,
+    scw_email_endpoint: String,
+    scw_api_key: String,
+    assets_path: String,
+}
 
-    json!(
-        {
-            "from": {
-                "name": email_sender_name,
-                "email": email_sender_email,
-            },
-            "to": [
-                {
-                    "name": dest_name,
-                    "email": dest_email,
-                }
-            ],
-            "subject": "Your reset password token",
-            "text": format!("Hello {dest_name},\n\nHere is your token: {token}.\nIt will be valid 15 minutes.\n\nBye."),
-            "html": format!("Hello {dest_name},<br/><br/>Here is your token: <b>{token}</b>.
-                <br/>It will be valid 15 minutes.<br/><br/>Bye."),
-            "project_id": project_id
-        }
-    )
+impl EmailApiProperties {
+    pub fn load() -> Result<Self, Box<dyn Error>> {
+        let sender_name = env::var("EMAIL_SENDER_NAME")?;
+        let sender_email = env::var("EMAIL_SENDER")?;
+        let project_id = env::var("SCW_PROJECT_ID")?;
+        let scw_email_endpoint = env::var("SCW_EMAIL_ENDPOINT")?;
+        let scw_api_key = env::var("SCW_API_KEY")?;
+        let assets_path = env::var("ASSETS_PATH")?;
+
+        Ok(EmailApiProperties {
+            sender_name,
+            sender_email,
+            project_id,
+            scw_email_endpoint,
+            scw_api_key,
+            assets_path,
+        })
+    }
 }
 
 #[cfg(test)]

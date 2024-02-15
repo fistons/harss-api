@@ -40,6 +40,25 @@ paths:
           $ref: '#/components/responses/DoomQuoteResponse'
         default:
           $ref: '#/components/responses/Error'
+  /user/confirm-email/{token}:
+    get:
+      operationId: confirm_email
+      tags:
+        - Users
+      summary: Confirm email adress
+      description: Confirm the user's email
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:    
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
   /user/update-password:
     patch:
       operationId: update_password
@@ -96,6 +115,29 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
+  /user/{userId}:
+    delete:
+      operationId: delete_user
+      tags:
+        - Users
+      summary: Delete a user
+      description: |
+        Delete the given user.
+
+        The caller must be admin to delete any user, or can only delete itself.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UserID'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        default:
+          $ref: '#/components/responses/Error'
   /user/{userId}/update-password:
     patch:
       operationId: update_other_password
@@ -164,6 +206,28 @@ paths:
           $ref: '#/components/responses/ObjectCreatedResponse'
         default:
           $ref: '#/components/responses/Error'
+  /user:
+    patch:
+      operationId: update_user
+      tags:
+        - Users
+      summary: Update your user
+      description: |
+        Update your user.
+
+        Currently support only email updates. An email will be sent to the new email address for confirmation.
+      requestBody:
+        required: true
+        description: User update request.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /channels/search:
     get:
       operationId: search_channels
@@ -791,6 +855,12 @@ components:
           $ref: '#/components/schemas/UserPassword'
         confirm_password:
           $ref: '#/components/schemas/UserPassword'
+    UpdateUserRequest:
+      type: object
+      description: User update request
+      properties:
+        email:
+          $ref: '#/components/schemas/UserEmail'
     CreateUserRequest:
       type: object
       description: User Creation request
@@ -812,6 +882,10 @@ components:
           $ref: '#/components/schemas/UserEmail'
     User:
       type: object
+      required:
+        - id
+        - username
+        - role
       properties:
         id:
           $ref: '#/components/schemas/UserID'
@@ -819,6 +893,9 @@ components:
           $ref: '#/components/schemas/UserName'
         role:
           $ref: '#/components/schemas/UserRole'
+        email_verified:
+          type: boolean
+          description: Whether the user's email is verified, if the user has provided one.
     UserRole:
       type: string
       description: The user's role (i.e. admin or not).

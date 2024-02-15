@@ -8,7 +8,6 @@ use crate::routes::errors::ApiError;
 use crate::startup::AppState;
 
 #[get("/items")]
-#[tracing::instrument(skip(app_state))]
 pub async fn get_all_items(
     page: web::Query<PageParameters>,
     read_starred: web::Query<ReadStarredParameters>,
@@ -31,7 +30,6 @@ pub async fn get_all_items(
 }
 
 #[post("/items/star")]
-#[tracing::instrument(skip(app_state))]
 pub async fn star_items(
     ids: web::Json<IdListParameter>,
     app_state: web::Data<AppState>,
@@ -44,7 +42,6 @@ pub async fn star_items(
 }
 
 #[post("/items/unstar")]
-#[tracing::instrument(skip(app_state))]
 pub async fn unstar_items(
     ids: web::Json<IdListParameter>,
     app_state: web::Data<AppState>,
@@ -57,7 +54,6 @@ pub async fn unstar_items(
 }
 
 #[post("/items/read")]
-#[tracing::instrument(skip(app_state))]
 pub async fn read_item(
     ids: web::Json<IdListParameter>,
     app_state: web::Data<AppState>,
@@ -70,7 +66,6 @@ pub async fn read_item(
 }
 
 #[post("/items/unread")]
-#[tracing::instrument(skip(app_state))]
 pub async fn unread_item(
     ids: web::Json<IdListParameter>,
     app_state: web::Data<AppState>,
@@ -83,7 +78,6 @@ pub async fn unread_item(
 }
 
 #[put("/item/{item_id}/notes")]
-#[tracing::instrument(skip(app_state))]
 pub async fn add_item_notes(
     item_id: web::Path<i32>,
     request: web::Json<ItemNotesRequest>,
@@ -104,7 +98,6 @@ pub async fn add_item_notes(
 }
 
 #[get("/item/{id}")]
-#[tracing::instrument(skip(app_state))]
 pub async fn get_item(
     id: web::Path<i32>,
     app_state: web::Data<AppState>,

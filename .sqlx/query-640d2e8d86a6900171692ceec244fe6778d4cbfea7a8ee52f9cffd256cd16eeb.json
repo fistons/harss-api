@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT id, username, password, role as \"role: UserRole\" FROM users\n        ORDER BY id\n        LIMIT $1 OFFSET $2\n        ",
+  "query": "\n        SELECT id, username, password, role as \"role: UserRole\", email_verified FROM users\n        ORDER BY id\n        LIMIT $1 OFFSET $2\n        ",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,11 @@
             }
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "email_verified",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -44,8 +49,9 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "855a17676e91685563a6652faf5543357c94dac1f60a09f67bb940ab15995269"
+  "hash": "640d2e8d86a6900171692ceec244fe6778d4cbfea7a8ee52f9cffd256cd16eeb"
 }

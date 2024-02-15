@@ -17,6 +17,7 @@ use redis::AsyncCommands;
 use secrecy::Secret;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
+use tracing::{debug_span, instrument, Instrument};
 
 use crate::common::model::{User, UserRole};
 use crate::common::users::*;
@@ -105,7 +106,7 @@ async fn extract_authenticated_user(
             };
 
             let app_state = req.app_data::<Data<AppState>>().unwrap();
-            check_and_get_authed_user(
+            check_and_get_authenticated_user(
                 &user,
                 &password,
                 &app_state.db,
@@ -136,6 +137,7 @@ fn extract_value_authentication_header(headers: &HeaderMap) -> Result<&str, Auth
 }
 
 /// # Retrieve a user and check its credentials
+#[instrument(skip(connection, password))]
 async fn check_and_get_user(
     connection: &DbPool,
     username: &str,
@@ -163,20 +165,23 @@ async fn check_and_get_user(
 }
 
 /// # Retrieve a user and check its credentials
-async fn check_and_get_authed_user(
+/// Check in redis if the user has already pass authentication by looking for its header. If not, try to authenticate
+/// it by matching password
+/// If it's ok, store the header in redis.
+/// This is to avoid decoding the password for each request, because it's a costing operation.
+#[instrument(skip_all)]
+async fn check_and_get_authenticated_user(
     user: &str,
     password: &Secret<String>,
     connection: &DbPool,
-    redis_pool: &Pool,
-    redis_key: &str,
+    redis: &Pool,
+    key: &str,
 ) -> Result<AuthenticatedUser, AuthenticationError> {
     // Fist, check that the user is not already in the cache
-    let mut redis = redis_pool
-        .get()
-        .await
-        .context("Couldn't get redis connection")?;
+    let mut redis = redis.get().await.context("Couldn't get redis connection")?;
     let value: Option<String> = redis
-        .get(format!("user:{}:{}", user, redis_key))
+        .get(format!("user:{}:{}", user, key))
+        .instrument(debug_span!("getting_http_token_in_redis"))
         .await
         .context("Could not get value")?;
 
@@ -195,10 +200,11 @@ async fn check_and_get_authed_user(
     let serialized_user = serde_json::to_string(&user).context("Could serialize user for redis")?;
     redis
         .set_ex::<_, _, ()>(
-            &format!("user:{}:Basic:{}", user.login, redis_key),
+            &format!("user:{}:Basic:{}", user.login, key),
             serialized_user,
             60 * 15,
         )
+        .instrument(debug_span!("store_http_token_in_redis"))
         .await
         .context("Could not store user in redis")?;
 
@@ -214,6 +220,7 @@ fn extract_credentials_from_http_basic(
 }
 
 /// # Generate a JWT for the given user password
+#[instrument(skip(connection, password))]
 pub async fn get_jwt_from_login_request(
     user: &str,
     password: &Secret<String>,
@@ -241,6 +248,7 @@ pub fn extract_login_from_refresh_token(token: &str) -> &str {
     token.split('.').collect::<Vec<&str>>()[1]
 }
 
+#[instrument(skip_all)]
 async fn verify_jwt(token: &str) -> Result<AuthenticatedUser, AuthenticationError> {
     let claims: Claims = token.verify_with_key(&(*JWT_KEY))?;
 
