@@ -11,16 +11,22 @@ use feed_rs::model::{Entry, Feed};
 use once_cell::sync::Lazy;
 use redis::{AsyncCommands, ExistenceCheck, RedisError, RedisResult, SetExpiry, SetOptions};
 use reqwest::Client;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_tracing::TracingMiddleware;
 use sqlx::PgPool;
 use std::error::Error;
-use tracing::info;
+use tracing::{info, instrument, Instrument};
 use uuid::Uuid;
 
-static CLIENT: Lazy<Client> = Lazy::new(|| {
-    Client::builder()
+static CLIENT: Lazy<ClientWithMiddleware> = Lazy::new(|| {
+    let client = Client::builder()
         .user_agent("HaRSS fetcher (+https://github.com/fistons/rss-aggregator)")
         .build()
-        .expect("Could not build CLIENT")
+        .expect("Could not build CLIENT");
+
+    ClientBuilder::new(client)
+        .with(TracingMiddleware::default())
+        .build()
 });
 
 #[derive(thiserror::Error, Debug)]
@@ -33,23 +39,28 @@ pub enum FetchError {
     SqlError(#[from] DbError),
     #[error("Parsing error: {0}")]
     ParseError(#[from] feed_rs::parser::ParseFeedError),
+    #[error("Could not read the response: {0}")]
+    ReadReponseError(#[from] reqwest::Error),
     #[error("Could not fetch the feed: {0}")]
-    GetError(#[from] reqwest::Error),
+    GetError(#[from] reqwest_middleware::Error),
     #[error("HTTP status code error: Upstream feed returned HTTP status code {0}")]
     StatusCodeError(u16),
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
 }
 
-/// Process the whole database update in one single transaction. BALLSY.
-#[tracing::instrument(skip_all)]
+/// Check for RSS channel updates and proceed.
+#[tracing::instrument(name = "refresh_channels", skip_all)]
 pub async fn process(connection: &PgPool, redis: &RedisPool) -> Result<(), anyhow::Error> {
     let channels = get_all_enabled_channels(connection)
         .await
         .context("Could not get channels to update")?;
 
     for channel in channels {
-        if let Err(error) = update_channel(connection, redis, &channel).await {
+        if let Err(error) = update_channel(connection, redis, &channel)
+            .in_current_span()
+            .await
+        {
             tracing::error!("{:?}", error.source());
         }
     }
@@ -104,7 +115,7 @@ pub async fn update_channel(
         .entries
         .into_iter()
         .map(|entry| item_from_rss_entry(entry, channel.id, &now))
-        .filter(|item| item.publish_timestamp.unwrap_or(last_update) > last_update)
+        .filter(|item| item.publish_timestamp.unwrap_or(last_update) >= last_update)
         .collect::<Vec<NewItem>>();
 
     insert_items(connection, &new_items).await?;
@@ -116,6 +127,7 @@ pub async fn update_channel(
     Ok(())
 }
 
+#[instrument(skip(redis))]
 async fn acquire_lock(
     redis: &mut Connection,
     channel_id: i32,
@@ -132,6 +144,7 @@ async fn acquire_lock(
     (key, value, redis_result)
 }
 
+#[instrument(skip(redis))]
 async fn release_lock(redis: &mut Connection, key: &str, value: &str) -> RedisResult<()> {
     let redis_value = redis.get::<&str, Option<String>>(key).await?;
     if redis_value.unwrap() == value {
@@ -142,6 +155,7 @@ async fn release_lock(redis: &mut Connection, key: &str, value: &str) -> RedisRe
 }
 
 /// Download and parse the feed of the given channel
+#[instrument]
 async fn get_and_parse_feed(channel_url: &str) -> Result<Feed, FetchError> {
     let response = CLIENT.get(channel_url).send().await?;
 

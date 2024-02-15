@@ -13,7 +13,7 @@ async fn main() -> std::io::Result<()> {
     // Init dotenv
     dotenvy::dotenv().ok();
 
-    let subscriber = harss_api::common::observability::get_subscriber("rss_aggregator", "info");
+    let subscriber = harss_api::common::observability::get_subscriber("harss-api", "info");
     harss_api::common::observability::init_subscriber(subscriber);
 
     let postgres_connection = init_postgres_connection().await;
@@ -24,7 +24,7 @@ async fn main() -> std::io::Result<()> {
     )?;
 
     if !check_configuration() {
-        panic!()
+        panic!("You need to check your configuration")
     }
 
     let postgres_connection_clone = postgres_connection.clone();
