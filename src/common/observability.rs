@@ -2,7 +2,6 @@ use std::env::var;
 
 use tracing::info;
 use tracing::{subscriber::set_global_default, Subscriber};
-use tracing_log::LogTracer;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
@@ -20,7 +19,6 @@ pub fn get_subscriber(name: &str, env_filter: &str) -> impl Subscriber + Sync + 
 }
 
 pub fn init_subscriber(subscriber: impl Subscriber + Sync + Send) {
-    LogTracer::init().expect("Failed to set logger");
     set_global_default(subscriber).expect("Failed to set subscriber");
 }
 

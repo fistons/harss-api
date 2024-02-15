@@ -37,8 +37,6 @@ reqwest-tracing = { version = "0.4", features = ["opentelemetry_0_21"] }
 reqwest-middleware = "0.2"
 feed-rs = "1"
 sqlx = { version = "0.7", features = ["runtime-tokio", "uuid", "macros", "postgres", "chrono", "migrate"] }
-fake = { version = "2.8", features = ["chrono"] }
-tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter", "fmt", "std", "json"] }
 tracing-opentelemetry = "0.22.0"
 opentelemetry = { version = "0.21"}
