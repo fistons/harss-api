@@ -45,7 +45,6 @@ pub async fn get_user_by_id(db: &Pool, id: i32) -> Result<Option<User>> {
 #[instrument(skip(db))]
 pub async fn get_user_by_email(db: &Pool, email: &Secret<String>) -> Result<Option<User>> {
     let encoded_email = hash_email(&Some(email.clone()));
-    tracing::info!("{:?} {encoded_email:?}", email.expose_secret());
     sqlx::query_as!(
         User,
         r#"
