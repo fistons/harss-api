@@ -9,16 +9,25 @@ use crate::common::Pool as DbPool;
 
 use crate::rate_limiting::build_rate_limiting_conf;
 use crate::routes;
+use crate::services::channels::ChannelService;
+use crate::services::users::UserService;
 
 pub struct AppState {
     pub db: DbPool,
     pub redis: Pool,
+    pub user_service: UserService,
+    pub channel_service: ChannelService,
 }
 
 pub async fn startup(database: DbPool, redis: Pool, listener: TcpListener) -> std::io::Result<()> {
+    let user_service = UserService::new(database.clone(), redis.clone());
+    let channel_service = ChannelService::new(database.clone(), redis.clone());
+
     let app_state = AppState {
         db: database,
         redis,
+        user_service,
+        channel_service,
     };
 
     let governor_conf = build_rate_limiting_conf();

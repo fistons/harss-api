@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT  channels_errors.id,\n                    channels_errors.channel_id,\n                    channels_errors.error_timestamp,\n                    channels_errors.error_reason,\n                    channels.name AS channel_name\n            FROM    channels_errors\n                    JOIN channels ON channels_errors.channel_id = channels.id\n                    JOIN channel_users ON channels_errors.channel_id = channel_users.channel_id\n            WHERE   channels_errors.channel_id = $1\n            AND     channel_users.user_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "channel_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "error_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "error_reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "channel_name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "e37a4a1bff66a045112729d47ad53dbde9440cce37809286d7a7fc19cd8742c1"
+}

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n           INSERT INTO channels_errors (channel_id, error_timestamp, error_reason) VALUES ($1, $2, $3)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9f1694a03ba74f492254977a108ef019598cc5c3af263eecb3ed26b1ece92e7b"
+}

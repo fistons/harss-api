@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE channels SET disabled = true WHERE channels.id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1b46fbeed8ae1c39c7429047b56b68b07fb61ac991396bd44c2780a216ed111b"
+}
