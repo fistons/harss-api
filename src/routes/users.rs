@@ -8,7 +8,6 @@ use serde_json::json;
 use tracing::debug;
 
 use crate::common::model::UserRole;
-use crate::common::users::{self, get_user_by_id};
 
 use crate::auth::AuthenticatedUser;
 use crate::errors::AuthenticationError;
@@ -25,8 +24,7 @@ async fn new_user(
     app_state: web::Data<AppState>,
     user: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    let redis = &app_state.redis;
+    let user_service = &app_state.user_service;
 
     let admin = user.map(|x| x.is_admin()).unwrap_or(false);
     let allow_account_creation = env::var("RSS_AGGREGATOR_ALLOW_ACCOUNT_CREATION")
@@ -45,15 +43,14 @@ async fn new_user(
             return Err(ApiError::PasswordMismatch);
         }
 
-        let user = users::create_user(
-            redis,
-            connection,
-            &request.username,
-            &request.password,
-            &request.email,
-            &request.role,
-        )
-        .await?;
+        let user = user_service
+            .create_user(
+                &request.username,
+                &request.password,
+                &request.email,
+                &request.role,
+            )
+            .await?;
 
         Ok(HttpResponse::Created().json(json!({"id": user.id})))
     } else {
@@ -68,11 +65,13 @@ async fn list_users(
     page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-
+    let user_service = &app_state.user_service;
     if user.is_admin() {
-        Ok(HttpResponse::Ok()
-            .json(users::list_users(connection, page.get_page(), page.get_size()).await?))
+        Ok(HttpResponse::Ok().json(
+            user_service
+                .list_users(page.get_page(), page.get_size())
+                .await?,
+        ))
     } else {
         Err(ApiError::AuthenticationError(
             AuthenticationError::Forbidden("no".into()),
@@ -86,14 +85,13 @@ async fn update_password(
     request: web::Json<UpdatePasswordRequest>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    let redis = &app_state.redis;
+    let user_service = &app_state.user_service;
 
     if request.new_password.expose_secret() != request.confirm_password.expose_secret() {
         return Err(ApiError::PasswordMismatch);
     }
 
-    if let Ok(Some(user)) = get_user_by_id(connection, user.id).await {
+    if let Ok(Some(user)) = user_service.get_user_by_id(user.id).await {
         if !verify_password(&user.password, &request.current_password) {
             return Err(ApiError::PasswordMismatch);
         }
@@ -101,11 +99,14 @@ async fn update_password(
         return Err(ApiError::NotFound("User".to_owned(), user.id));
     }
 
-    if let Err(e) = users::update_user_password(connection, user.id, &request.new_password).await {
+    if let Err(e) = user_service
+        .update_user_password(user.id, &request.new_password)
+        .await
+    {
         return Err(ApiError::DatabaseError(e));
     }
 
-    users::delete_user_redis_keys(redis, user.id).await?;
+    user_service.delete_user_redis_keys(user.id).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -115,10 +116,9 @@ async fn reset_password_token(
     app_state: web::Data<AppState>,
     request: web::Json<ResetPasswordRequest>,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    let redis = &app_state.redis;
+    let user_service = &app_state.user_service;
 
-    users::reset_password_request(connection, redis, &request.email).await?;
+    user_service.reset_password_request(&request.email).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -128,21 +128,15 @@ async fn reset_password(
     app_state: web::Data<AppState>,
     request: web::Json<ResetPasswordTokenRequest>,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    let redis = &app_state.redis;
+    let user_service = &app_state.user_service;
 
     if request.new_password.expose_secret() != request.confirm_password.expose_secret() {
         return Err(ApiError::PasswordMismatch);
     }
 
-    users::reset_password(
-        connection,
-        redis,
-        &request.token,
-        &request.new_password,
-        &request.username,
-    )
-    .await?;
+    user_service
+        .reset_password(&request.token, &request.new_password, &request.username)
+        .await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -154,9 +148,7 @@ async fn update_other_password(
     request: web::Json<UpdateOtherPasswordRequest>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    let redis = &app_state.redis;
-    let user_id = user_id.into_inner();
+    let user_service = &app_state.user_service;
 
     if !user.is_admin() {
         return Err(ApiError::AuthenticationError(
@@ -168,14 +160,17 @@ async fn update_other_password(
         return Err(ApiError::PasswordMismatch);
     }
 
-    if let Err(e) = users::update_user_password(connection, user_id, &request.new_password).await {
+    if let Err(e) = user_service
+        .update_user_password(*user_id, &request.new_password)
+        .await
+    {
         return match e {
-            RowNotFound => Err(ApiError::NotFound(String::from("user"), user_id)),
+            RowNotFound => Err(ApiError::NotFound(String::from("user"), *user_id)),
             _ => return Err(ApiError::DatabaseError(e)),
         };
     }
 
-    users::delete_user_redis_keys(redis, user_id).await?;
+    user_service.delete_user_redis_keys(*user_id).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -186,10 +181,8 @@ async fn update_user(
     request: web::Json<UpdateUserRequest>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    let redis = &app_state.redis;
-
-    users::update_user(connection, redis, user.id, &request.email).await?;
+    let user_service = &app_state.user_service;
+    user_service.update_user(user.id, &request.email).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -200,10 +193,8 @@ async fn confirm_email(
     token: web::Path<Secret<String>>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    let redis = &app_state.redis;
-
-    users::confirm_email(connection, redis, user.id, &token).await?;
+    let user_service = &app_state.user_service;
+    user_service.confirm_email(user.id, &token).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -214,14 +205,12 @@ async fn delete_user(
     user_id: web::Path<i32>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let db = &app_state.db;
-    let redis = &app_state.redis;
-
+    let user_service = &app_state.user_service;
     if !user.is_admin() && user.id != *user_id {
         return Err(ApiError::NotFound("User not found".to_owned(), *user_id));
     }
 
-    users::delete_user(db, redis, *user_id).await?;
+    user_service.delete_user(*user_id).await?;
 
     Ok(HttpResponse::NoContent().json(json!({"you-will-be":"missed"})))
 }

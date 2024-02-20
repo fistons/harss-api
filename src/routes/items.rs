@@ -1,7 +1,5 @@
 use actix_web::{get, post, put, web, HttpResponse};
 
-use crate::common::items::*;
-
 use crate::auth::AuthenticatedUser;
 use crate::model::{IdListParameter, ItemNotesRequest, PageParameters, ReadStarredParameters};
 use crate::routes::errors::ApiError;
@@ -14,18 +12,18 @@ pub async fn get_all_items(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
+    let item_service = &app_state.item_service;
 
-    let items = get_items_of_user(
-        connection,
-        None,
-        read_starred.starred,
-        read_starred.read,
-        user.id,
-        page.get_page(),
-        page.get_size(),
-    )
-    .await?;
+    let items = item_service
+        .get_items_of_user(
+            None,
+            read_starred.starred,
+            read_starred.read,
+            user.id,
+            page.get_page(),
+            page.get_size(),
+        )
+        .await?;
     Ok(HttpResponse::Ok().json(items))
 }
 
@@ -35,8 +33,10 @@ pub async fn star_items(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    set_item_starred(connection, user.id, ids.into_inner().ids, true).await?;
+    let item_service = &app_state.item_service;
+    item_service
+        .set_item_starred(user.id, ids.into_inner().ids, true)
+        .await?;
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -47,8 +47,10 @@ pub async fn unstar_items(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    set_item_starred(connection, user.id, ids.into_inner().ids, false).await?;
+    let item_service = &app_state.item_service;
+    item_service
+        .set_item_starred(user.id, ids.into_inner().ids, false)
+        .await?;
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -59,8 +61,10 @@ pub async fn read_item(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    set_item_read(connection, user.id, ids.into_inner().ids, true).await?;
+    let item_service = &app_state.item_service;
+    item_service
+        .set_item_read(user.id, ids.into_inner().ids, true)
+        .await?;
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -71,8 +75,10 @@ pub async fn unread_item(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    set_item_read(connection, user.id, ids.into_inner().ids, false).await?;
+    let item_service = &app_state.item_service;
+    item_service
+        .set_item_read(user.id, ids.into_inner().ids, false)
+        .await?;
 
     Ok(HttpResponse::Accepted().finish())
 }
@@ -84,15 +90,10 @@ pub async fn add_item_notes(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-
-    add_notes(
-        connection,
-        request.into_inner().notes,
-        user.id,
-        item_id.into_inner(),
-    )
-    .await?;
+    let item_service = &app_state.item_service;
+    item_service
+        .add_notes(request.into_inner().notes, user.id, item_id.into_inner())
+        .await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -103,9 +104,8 @@ pub async fn get_item(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-
-    let item = get_one_item(connection, id.into_inner(), user.id).await?;
+    let item_service = &app_state.item_service;
+    let item = item_service.get_one_item(id.into_inner(), user.id).await?;
 
     match item {
         Some(item) => Ok(HttpResponse::Ok().json(item)),

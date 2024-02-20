@@ -271,7 +271,7 @@ impl UserService {
     }
 
     #[instrument(skip(self))]
-    pub async fn delete_user(self, user_id: i32) -> anyhow::Result<()> {
+    pub async fn delete_user(&self, user_id: i32) -> anyhow::Result<()> {
         let result = sqlx::query!(r#"DELETE FROM users WHERE id = $1"#, user_id)
             .execute(&self.db)
             .await?;

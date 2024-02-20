@@ -3,8 +3,6 @@ use actix_web::{delete, get, post, web, HttpResponse};
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::common::channels;
-use crate::common::items;
 use crate::common::rss;
 
 use crate::auth::AuthenticatedUser;
@@ -18,8 +16,10 @@ pub async fn get_channel(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    let res = channels::select_by_id_and_user_id(connection, id.into_inner(), user.id).await?;
+    let channel_service = &app_state.channel_service;
+    let res = channel_service
+        .select_by_id_and_user_id(*id, user.id)
+        .await?;
 
     match res {
         Some(data) => Ok(HttpResponse::Ok().json(data)),
@@ -33,8 +33,8 @@ pub async fn unsubscribe_channel(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    channels::unsubscribe_channel(connection, id.into_inner(), user.id).await?;
+    let channel_service = &app_state.channel_service;
+    channel_service.unsubscribe_channel(*id, user.id).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -45,13 +45,15 @@ pub async fn get_errors_of_channel(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
+    let channel_service = &app_state.channel_service;
 
     if !user.is_admin() {
         return Ok(HttpResponse::Forbidden().finish());
     }
 
-    let errors = channels::select_errors_by_chan_id(connection, id.into_inner(), user.id).await?;
+    let errors = channel_service
+        .select_errors_by_chan_id(*id, user.id)
+        .await?;
 
     Ok(HttpResponse::Ok().json(errors))
 }
@@ -62,9 +64,8 @@ pub async fn mark_channel_as_read(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-
-    channels::mark_channel_as_read(connection, id.into_inner(), user.id).await?;
+    let channel_service = &app_state.channel_service;
+    channel_service.mark_channel_as_read(*id, user.id).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -75,11 +76,10 @@ pub async fn get_channels(
     page: web::Query<PageParameters>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-
-    let channels =
-        channels::select_page_by_user_id(connection, user.id, page.get_page(), page.get_size())
-            .await?;
+    let channel_service = &app_state.channel_service;
+    let channels = channel_service
+        .select_page_by_user_id(user.id, page.get_page(), page.get_size())
+        .await?;
     Ok(HttpResponse::Ok().json(channels))
 }
 
@@ -89,14 +89,12 @@ async fn new_channel(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-    let redis = &app_state.redis;
     let data = new_channel.into_inner();
+    let channel_service = &app_state.channel_service;
 
-    let channel_id = channels::create_or_link_channel(
-        connection, redis, &data.url, data.name, data.notes, user.id,
-    )
-    .await?;
+    let channel_id = channel_service
+        .create_or_link_channel(&data.url, data.name, data.notes, user.id)
+        .await?;
 
     Ok(HttpResponse::Created().json(json!({"id": channel_id})))
 }
@@ -108,18 +106,17 @@ async fn get_items_of_channel(
     app_state: web::Data<AppState>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
-
-    let items = items::get_items_of_user(
-        connection,
-        Some(chan_id.into_inner()),
-        None,
-        None,
-        auth.id,
-        page.get_page(),
-        page.get_size(),
-    )
-    .await?;
+    let item_service = &app_state.item_service;
+    let items = item_service
+        .get_items_of_user(
+            Some(*chan_id),
+            None,
+            None,
+            auth.id,
+            page.get_page(),
+            page.get_size(),
+        )
+        .await?;
 
     Ok(HttpResponse::Ok().json(items))
 }
@@ -130,10 +127,10 @@ async fn enable_channel(
     app_state: web::Data<AppState>,
     user: AuthenticatedUser,
 ) -> Result<HttpResponse, ApiError> {
-    let connection = &app_state.db;
+    let channel_service = &app_state.channel_service;
 
     if user.is_admin() {
-        channels::enable_channel(connection, id.into_inner()).await?;
+        channel_service.enable_channel(*id).await?;
         Ok(HttpResponse::Accepted().finish())
     } else {
         Ok(HttpResponse::Forbidden().finish())
